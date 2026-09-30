@@ -1,0 +1,53 @@
+﻿{
+  "timestamp": "2026-09-30T19:02:33.000+0000",
+  "rule": {
+    "level": 7,
+    "description": "Integrity checksum changed",
+    "id": "550",
+    "mitre": {
+      "attack": ["Defense Evasion", "Persistence"],
+      "id": ["T1565.001", "T1036"],
+      "tactic": ["Defense Evasion", "Persistence"],
+      "technique": ["Stored Data Manipulation", "Masquerading"]
+    },
+    "groups": ["ossec", "syscheck", "syscheck_entry_modified"],
+    "pci_dss": ["11.5"],
+    "nist_800_53": ["SI.7"],
+    "mail": false
+  },
+  "agent": {
+    "id": "005",
+    "name": "linux-db-02",
+    "ip": "10.0.20.8"
+  },
+  "manager": {
+    "name": "wazuh-manager"
+  },
+  "id": "1727721753.112345",
+  "cluster": {
+    "name": "cyberqalqon-cluster",
+    "node": "node01"
+  },
+  "full_log": "File '/etc/crontab' modified.\nMode: realtime\nChanged attributes: size,md5,sha1,sha256,mtime,inode\nSize changed from '846' to '891'\nOld md5sum was: 'a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4'\nNew md5sum is: 'd4c3b2a1f6e5d4c3b2a1f6e5d4c3b2a1'",
+  "decoder": {
+    "name": "syscheck_integrity_changed"
+  },
+  "syscheck": {
+    "path": "/etc/crontab",
+    "mode": "realtime",
+    "size_before": "846",
+    "size_after": "891",
+    "perm_before": "100644",
+    "perm_after": "100644",
+    "uid_before": "0",
+    "uid_after": "0",
+    "gid_before": "0",
+    "gid_after": "0",
+    "md5_before": "a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4",
+    "md5_after": "d4c3b2a1f6e5d4c3b2a1f6e5d4c3b2a1",
+    "sha1_before": "abc123def456abc123def456abc123def456abc1",
+    "sha1_after": "def456abc123def456abc123def456abc123def4",
+    "event": "modified"
+  },
+  "location": "syscheck"
+}

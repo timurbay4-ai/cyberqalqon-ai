@@ -1,0 +1,31 @@
+﻿#!/bin/sh
+# CyberQalqon AI -- Wazuh Custom Integration Wrapper
+# ===================================================
+# This shell wrapper is required by Wazuh integratord.
+# Wazuh executes files named "custom-*" in /var/ossec/integrations/.
+# The wrapper simply delegates to the Python sender.
+#
+# Wazuh passes four positional arguments:
+#   $1 -- path to alert JSON file
+#   $2 -- api_key (from ossec.conf; may be empty)
+#   $3 -- hook_url (from ossec.conf)
+#   $4 -- full alert file path
+#
+# The Python interpreter path uses Wazuh's bundled Python when available,
+# falling back to the system python3.
+SCRIPT_DIR="$(dirname "$0")"
+SENDER="${SCRIPT_DIR}/cyberqalqon_sender.py"
+
+# Prefer Wazuh bundled Python; fall back to system python3.
+if [ -x "/var/ossec/framework/python/bin/python3" ]; then
+    PYTHON="/var/ossec/framework/python/bin/python3"
+else
+    PYTHON="$(command -v python3 2>/dev/null || command -v python 2>/dev/null)"
+fi
+
+if [ -z "$PYTHON" ]; then
+    echo "[ERROR] cyberqalqon: python3 not found" >&2
+    exit 1
+fi
+
+exec "$PYTHON" "$SENDER" "$1" "$2" "$3" "$4"

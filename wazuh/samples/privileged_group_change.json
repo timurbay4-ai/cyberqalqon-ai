@@ -1,0 +1,51 @@
+﻿{
+  "timestamp": "2026-09-30T19:15:47.000+0000",
+  "rule": {
+    "level": 8,
+    "description": "User added to privileged group",
+    "id": "5901",
+    "mitre": {
+      "attack": ["Privilege Escalation"],
+      "id": ["T1098"],
+      "tactic": ["Privilege Escalation"],
+      "technique": ["Account Manipulation"]
+    },
+    "groups": ["account_changes", "linux", "privileged_escalation"],
+    "pci_dss": ["10.2.5"],
+    "nist_800_53": ["AC.2"],
+    "mail": false
+  },
+  "agent": {
+    "id": "007",
+    "name": "linux-admin-01",
+    "ip": "10.0.30.15"
+  },
+  "manager": {
+    "name": "wazuh-manager"
+  },
+  "id": "1727722547.334455",
+  "cluster": {
+    "name": "cyberqalqon-cluster",
+    "node": "node01"
+  },
+  "full_log": "type=USER_MGMT msg=audit(1727722547.334:4521): pid=12340 uid=1001 auid=1001 ses=12 msg='op=add-user-to-group acct=\"jsmith\" grp=\"sudo\" exe=\"/usr/sbin/usermod\" hostname=linux-admin-01 addr=? terminal=pts/1 res=success'",
+  "decoder": {
+    "parent": "auditd",
+    "name": "auditd"
+  },
+  "data": {
+    "audit": {
+      "type": "USER_MGMT",
+      "pid": "12340",
+      "uid": "1001",
+      "auid": "1001",
+      "session": "12",
+      "op": "add-user-to-group",
+      "acct": "jsmith",
+      "grp": "sudo",
+      "exe": "/usr/sbin/usermod",
+      "res": "success"
+    }
+  },
+  "location": "/var/log/audit/audit.log"
+}

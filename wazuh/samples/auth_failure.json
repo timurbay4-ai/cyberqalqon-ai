@@ -1,0 +1,43 @@
+﻿{
+  "timestamp": "2026-09-30T18:45:12.000+0000",
+  "rule": {
+    "level": 10,
+    "description": "Multiple authentication failures",
+    "id": "5712",
+    "mitre": {
+      "attack": ["Credential Access"],
+      "id": ["T1110"],
+      "tactic": ["Credential Access"],
+      "technique": ["Brute Force"]
+    },
+    "groups": ["authentication_failures", "pam"],
+    "pci_dss": ["10.2.4", "10.2.5"],
+    "gdpr": ["IV_35.7.d"],
+    "nist_800_53": ["AU.14", "AC.7"],
+    "mail": false
+  },
+  "agent": {
+    "id": "003",
+    "name": "linux-web-01",
+    "ip": "10.0.10.5"
+  },
+  "manager": {
+    "name": "wazuh-manager"
+  },
+  "id": "1727720712.841234",
+  "cluster": {
+    "name": "cyberqalqon-cluster",
+    "node": "node01"
+  },
+  "full_log": "Failed password for invalid user admin from 198.51.100.22 port 54328 ssh2",
+  "decoder": {
+    "parent": "sshd",
+    "name": "sshd"
+  },
+  "data": {
+    "srcip": "198.51.100.22",
+    "srcport": "54328",
+    "srcuser": "admin"
+  },
+  "location": "/var/log/auth.log"
+}
