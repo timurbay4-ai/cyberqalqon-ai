@@ -1,0 +1,53 @@
+﻿[
+  {
+    "incident_id": "INC-2026-001",
+    "title": "Brute Force Attempt on WIN-PC-01",
+    "status": "open",
+    "priority": "high",
+    "created_at": "2026-09-30T21:00:00+05:00",
+    "updated_at": "2026-09-30T21:05:00+05:00",
+    "assigned_to": null,
+    "alert_ids": ["demo-001"],
+    "mitre_ids": ["T1110"],
+    "agent": {
+      "id": "001",
+      "name": "WIN-PC-01"
+    },
+    "summary": "Multiple authentication failures detected from internal IP 192.168.1.25 targeting user account demo-user.",
+    "rule_level": 10
+  },
+  {
+    "incident_id": "INC-2026-002",
+    "title": "Suspicious PowerShell Execution on SRV-DC-01",
+    "status": "investigating",
+    "priority": "critical",
+    "created_at": "2026-09-30T19:30:00+05:00",
+    "updated_at": "2026-09-30T20:45:00+05:00",
+    "assigned_to": "analyst-1",
+    "alert_ids": ["demo-002", "demo-003"],
+    "mitre_ids": ["T1059.001", "T1086"],
+    "agent": {
+      "id": "002",
+      "name": "SRV-DC-01"
+    },
+    "summary": "Encoded PowerShell command executed under SYSTEM context. Possible lateral movement or persistence attempt.",
+    "rule_level": 14
+  },
+  {
+    "incident_id": "INC-2026-003",
+    "title": "Unusual Outbound Connection from DEV-LAPTOP-03",
+    "status": "resolved",
+    "priority": "medium",
+    "created_at": "2026-09-29T14:10:00+05:00",
+    "updated_at": "2026-09-29T17:00:00+05:00",
+    "assigned_to": "analyst-2",
+    "alert_ids": ["demo-004"],
+    "mitre_ids": ["T1071.001"],
+    "agent": {
+      "id": "003",
+      "name": "DEV-LAPTOP-03"
+    },
+    "summary": "Outbound HTTPS connection to an unusual external endpoint not previously seen from this host. Verified benign after investigation — developer testing an external API.",
+    "rule_level": 7
+  }
+]

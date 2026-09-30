@@ -1,0 +1,65 @@
+﻿# ============================================================
+# CyberQalqon AI — CI Workflow (Phase 1)
+# ============================================================
+# Validates the backend health endpoint on every push/PR.
+# Expand this workflow in Phase 2 when real tests are added.
+
+name: CI
+
+on:
+  push:
+    branches: [main, dev-backend, dev-frontend, dev-ai]
+  pull_request:
+    branches: [main]
+
+jobs:
+  backend-health:
+    name: Backend Health Check
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install backend dependencies
+        run: |
+          cd backend
+          pip install -r requirements.txt
+
+      - name: Start backend server
+        run: |
+          cd backend
+          uvicorn app.main:app --host 0.0.0.0 --port 8000 &
+          sleep 3
+
+      - name: Test /health endpoint
+        run: |
+          response=$(curl -sf http://localhost:8000/health)
+          echo "Response: $response"
+          echo "$response" | python3 -c "
+          import sys, json
+          data = json.load(sys.stdin)
+          assert data['status'] == 'ok', f'Expected status ok, got: {data}'
+          assert data['service'] == 'cyberqalqon-backend', f'Unexpected service: {data}'
+          print('Health check PASSED')
+          "
+
+  validate-json:
+    name: Validate JSON Files
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Validate JSON syntax
+        run: |
+          for f in $(find shared/ -name "*.json"); do
+            echo "Validating $f"
+            python3 -m json.tool "$f" > /dev/null && echo "  OK: $f"
+          done

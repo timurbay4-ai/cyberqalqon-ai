@@ -1,0 +1,46 @@
+﻿{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://cyberqalqon.ai/schemas/ai_analysis.schema.json",
+  "title": "AIAnalysis",
+  "description": "Contract for the structured output returned by the local AI engine after analyzing a NormalizedAlert. This schema defines the interface only — no LLM is implemented in Phase 1.",
+  "type": "object",
+  "required": ["status", "summary_uz", "summary_ru", "why_it_matters", "investigation_steps"],
+  "additionalProperties": false,
+  "properties": {
+    "status": {
+      "type": "string",
+      "description": "Status of the AI analysis result.",
+      "enum": ["success", "partial", "failed", "unavailable"],
+      "examples": ["success"]
+    },
+    "summary_uz": {
+      "type": "string",
+      "description": "Short summary of the security event in Uzbek language.",
+      "examples": ["Bir nechta muvaffaqiyatsiz autentifikatsiya urinishlari aniqlandi."]
+    },
+    "summary_ru": {
+      "type": "string",
+      "description": "Short summary of the security event in Russian language.",
+      "examples": ["Обнаружено несколько неудачных попыток аутентификации."]
+    },
+    "why_it_matters": {
+      "type": "string",
+      "description": "Explanation of the potential security significance of this event in English.",
+      "examples": ["Multiple failed login attempts may indicate a brute-force or credential stuffing attack targeting this host."]
+    },
+    "investigation_steps": {
+      "type": "array",
+      "description": "Ordered list of recommended investigation actions for the SOC analyst.",
+      "items": {
+        "type": "string"
+      },
+      "minItems": 1,
+      "examples": [["Check the source IP reputation.", "Review adjacent authentication logs.", "Verify if the target account was ultimately compromised."]]
+    },
+    "limitations": {
+      "type": "string",
+      "description": "Optional note about known limitations or low-confidence areas of this analysis.",
+      "examples": ["Analysis is based solely on alert metadata. Full log context was not available."]
+    }
+  }
+}

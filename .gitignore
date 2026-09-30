@@ -1,0 +1,81 @@
+﻿# ============================================================
+# CyberQalqon AI — .gitignore
+# ============================================================
+
+# ----- Secrets & Credentials (NEVER COMMIT) -----
+.env
+.env.*
+!.env.example
+*.key
+*.pem
+*.p12
+*.pfx
+*.cer
+*.crt
+secrets/
+credentials/
+
+# ----- Logs -----
+*.log
+*.log.*
+logs/
+
+# ----- Python -----
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.venv/
+venv/
+env/
+ENV/
+*.egg-info/
+dist/
+build/
+htmlcov/
+.coverage
+.coverage.*
+coverage/
+coverage.xml
+*.cover
+
+# ----- Node / Frontend -----
+node_modules/
+.npm
+.yarn/
+yarn-error.log
+dist/
+build/
+.next/
+.nuxt/
+out/
+
+# ----- IDE / Editor -----
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+.DS_Store
+Thumbs.db
+
+# ----- Docker -----
+*.env.docker
+
+# ----- OS -----
+Desktop.ini
+ehthumbs.db
+
+# ----- Testing / Coverage -----
+.hypothesis/
+junit.xml
+test-results/
+
+# ----- Temporary -----
+*.tmp
+*.bak
+*.orig

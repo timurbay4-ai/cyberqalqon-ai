@@ -1,0 +1,99 @@
+﻿{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://cyberqalqon.ai/schemas/normalized_alert.schema.json",
+  "title": "NormalizedAlert",
+  "description": "Shared contract for a normalized security alert produced by the Wazuh ingestion pipeline and consumed by the backend and AI engine.",
+  "type": "object",
+  "required": ["alert_id", "timestamp", "agent", "rule", "mitre"],
+  "additionalProperties": false,
+  "properties": {
+    "alert_id": {
+      "type": "string",
+      "description": "Unique identifier for this alert.",
+      "minLength": 1,
+      "examples": ["alert-20260930-001"]
+    },
+    "timestamp": {
+      "type": "string",
+      "format": "date-time",
+      "description": "ISO 8601 timestamp when the alert was generated."
+    },
+    "agent": {
+      "type": "object",
+      "description": "Wazuh agent that detected the event.",
+      "required": ["id", "name"],
+      "additionalProperties": false,
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Wazuh agent ID.",
+          "examples": ["001"]
+        },
+        "name": {
+          "type": "string",
+          "description": "Hostname or label of the agent.",
+          "examples": ["WIN-PC-01"]
+        }
+      }
+    },
+    "rule": {
+      "type": "object",
+      "description": "Security rule that triggered this alert.",
+      "required": ["id", "level", "description"],
+      "additionalProperties": false,
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Rule identifier.",
+          "examples": ["100001"]
+        },
+        "level": {
+          "type": "integer",
+          "description": "Wazuh rule severity level (1–15).",
+          "minimum": 1,
+          "maximum": 15
+        },
+        "description": {
+          "type": "string",
+          "description": "Human-readable description of the rule.",
+          "examples": ["Multiple authentication failures"]
+        }
+      }
+    },
+    "mitre": {
+      "type": "object",
+      "description": "MITRE ATT&CK context for this alert.",
+      "required": ["ids"],
+      "additionalProperties": false,
+      "properties": {
+        "ids": {
+          "type": "array",
+          "description": "One or more MITRE ATT&CK technique IDs.",
+          "items": {
+            "type": "string",
+            "pattern": "^T[0-9]{4}(\\.[0-9]{3})?$"
+          },
+          "minItems": 1,
+          "examples": [["T1110"], ["T1110", "T1078"]]
+        }
+      }
+    },
+    "source": {
+      "type": "object",
+      "description": "Source network information. Optional.",
+      "additionalProperties": false,
+      "properties": {
+        "ip": {
+          "type": "string",
+          "format": "ipv4",
+          "description": "IPv4 address of the event source."
+        }
+      }
+    },
+    "user": {
+      "type": "string",
+      "description": "Username associated with the event. Optional.",
+      "examples": ["jsmith"]
+    }
+  }
+}
