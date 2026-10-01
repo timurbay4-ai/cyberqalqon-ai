@@ -254,36 +254,36 @@ class TestHTTPDelivery(unittest.TestCase):
         """9. Backend 500 returns exit code 2 after retries."""
         srv = MockServer(status=500, body='{"error":"server error"}')
         # Patch RETRY_DELAY to speed test up
-        orig_delay = sender.RETRY_DELAY
-        sender.RETRY_DELAY = 0.01
+        orig_delay = sender.RETRY_BASE_DELAY
+        sender.RETRY_BASE_DELAY = 0.01
         try:
             rc = self._run_delivery(VALID_ALERT, srv.url)
             self.assertEqual(rc, 2)
         finally:
-            sender.RETRY_DELAY = orig_delay
+            sender.RETRY_BASE_DELAY = orig_delay
             srv.shutdown()
 
     def test_10_connection_refused(self) -> None:
         """10. Connection refused returns exit code 2."""
         # Use a port that should be refused
-        orig_delay = sender.RETRY_DELAY
-        sender.RETRY_DELAY = 0.01
+        orig_delay = sender.RETRY_BASE_DELAY
+        sender.RETRY_BASE_DELAY = 0.01
         try:
             rc = self._run_delivery(VALID_ALERT, "http://127.0.0.1:19999/api/v1/ingest/wazuh")
             self.assertEqual(rc, 2)
         finally:
-            sender.RETRY_DELAY = orig_delay
+            sender.RETRY_BASE_DELAY = orig_delay
 
     def test_11_timeout(self) -> None:
         """11. Request timeout returns exit code 2."""
         orig_ct = sender.CONNECT_TIMEOUT
         orig_rt = sender.READ_TIMEOUT
         orig_mr = sender.MAX_RETRIES
-        orig_delay = sender.RETRY_DELAY
+        orig_delay = sender.RETRY_BASE_DELAY
         sender.CONNECT_TIMEOUT = 0.01
         sender.READ_TIMEOUT = 0.01
         sender.MAX_RETRIES = 0
-        sender.RETRY_DELAY = 0.01
+        sender.RETRY_BASE_DELAY = 0.01
         # Blackhole address (non-routable)
         try:
             rc = self._run_delivery(VALID_ALERT, "http://10.255.255.1:80/api/v1/ingest/wazuh")
@@ -292,7 +292,7 @@ class TestHTTPDelivery(unittest.TestCase):
             sender.CONNECT_TIMEOUT = orig_ct
             sender.READ_TIMEOUT = orig_rt
             sender.MAX_RETRIES = orig_mr
-            sender.RETRY_DELAY = orig_delay
+            sender.RETRY_BASE_DELAY = orig_delay
 
 
 class TestAuthentication(unittest.TestCase):
