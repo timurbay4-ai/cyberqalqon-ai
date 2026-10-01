@@ -59,6 +59,7 @@ Database tables and indexes are initialized idempotently at application startup 
 | GET | `/ready` | Database readiness |
 | POST | `/api/v1/ingest/wazuh` | Normalize and persist one raw Wazuh alert |
 | GET | `/api/v1/incidents` | Paginated and filtered incidents |
+| GET | `/api/v1/incidents/summary` | Lightweight paginated incident metadata |
 | GET | `/api/v1/incidents/stats` | Counts by severity and analyst-review status |
 | GET | `/api/v1/incidents/{id}` | Incident detail and evidence |
 | POST | `/api/v1/incidents/{id}/review` | Append analyst review history |
