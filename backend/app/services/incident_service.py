@@ -1,5 +1,7 @@
 """Incident query service."""
 
+from __future__ import annotations
+
 from sqlalchemy.orm import Session
 from app.core.exceptions import IncidentNotFoundError
 from app.models.incident import Incident
@@ -18,6 +20,9 @@ class IncidentService:
 
     def list(self, **filters) -> tuple[int, list[Incident]]:
         return self.repository.list(**filters)
+
+    def list_summaries(self, **filters) -> tuple[int, list[dict]]:
+        return self.repository.list_summaries(**filters)
 
     def stats(self) -> dict:
         raw = self.repository.stats()

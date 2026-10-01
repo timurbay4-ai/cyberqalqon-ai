@@ -13,8 +13,9 @@ import { JsonViewer } from '@/components/JsonViewer';
 import { LoadingState } from '@/components/LoadingState';
 import { ErrorState } from '@/components/ErrorState';
 import { EmptyState } from '@/components/EmptyState';
-import type { IncidentListParams, Severity } from '@/types';
+import type { IncidentListParams, IncidentResponse, Severity } from '@/types';
 import { formatDateTime } from '@/utils';
+import { api } from '@/api/client';
 
 const PAGE_SIZE = 20;
 
@@ -22,6 +23,9 @@ export function AlertExplorerPage() {
   const [page, setPage] = useState(0);
   const [severityFilter, setSeverityFilter] = useState<Severity | ''>('');
   const [expandedId, setExpandedId] = useState<string | null>(null);
+  const [detailCache, setDetailCache] = useState<Record<string, IncidentResponse>>({});
+  const [detailLoading, setDetailLoading] = useState<Record<string, boolean>>({});
+  const [detailErrors, setDetailErrors] = useState<Record<string, string>>({});
 
   const params: IncidentListParams = {
     limit: PAGE_SIZE,
@@ -35,6 +39,36 @@ export function AlertExplorerPage() {
     state.status === 'success'
       ? Math.ceil(state.data.total / PAGE_SIZE)
       : 0;
+
+  const loadDetail = async (incidentId: string) => {
+    if (detailCache[incidentId] || detailLoading[incidentId]) return;
+    setDetailLoading((current) => ({ ...current, [incidentId]: true }));
+    setDetailErrors((current) => {
+      const next = { ...current };
+      delete next[incidentId];
+      return next;
+    });
+    try {
+      const detail = await api.getIncident(incidentId);
+      setDetailCache((current) => ({ ...current, [incidentId]: detail }));
+    } catch (error) {
+      setDetailErrors((current) => ({
+        ...current,
+        [incidentId]: error instanceof Error ? error.message : 'Unable to load original evidence.',
+      }));
+    } finally {
+      setDetailLoading((current) => ({ ...current, [incidentId]: false }));
+    }
+  };
+
+  const toggleIncident = (incidentId: string) => {
+    if (expandedId === incidentId) {
+      setExpandedId(null);
+      return;
+    }
+    setExpandedId(incidentId);
+    void loadDetail(incidentId);
+  };
 
   return (
     <>
@@ -111,12 +145,9 @@ export function AlertExplorerPage() {
                       background: expandedId === incident.id ? 'var(--bg-hover)' : 'transparent',
                       transition: 'background 0.1s',
                     }}
-                    onClick={() =>
-                      setExpandedId((prev) => (prev === incident.id ? null : incident.id))
-                    }
+                    onClick={() => toggleIncident(incident.id)}
                     onKeyDown={(e) => {
-                      if (e.key === 'Enter' || e.key === ' ')
-                        setExpandedId((prev) => (prev === incident.id ? null : incident.id));
+                      if (e.key === 'Enter' || e.key === ' ') toggleIncident(incident.id);
                     }}
                     role="button"
                     tabIndex={0}
@@ -167,11 +198,20 @@ export function AlertExplorerPage() {
                       role="region"
                       aria-label="Raw event JSON"
                     >
-                      <JsonViewer
-                        data={incident.raw_event}
-                        label="Raw Wazuh Event"
-                        initiallyExpanded
-                      />
+                      {detailLoading[incident.id] && <LoadingState message="Loading original evidence…" />}
+                      {detailErrors[incident.id] && (
+                        <ErrorState
+                          message={detailErrors[incident.id]}
+                          onRetry={() => void loadDetail(incident.id)}
+                        />
+                      )}
+                      {detailCache[incident.id] && (
+                        <JsonViewer
+                          data={detailCache[incident.id].raw_event}
+                          label="Raw Wazuh Event"
+                          initiallyExpanded
+                        />
+                      )}
                     </div>
                   )}
                 </div>

@@ -2,7 +2,7 @@
  * Dashboard — Security monitoring overview.
  *
  * Statistics are fetched from GET /api/v1/incidents/stats (accurate DB counts).
- * Recent incidents are fetched from GET /api/v1/incidents?limit=5.
+ * Recent incidents are fetched from GET /api/v1/incidents/summary?limit=5.
  *
  * When backend is offline:
  * - Demo fixture data is shown with a clear "SAMPLE DATA" banner.

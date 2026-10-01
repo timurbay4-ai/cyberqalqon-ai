@@ -7,12 +7,12 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import { api, ApiRequestError, NetworkError } from '@/api/client';
-import type { IncidentListResponse, IncidentListParams } from '@/types';
+import type { IncidentSummaryListResponse, IncidentListParams } from '@/types';
 
 export type FetchState =
   | { status: 'idle' }
   | { status: 'loading' }
-  | { status: 'success'; data: IncidentListResponse }
+  | { status: 'success'; data: IncidentSummaryListResponse }
   | { status: 'error'; message: string; isNetwork: boolean };
 
 export function useIncidents(params: IncidentListParams = {}) {
@@ -22,7 +22,7 @@ export function useIncidents(params: IncidentListParams = {}) {
     setState({ status: 'loading' });
 
     api
-      .listIncidents(params)
+      .listIncidentSummaries(params)
       .then((data) => setState({ status: 'success', data }))
       .catch((err: unknown) => {
         if (err instanceof NetworkError) {
