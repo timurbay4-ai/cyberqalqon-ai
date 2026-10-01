@@ -1,0 +1,32 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://cyberqalqon.ai/schemas/incident_analysis.schema.json",
+  "title": "IncidentAnalysisResponse",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["incident_id", "analysis_status", "provider", "model", "result", "failure_category", "failure_message", "analysis_version", "input_truncated", "analysis_timestamp"],
+  "properties": {
+    "incident_id": {"type": "string"},
+    "analysis_status": {"enum": ["not_configured", "pending", "processing", "completed", "failed"]},
+    "provider": {"type": "string"},
+    "model": {"type": ["string", "null"]},
+    "failure_category": {"type": ["string", "null"]},
+    "failure_message": {"type": ["string", "null"]},
+    "analysis_version": {"type": "string"},
+    "input_truncated": {"type": "boolean"},
+    "analysis_timestamp": {"type": ["string", "null"], "format": "date-time"},
+    "result": {
+      "type": ["object", "null"],
+      "additionalProperties": false,
+      "required": ["summary", "observed_facts", "severity_explanation", "potential_mitre_techniques", "investigation_steps", "uncertainties"],
+      "properties": {
+        "summary": {"type": "string"},
+        "observed_facts": {"type": "array", "items": {"type": "string"}},
+        "severity_explanation": {"type": "string"},
+        "potential_mitre_techniques": {"type": "array", "items": {"type": "object", "additionalProperties": false, "required": ["technique_id", "reasoning", "source"], "properties": {"technique_id": {"type": "string", "pattern": "^T\\d{4}(?:\\.\\d{3})?$"}, "reasoning": {"type": "string"}, "source": {"enum": ["source_event", "ai_suggestion"]}}}},
+        "investigation_steps": {"type": "array", "items": {"type": "string"}},
+        "uncertainties": {"type": "array", "items": {"type": "string"}}
+      }
+    }
+  }
+}

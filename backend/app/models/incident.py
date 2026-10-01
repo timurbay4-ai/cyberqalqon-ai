@@ -47,3 +47,4 @@ class Incident(Base):
     ai_status: Mapped[str] = mapped_column(String(32), default="not_configured", nullable=False)
     review_status: Mapped[str] = mapped_column(String(32), default="needs_review", nullable=False)
     reviews = relationship("Review", back_populates="incident", cascade="all, delete-orphan", order_by="Review.created_at")
+    analysis = relationship("IncidentAnalysis", back_populates="incident", cascade="all, delete-orphan", uselist=False)

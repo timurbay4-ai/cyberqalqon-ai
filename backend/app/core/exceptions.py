@@ -30,3 +30,13 @@ class AuthenticationError(AppError):
             401,
             {"WWW-Authenticate": "Bearer"},
         )
+
+
+class AIUnavailableError(AppError):
+    def __init__(self, message: str = "AI provider is not configured") -> None:
+        super().__init__("AI_NOT_CONFIGURED", message, 503)
+
+
+class AIRequestConflictError(AppError):
+    def __init__(self, message: str) -> None:
+        super().__init__("AI_ANALYSIS_CONFLICT", message, 409)

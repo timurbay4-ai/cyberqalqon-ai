@@ -2,7 +2,7 @@
 
 from sqlalchemy.engine import Engine
 from app.db.base import Base
-from app.models import incident, review  # noqa: F401
+from app.models import analysis, incident, review  # noqa: F401
 
 
 def init_db(engine: Engine) -> None:

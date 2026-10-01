@@ -9,7 +9,7 @@ from app.detection.normalizer import normalize_wazuh_alert
 from app.detection.priority_engine import calculate_priority, severity_for_level
 from app.models.incident import Incident
 from app.repositories.incidents import IncidentRepository
-from app.services.ai_service import NoOpAIAnalyzer
+from app.core.config import get_settings
 
 
 def _dedupe_key(normalized_payload: dict) -> str:
@@ -61,7 +61,7 @@ class IngestService:
             raw_event=normalized.raw_event,
             severity=severity_for_level(normalized.rule.level),
             priority_score=calculate_priority(normalized.rule.level),
-            ai_status=NoOpAIAnalyzer().status,
+            ai_status="not_configured" if get_settings().ai_provider == "noop" else "pending",
         )
         try:
             return self.repository.add(incident), True
