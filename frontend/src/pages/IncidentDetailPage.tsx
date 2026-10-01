@@ -23,6 +23,7 @@ import { JsonViewer } from '@/components/JsonViewer';
 import { PriorityBar } from '@/components/PriorityBar';
 import { LoadingState } from '@/components/LoadingState';
 import { ErrorState } from '@/components/ErrorState';
+import { AIAnalysisPanel } from '@/components/AIAnalysisPanel';
 import { api } from '@/api/client';
 import type { ReviewCreate, ReviewStatus } from '@/types';
 import { formatDateTime, formatRelativeTime, aiStatusLabel } from '@/utils';
@@ -460,52 +461,12 @@ export function IncidentDetailPage() {
             <section className="card">
               <div className="card-header">
                 <span className="card-title">AI Analysis</span>
-                <span
-                  className="text-xs"
-                  style={{ color: 'var(--ai-unavail-text)' }}
-                  aria-label={`AI status: ${aiStatusLabel(incident.ai_status)}`}
-                >
+                <span className="text-xs" style={{ color: 'var(--ai-unavail-text)' }} aria-label={`AI status: ${aiStatusLabel(incident.ai_status)}`}>
                   Status: {aiStatusLabel(incident.ai_status)}
                 </span>
               </div>
               <div className="card-body">
-                {incident.ai_status === 'not_configured' && (
-                  <div className="info-message">
-                    <span aria-hidden="true">ℹ️</span>
-                    <div>
-                      <strong>AI Analysis Not Configured</strong>
-                      <p style={{ marginTop: 8 }}>
-                        The AI engine is not yet integrated (Phase 3). When available, this section will display:
-                      </p>
-                      <ul style={{ marginTop: 8, paddingLeft: 20 }}>
-                        <li>Security summary (Uzbek / Russian / English)</li>
-                        <li>Why this event matters</li>
-                        <li>Recommended investigation steps</li>
-                        <li>Analysis uncertainty / limitations</li>
-                      </ul>
-                      <p style={{ marginTop: 8 }}>
-                        This section will only show AI-generated content when a live AI provider is configured and returns a valid analysis.
-                        No fabricated content will be shown.
-                      </p>
-                    </div>
-                  </div>
-                )}
-                {incident.ai_status === 'unavailable' && (
-                  <div className="warning-message">
-                    ⚠️ AI provider is configured but currently unavailable. Analysis could not be produced.
-                  </div>
-                )}
-                {incident.ai_status === 'failed' && (
-                  <div className="error-message">
-                    ⚠️ AI analysis failed for this incident. Refer to backend logs for details.
-                  </div>
-                )}
-                {incident.ai_status === 'pending' && (
-                  <div className="info-message">
-                    <div className="spinner" style={{ marginRight: 8 }} aria-hidden="true" />
-                    AI analysis is being generated. Refresh to check for results.
-                  </div>
-                )}
+                <AIAnalysisPanel incidentId={incident.id} />
               </div>
             </section>
           </div>

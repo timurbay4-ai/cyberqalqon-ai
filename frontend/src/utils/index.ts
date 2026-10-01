@@ -100,6 +100,8 @@ export function aiStatusLabel(status: AIStatus | string): string {
   const labels: Record<string, string> = {
     not_configured: 'Not configured',
     pending: 'Pending',
+    processing: 'Processing',
+    completed: 'Completed',
     success: 'Available',
     partial: 'Partial',
     failed: 'Failed',

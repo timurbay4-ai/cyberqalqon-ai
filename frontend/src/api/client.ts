@@ -18,6 +18,7 @@ import type {
   IncidentResponse,
   IncidentStatsResponse,
   ReviewCreate,
+  AIAnalysisResponse,
 } from '@/types';
 
 // ---------------------------------------------------------------------------
@@ -160,6 +161,14 @@ export const api = {
         body: JSON.stringify(review),
       },
     );
+  },
+
+  getAnalysis(incidentId: string): Promise<AIAnalysisResponse> {
+    return apiFetch<AIAnalysisResponse>(`/api/v1/incidents/${encodeURIComponent(incidentId)}/analysis`);
+  },
+
+  runAnalysis(incidentId: string, retry = false): Promise<AIAnalysisResponse> {
+    return apiFetch<AIAnalysisResponse>(`/api/v1/incidents/${encodeURIComponent(incidentId)}/analysis${retry ? '?retry=true' : ''}`, { method: 'POST' });
   },
 
   /**

@@ -44,10 +44,35 @@ export type Severity = 'low' | 'medium' | 'high' | 'critical';
 export type AIStatus =
   | 'not_configured'
   | 'pending'
+  | 'processing'
+  | 'completed'
+  | 'failed'
   | 'success'
   | 'partial'
-  | 'failed'
-  | 'unavailable';
+  | 'unavailable'
+;
+
+export interface AIAnalysisResult {
+  summary: string;
+  observed_facts: string[];
+  severity_explanation: string;
+  potential_mitre_techniques: { technique_id: string; reasoning: string; source: 'source_event' | 'ai_suggestion' }[];
+  investigation_steps: string[];
+  uncertainties: string[];
+}
+
+export interface AIAnalysisResponse {
+  incident_id: string;
+  analysis_status: AIStatus;
+  provider: string;
+  model: string | null;
+  result: AIAnalysisResult | null;
+  failure_category: string | null;
+  failure_message: string | null;
+  analysis_version: string;
+  input_truncated: boolean;
+  analysis_timestamp: string | null;
+}
 
 export interface IncidentResponse {
   id: string;
