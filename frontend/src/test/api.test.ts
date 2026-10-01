@@ -81,6 +81,23 @@ describe('api.listIncidents', () => {
   });
 });
 
+describe('api.listIncidentSummaries', () => {
+  beforeEach(() => mockFetch.mockClear());
+
+  it('uses the static summary route and preserves filters', async () => {
+    mockFetch.mockReturnValueOnce(
+      mockResponse(200, { total: 0, limit: 20, offset: 20, items: [] })
+    );
+    await api.listIncidentSummaries({ limit: 20, offset: 20, severity: 'critical', mitre_id: 'T1110' });
+    const calledUrl = mockFetch.mock.calls[0][0] as string;
+    expect(calledUrl).toContain('/api/v1/incidents/summary?');
+    expect(calledUrl).toContain('limit=20');
+    expect(calledUrl).toContain('offset=20');
+    expect(calledUrl).toContain('severity=critical');
+    expect(calledUrl).toContain('mitre_id=T1110');
+  });
+});
+
 describe('api.getIncident', () => {
   beforeEach(() => mockFetch.mockClear());
 

@@ -17,6 +17,7 @@ import type {
   IncidentListResponse,
   IncidentResponse,
   IncidentStatsResponse,
+  IncidentSummaryListResponse,
   ReviewCreate,
   AIAnalysisResponse,
 } from '@/types';
@@ -141,6 +142,22 @@ export const api = {
     const qs = query.toString();
     return apiFetch<IncidentListResponse>(
       `/api/v1/incidents${qs ? `?${qs}` : ''}`,
+    );
+  },
+
+  /**
+   * GET /api/v1/incidents/summary — list metadata without raw evidence.
+   */
+  listIncidentSummaries(params: IncidentListParams = {}): Promise<IncidentSummaryListResponse> {
+    const query = new URLSearchParams();
+    if (params.limit != null) query.set('limit', String(params.limit));
+    if (params.offset != null) query.set('offset', String(params.offset));
+    if (params.severity) query.set('severity', params.severity);
+    if (params.agent) query.set('agent', params.agent);
+    if (params.mitre_id) query.set('mitre_id', params.mitre_id);
+    const qs = query.toString();
+    return apiFetch<IncidentSummaryListResponse>(
+      `/api/v1/incidents/summary${qs ? `?${qs}` : ''}`,
     );
   },
 

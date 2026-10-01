@@ -115,6 +115,31 @@ export interface IncidentListResponse {
   items: IncidentResponse[];
 }
 
+export interface IncidentSummaryResponse {
+  id: string;
+  alert_id: string | null;
+  event_timestamp: string | null;
+  created_at: string;
+  agent_name: string | null;
+  agent_ip: string | null;
+  rule_id: string | null;
+  rule_level: number | null;
+  rule_description: string | null;
+  mitre_ids: string[];
+  source_ip: string | null;
+  severity: Severity;
+  priority_score: number;
+  ai_status: AIStatus;
+  review_status: ReviewStatus;
+}
+
+export interface IncidentSummaryListResponse {
+  total: number;
+  limit: number;
+  offset: number;
+  items: IncidentSummaryResponse[];
+}
+
 // ---------------------------------------------------------------------------
 // Statistics — GET /api/v1/incidents/stats
 // ---------------------------------------------------------------------------

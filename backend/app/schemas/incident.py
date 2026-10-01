@@ -1,7 +1,7 @@
 """Incident API response schemas."""
 
 from datetime import datetime
-from typing import Any
+from typing import Any, Literal
 from pydantic import BaseModel, ConfigDict
 from app.schemas.review import ReviewResponse
 
@@ -46,6 +46,31 @@ class IncidentListResponse(BaseModel):
     limit: int
     offset: int
     items: list[IncidentResponse]
+
+
+class IncidentSummaryResponse(BaseModel):
+    id: str
+    alert_id: str | None
+    event_timestamp: datetime | None
+    created_at: datetime
+    agent_name: str | None
+    agent_ip: str | None
+    rule_id: str | None
+    rule_level: int | None
+    rule_description: str | None
+    mitre_ids: list[str]
+    source_ip: str | None
+    severity: Literal["low", "medium", "high", "critical"]
+    priority_score: int
+    ai_status: str
+    review_status: str
+
+
+class IncidentSummaryListResponse(BaseModel):
+    total: int
+    limit: int
+    offset: int
+    items: list[IncidentSummaryResponse]
 
 
 class SeverityCounts(BaseModel):

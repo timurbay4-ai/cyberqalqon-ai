@@ -5,7 +5,13 @@ from fastapi import APIRouter, Depends, Query
 from sqlalchemy.orm import Session
 from app.db.session import get_db
 from app.core.security import require_api_auth
-from app.schemas.incident import IncidentListResponse, IncidentResponse, IncidentStatsResponse
+from app.schemas.incident import (
+    IncidentListResponse,
+    IncidentResponse,
+    IncidentStatsResponse,
+    IncidentSummaryListResponse,
+    IncidentSummaryResponse,
+)
 from app.services.incident_service import IncidentService
 
 router = APIRouter(
@@ -26,6 +32,31 @@ def list_incidents(
 ) -> IncidentListResponse:
     total, incidents = IncidentService(session).list(limit=limit, offset=offset, severity=severity, agent=agent, mitre_id=mitre_id)
     return IncidentListResponse(total=total, limit=limit, offset=offset, items=[IncidentResponse.model_validate(item) for item in incidents])
+
+
+@router.get("/summary", response_model=IncidentSummaryListResponse)
+def list_incident_summaries(
+    limit: int = Query(50, ge=1, le=200),
+    offset: int = Query(0, ge=0),
+    severity: Literal["low", "medium", "high", "critical"] | None = None,
+    agent: str | None = Query(default=None, min_length=1, max_length=256),
+    mitre_id: str | None = Query(default=None, min_length=1, max_length=128),
+    session: Session = Depends(get_db),
+) -> IncidentSummaryListResponse:
+    """Return list metadata without loading original evidence or review history."""
+    total, incidents = IncidentService(session).list_summaries(
+        limit=limit,
+        offset=offset,
+        severity=severity,
+        agent=agent,
+        mitre_id=mitre_id,
+    )
+    return IncidentSummaryListResponse(
+        total=total,
+        limit=limit,
+        offset=offset,
+        items=[IncidentSummaryResponse.model_validate(item) for item in incidents],
+    )
 
 
 @router.get("/stats", response_model=IncidentStatsResponse)
