@@ -97,6 +97,57 @@ Response:
 
 Items are ordered by descending priority, then newest creation time.
 
+This legacy endpoint remains compatible with existing clients and returns full
+incident objects, including evidence and review history. New list views should
+use the lightweight summary endpoint below.
+
+## `GET /api/v1/incidents/summary`
+
+Returns paginated incident-list metadata without loading or serializing raw
+security evidence. It uses the same authentication, query parameters, filters,
+ordering, `total`, `limit`, and `offset` semantics as the legacy list endpoint.
+
+Query parameters:
+
+- `limit`: 1–200, default 50
+- `offset`: non-negative, default 0
+- `severity`: `low`, `medium`, `high`, or `critical`
+- `agent`: exact agent-name match
+- `mitre_id`: exact MITRE ID membership
+
+Example response:
+
+```json
+{
+  "total": 1,
+  "limit": 50,
+  "offset": 0,
+  "items": [{
+    "id": "450c94e4-3894-48d7-9af5-fc15b69263c3",
+    "alert_id": "wazuh-example-001",
+    "event_timestamp": "2026-09-30T16:00:00Z",
+    "created_at": "2026-09-30T16:00:01Z",
+    "agent_name": "LAB-WIN-01",
+    "agent_ip": "192.0.2.10",
+    "rule_id": "5710",
+    "rule_level": 8,
+    "rule_description": "Synthetic authentication failure",
+    "mitre_ids": ["T1110"],
+    "source_ip": "198.51.100.20",
+    "severity": "high",
+    "priority_score": 40,
+    "ai_status": "not_configured",
+    "review_status": "needs_review"
+  }]
+}
+```
+
+The SQL projection deliberately excludes `raw_event`, `full_log`, `decoder`,
+`rule_metadata`, and incident review rows. Use
+`GET /api/v1/incidents/{incident_id}` when complete authorized detail is needed.
+The static `/summary` route is registered before the dynamic `/{incident_id}`
+route.
+
 ## `GET /api/v1/incidents/stats`
 
 Returns counts derived from current database rows. It does not fabricate or estimate metrics.
