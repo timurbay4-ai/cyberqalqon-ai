@@ -6,13 +6,16 @@ from dataclasses import asdict, dataclass
 from pathlib import Path
 from typing import Any
 
-from sqlalchemy import JSON, DateTime, Integer, String, Text, create_engine, inspect
+from sqlalchemy import JSON, DateTime, Integer, String, Text, create_engine, inspect, text
 from sqlalchemy.engine import Engine
 from sqlalchemy.sql.schema import UniqueConstraint
 from sqlalchemy.types import TypeDecorator
 
 from app.db.base import Base
 from app.models import incident, review  # noqa: F401
+
+
+BASELINE_REVISION = "20261001_0001"
 
 
 @dataclass(frozen=True)
@@ -127,6 +130,38 @@ def verify_database_schema(
     for table_name in sorted(actual_tables - allowed_tables):
         code = "unexpected_ai_table" if table_name == "incident_analyses" else "unexpected_table"
         issues.append(SchemaIssue(code, table_name, "Unexpected table blocks baseline adoption"))
+
+    if allow_alembic_version and "alembic_version" in actual_tables:
+        version_columns = inspector.get_columns("alembic_version")
+        version_schema = [
+            (
+                column["name"],
+                _type_signature(column["type"]),
+                bool(column["nullable"]),
+                bool(column.get("primary_key")),
+            )
+            for column in version_columns
+        ]
+        expected_version_schema = [("version_num", ("string", 32), False, True)]
+        if version_schema != expected_version_schema:
+            issues.append(
+                SchemaIssue(
+                    "alembic_version_schema_mismatch",
+                    "alembic_version",
+                    f"Expected {expected_version_schema}; found {version_schema}",
+                )
+            )
+        else:
+            with engine.connect() as connection:
+                revisions = list(connection.scalars(text("SELECT version_num FROM alembic_version")))
+            if revisions != [BASELINE_REVISION]:
+                issues.append(
+                    SchemaIssue(
+                        "alembic_revision_mismatch",
+                        "alembic_version.version_num",
+                        f"Expected [{BASELINE_REVISION!r}]; found {revisions!r}",
+                    )
+                )
 
     for table_name in sorted(expected_tables & actual_tables):
         expected_table = Base.metadata.tables[table_name]

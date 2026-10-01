@@ -136,7 +136,9 @@ orqali quyidagilarni canonical model metadata bilan aniq solishtiradi:
 
 Verifier mismatch uchun structured diagnostic va non-zero exit code qaytaradi.
 `incident_analyses` alohida `unexpected_ai_table` diagnostikasi bilan rad
-etiladi. Tool hech qachon avtomatik stamp qilmaydi.
+etiladi. Boshqarilayotgan nusxada `alembic_version` jadvalining aniq tuzilishi
+va yagona `20261001_0001` revision qiymati ham tekshiriladi. Tool hech qachon
+avtomatik stamp qilmaydi.
 
 Faqat schema aynan mos, verified backup mavjud, writerlar to'xtatilgan va
 alohida approval berilgan bo'lsa, boshlang'ich revisionga
@@ -197,8 +199,8 @@ adoption hamda Wazuh/summary/review application workflow'larini qamrab oladi.
 
 2026-10-01 yakuniy natijalari:
 
-- migration/database safety targeted testlari: 8 passed;
-- to'liq backend regressiya: 74 passed;
+- migration/database safety targeted testlari: 9 passed;
+- to'liq backend regressiya: 75 passed;
 - frontend regressiya: 72 passed;
 - frontend production build: passed;
 - frontend lint: 0 error, 7 ta avvaldan mavjud warning;

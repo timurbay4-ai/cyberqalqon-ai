@@ -88,6 +88,28 @@ def test_schema_verifier_rejects_unexpected_ai_table(tmp_path):
     assert any(issue.code == "unexpected_ai_table" for issue in report.issues)
 
 
+def test_schema_verifier_rejects_unexpected_alembic_revision(tmp_path):
+    database = tmp_path / "wrong-revision.db"
+    create_model_database(database)
+    engine = create_engine(f"sqlite:///{database.as_posix()}")
+    try:
+        with engine.begin() as connection:
+            connection.execute(
+                text("CREATE TABLE alembic_version (version_num VARCHAR(32) NOT NULL PRIMARY KEY)")
+            )
+            connection.execute(text("INSERT INTO alembic_version VALUES ('unexpected_revision')"))
+    finally:
+        engine.dispose()
+
+    read_only_engine = create_read_only_sqlite_engine(database)
+    try:
+        report = verify_database_schema(read_only_engine, allow_alembic_version=True)
+    finally:
+        read_only_engine.dispose()
+    assert not report.valid
+    assert any(issue.code == "alembic_revision_mismatch" for issue in report.issues)
+
+
 def test_backup_and_restore_preserve_schema_and_data_without_overwrite(tmp_path):
     source = tmp_path / "source.db"
     backup = tmp_path / "backup.db"
