@@ -1,18 +1,7 @@
-﻿# ============================================================
-# CyberQalqon AI — Backend Dependencies (Phase 1)
-# ============================================================
-# Phase 1: Minimal dependencies for the health-check placeholder only.
-# Future phases will expand this list.
-
-# --- Web Framework ---
-fastapi==0.115.12
-
-# --- ASGI Server ---
-uvicorn[standard]==0.34.3
-
-# --- Future (not yet installed — placeholders for Phase 2+) ---
-# sqlalchemy==2.x          # ORM (Phase 2)
-# alembic==1.x             # Database migrations (Phase 2)
-# psycopg2-binary==2.x     # PostgreSQL driver (Phase 2)
-# pydantic-settings==2.x   # Settings management (Phase 2)
-# httpx==0.x               # HTTP client for Wazuh API (Phase 3)
+fastapi==0.141.1
+starlette==1.7.0
+pydantic==2.13.5
+uvicorn[standard]==0.54.0
+sqlalchemy==2.0.54
+pytest==8.4.2
+httpx==0.28.1

@@ -1,0 +1,7 @@
+{
+  "timestamp": "2026-09-30T22:00:00+05:00",
+  "id": "synthetic-fim-001",
+  "agent": {"id": "002", "name": "LAB-LINUX-01"},
+  "rule": {"id": "550", "level": 7, "description": "Synthetic file integrity change", "mitre": {"id": ["T1070.006", "T1565.001"]}},
+  "location": "synthetic-fim.log"
+}

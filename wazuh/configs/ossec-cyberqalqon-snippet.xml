@@ -1,0 +1,70 @@
+﻿<!--
+  CyberQalqon AI -- Wazuh Integrator Configuration Snippet
+  =========================================================
+  PURPOSE:
+    This snippet adds the CyberQalqon custom integration to your Wazuh
+    manager's ossec.conf file. It instructs integratord to call the
+    custom-cyberqalqon script for every alert matching the filter criteria.
+
+  HOW TO USE:
+    1. Copy the <integration> block below into your Wazuh manager's:
+         /var/ossec/etc/ossec.conf
+       inside the existing <ossec_config> root element.
+
+    2. Set the <hook_url> to the actual CyberQalqon backend URL.
+
+    3. Optionally set <api_key> if the backend requires a Bearer token.
+       Leave the element present but empty if no authentication is required.
+
+    4. Copy the integration files to the Wazuh integrations directory:
+         /var/ossec/integrations/custom-cyberqalqon    (shell wrapper)
+         /var/ossec/integrations/cyberqalqon_sender.py (Python sender)
+
+    5. Set correct ownership and permissions:
+         sudo chown root:wazuh /var/ossec/integrations/custom-cyberqalqon
+         sudo chown root:wazuh /var/ossec/integrations/cyberqalqon_sender.py
+         sudo chmod 750 /var/ossec/integrations/custom-cyberqalqon
+         sudo chmod 640 /var/ossec/integrations/cyberqalqon_sender.py
+
+    6. Validate the Wazuh configuration:
+         sudo /var/ossec/bin/wazuh-logtest -t
+
+    7. Restart the Wazuh manager to apply the new integration:
+         sudo systemctl restart wazuh-manager
+
+  FILTER OPTIONS (adjust to your requirements):
+    <level>   Minimum rule level to forward (1-15). Default: 7
+              Set lower to forward more alerts, higher to reduce volume.
+    <group>   Optionally restrict to a Wazuh rule group.
+              Remove this element to forward all alerts above <level>.
+
+  WARNING:
+    Do NOT replace your entire ossec.conf with this file.
+    This is an ADDITIVE snippet only.
+    Always validate before restarting the Wazuh manager.
+-->
+
+<!-- Add the block below inside your existing <ossec_config> element -->
+<integration>
+  <!-- REQUIRED: Must begin with "custom-" -->
+  <name>custom-cyberqalqon</name>
+
+  <!-- REQUIRED: CyberQalqon backend ingest URL -->
+  <!-- Replace with your actual backend address -->
+  <hook_url>http://127.0.0.1:8000/api/v1/ingest/wazuh</hook_url>
+
+  <!-- OPTIONAL: Bearer token for future backend authentication -->
+  <!-- Leave empty if backend does not require authentication yet -->
+  <!-- DO NOT commit real tokens to Git -->
+  <api_key></api_key>
+
+  <!-- Minimum alert level to forward (1-15). Level 7 = medium severity. -->
+  <level>7</level>
+
+  <!-- Optionally restrict to a specific rule group. Remove to forward all. -->
+  <!-- <group>authentication_failures,syscheck</group> -->
+
+  <!-- Must be "json" for the sender to receive the full alert object -->
+  <alert_format>json</alert_format>
+</integration>
+<!-- End of CyberQalqon integration snippet -->
