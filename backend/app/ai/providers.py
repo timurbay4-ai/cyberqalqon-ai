@@ -26,7 +26,18 @@ class OllamaAIAnalyzer:
         self.model = settings.ai_model; self.base_url = settings.ai_base_url; self.timeout = settings.ai_timeout_seconds; self.temperature = settings.ai_temperature
     def analyze(self, prompt: str) -> AnalysisResult:
         try:
-            response = httpx.post(f"{self.base_url}/api/generate", json={"model": self.model, "prompt": prompt, "stream": False, "format": "json", "options": {"temperature": self.temperature}}, timeout=self.timeout)
+            response = httpx.post(
+                f"{self.base_url}/api/generate",
+                json={
+                    "model": self.model,
+                    "prompt": prompt,
+                    "stream": False,
+                    "format": AnalysisResult.model_json_schema(),
+                    "think": False,
+                    "options": {"temperature": self.temperature, "num_predict": 2048},
+                },
+                timeout=self.timeout,
+            )
             response.raise_for_status(); content = response.json().get("response", "")
             if not isinstance(content, str) or not content.strip(): raise ProviderError("empty_response", "AI provider returned an empty response")
             return AnalysisResult.model_validate(json.loads(content))
