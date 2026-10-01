@@ -6,6 +6,17 @@ Base URL examples use `http://127.0.0.1:8000`. JSON errors have the form:
 {"error":{"code":"INCIDENT_NOT_FOUND","message":"Incident not found"}}
 ```
 
+## Authentication
+
+`GET /health` and `GET /ready` are always public. Authentication for other endpoints is configuration-driven:
+
+- If `WAZUH_INGEST_TOKEN` is non-empty, `POST /api/v1/ingest/wazuh` requires `Authorization: Bearer <token>`.
+- If `API_ACCESS_TOKEN` is non-empty, incident list, statistics, detail, and review endpoints require `Authorization: Bearer <token>`.
+- Empty settings keep local development backward-compatible and unauthenticated.
+- `APP_ENV=production` requires both tokens and fails startup if either is absent.
+
+Missing or invalid configured credentials return `401` with code `UNAUTHORIZED` and `WWW-Authenticate: Bearer`.
+
 ## System endpoints
 
 ### `GET /health`
@@ -66,6 +77,8 @@ Abbreviated response:
 
 The actual response contains all normalized fields, timestamps, complete `raw_event`, preserved `rule_metadata`, and review history.
 
+All returned timestamps are ISO 8601 UTC values such as `2026-09-30T16:00:00Z`. Incoming event timestamps must contain a timezone offset.
+
 ## `GET /api/v1/incidents`
 
 Query parameters:
@@ -83,6 +96,18 @@ Response:
 ```
 
 Items are ordered by descending priority, then newest creation time.
+
+## `GET /api/v1/incidents/stats`
+
+Returns counts derived from current database rows. It does not fabricate or estimate metrics.
+
+```json
+{
+  "total": 3,
+  "severity": {"low": 1, "medium": 0, "high": 1, "critical": 1},
+  "review_status": {"needs_review": 3, "confirmed": 0, "false_positive": 0}
+}
+```
 
 ## `GET /api/v1/incidents/{incident_id}`
 
@@ -112,4 +137,4 @@ The result is clamped to 0–100 and is not a probability or AI confidence. Asse
 
 ## Phase 2 limits
 
-There is no authentication, authorization, schema migration framework, active response, Wazuh installation, or AI analysis in this phase. SQLite schema is created on startup. Production deployments should add access control and managed migrations before exposing the service.
+There is no user/role authorization, schema migration framework, active response, Wazuh installation, or AI analysis in this phase. SQLite schema is created on startup. Optional shared bearer tokens provide integration access control, but production deployments still require identity-aware authorization and managed migrations.
