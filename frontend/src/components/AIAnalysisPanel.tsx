@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { api, ApiRequestError } from '@/api/client';
 import type { AIAnalysisResponse } from '@/types';
 import { MitreTagList } from './MitreTagList';
@@ -7,9 +7,9 @@ export function AIAnalysisPanel({ incidentId }: { incidentId: string }) {
   const [analysis, setAnalysis] = useState<AIAnalysisResponse | null>(null);
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(true);
-  const load = async () => { setLoading(true); setError(''); try { setAnalysis(await api.getAnalysis(incidentId)); } catch (e) { setError(e instanceof Error ? e.message : 'Unable to load AI analysis'); } finally { setLoading(false); } };
+  const load = useCallback(async () => { setLoading(true); setError(''); try { setAnalysis(await api.getAnalysis(incidentId)); } catch (e) { setError(e instanceof Error ? e.message : 'Unable to load AI analysis'); } finally { setLoading(false); } }, [incidentId]);
   const run = async (retry: boolean) => { setLoading(true); setError(''); try { setAnalysis(await api.runAnalysis(incidentId, retry)); } catch (e) { setError(e instanceof ApiRequestError ? e.message : 'Backend or AI provider unavailable'); } finally { setLoading(false); } };
-  useEffect(() => { void load(); }, [incidentId]);
+  useEffect(() => { void load(); }, [load]);
   if (loading) return <div className="info-message" role="status"><span className="spinner" /> Processing AI request…</div>;
   if (error) return <div className="error-message" role="alert">{error} <button className="btn" onClick={() => void load()}>Retry load</button></div>;
   if (!analysis) return null;

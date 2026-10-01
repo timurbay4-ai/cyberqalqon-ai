@@ -26,7 +26,7 @@ import { ErrorState } from '@/components/ErrorState';
 import { AIAnalysisPanel } from '@/components/AIAnalysisPanel';
 import { api } from '@/api/client';
 import type { ReviewCreate, ReviewStatus } from '@/types';
-import { formatDateTime, formatRelativeTime, aiStatusLabel } from '@/utils';
+import { formatDateTime, formatRelativeTime } from '@/utils';
 
 type ActiveTab = 'overview' | 'evidence' | 'mitre' | 'ai' | 'reviews';
 
@@ -461,9 +461,7 @@ export function IncidentDetailPage() {
             <section className="card">
               <div className="card-header">
                 <span className="card-title">AI Analysis</span>
-                <span className="text-xs" style={{ color: 'var(--ai-unavail-text)' }} aria-label={`AI status: ${aiStatusLabel(incident.ai_status)}`}>
-                  Status: {aiStatusLabel(incident.ai_status)}
-                </span>
+                <span className="text-xs text-muted">Advisory output — verify against evidence</span>
               </div>
               <div className="card-body">
                 <AIAnalysisPanel incidentId={incident.id} />

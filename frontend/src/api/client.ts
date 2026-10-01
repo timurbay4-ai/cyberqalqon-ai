@@ -60,11 +60,12 @@ export class NetworkError extends Error {
 async function apiFetch<T>(
   path: string,
   options: RequestInit = {},
+  timeoutMs = DEFAULT_TIMEOUT_MS,
 ): Promise<T> {
   const controller = new AbortController();
   const timeoutId = setTimeout(
     () => controller.abort(),
-    DEFAULT_TIMEOUT_MS,
+    timeoutMs,
   );
 
   let response: Response;
@@ -168,7 +169,11 @@ export const api = {
   },
 
   runAnalysis(incidentId: string, retry = false): Promise<AIAnalysisResponse> {
-    return apiFetch<AIAnalysisResponse>(`/api/v1/incidents/${encodeURIComponent(incidentId)}/analysis${retry ? '?retry=true' : ''}`, { method: 'POST' });
+    return apiFetch<AIAnalysisResponse>(
+      `/api/v1/incidents/${encodeURIComponent(incidentId)}/analysis${retry ? '?retry=true' : ''}`,
+      { method: 'POST' },
+      130_000,
+    );
   },
 
   /**
