@@ -37,6 +37,8 @@ python -m pytest -q
 |---|---|---|
 | `APP_ENV` | `development` | Environment label |
 | `DATABASE_URL` | `sqlite:///./cyberqalqon.db` | SQLAlchemy database URL |
+| `SQLITE_BUSY_TIMEOUT_MS` | `5000` | SQLite write-lock kutish vaqti, millisekundlarda |
+| `SQLITE_FOREIGN_KEYS` | `false` | SQLite FK enforcement approval gate; existing DB uchun auditdan oldin yoqmang |
 | `LOG_LEVEL` | `INFO` | Application log level |
 | `CORS_ORIGINS` | `http://localhost:5173` | Comma-separated allowed browser origins |
 | `MAX_REQUEST_BODY_BYTES` | `1048576` | Maximum HTTP request body size |
@@ -60,6 +62,12 @@ $env:DATABASE_URL = "sqlite:///C:/absolute/path/to/new.db"
 
 For existing SQLite adoption, backup, restore, and approval requirements, see
 `docs/integration/ALEMBIC_IMPLEMENTATION_PLAN_UZ.md`.
+
+Application va online Alembic engine'lari SQLAlchemy bound parametrlarini
+exception matnida yashiradi. `SQLITE_FOREIGN_KEYS` default holatda o'chiq:
+existing DB uchun uni faqat `PRAGMA foreign_key_check` toza natija bergach,
+verified backup va alohida adoption approval mavjud bo'lganda yoqing. Database
+hardening tafsilotlari `docs/database/DATABASE_HARDENING_V1.md`da.
 
 ## API overview
 
