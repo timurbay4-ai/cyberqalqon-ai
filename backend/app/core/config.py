@@ -13,6 +13,13 @@ def _positive_int(name: str, default: int) -> int:
     return value if value > 0 else default
 
 
+def _boolean(name: str, default: bool = False) -> bool:
+    value = os.getenv(name)
+    if value is None:
+        return default
+    return value.strip().lower() in {"1", "true", "yes", "on"}
+
+
 @dataclass(frozen=True)
 class Settings:
     app_env: str
@@ -20,6 +27,8 @@ class Settings:
     log_level: str
     cors_origins: tuple[str, ...]
     max_request_body_bytes: int
+    sqlite_busy_timeout_ms: int
+    sqlite_foreign_keys: bool
     api_access_token: str | None
     wazuh_ingest_token: str | None
 
@@ -38,6 +47,8 @@ def get_settings() -> Settings:
         log_level=os.getenv("LOG_LEVEL", "INFO").upper(),
         cors_origins=origins,
         max_request_body_bytes=_positive_int("MAX_REQUEST_BODY_BYTES", 1_048_576),
+        sqlite_busy_timeout_ms=_positive_int("SQLITE_BUSY_TIMEOUT_MS", 5_000),
+        sqlite_foreign_keys=_boolean("SQLITE_FOREIGN_KEYS"),
         api_access_token=_optional_secret("API_ACCESS_TOKEN"),
         wazuh_ingest_token=_optional_secret("WAZUH_INGEST_TOKEN"),
     )

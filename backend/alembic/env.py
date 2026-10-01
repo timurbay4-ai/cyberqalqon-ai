@@ -51,10 +51,18 @@ def run_migrations_online() -> None:
     database_url = _database_url()
     escaped_url = database_url.replace("%", "%%")
     config.set_main_option("sqlalchemy.url", escaped_url)
+    engine_options = {
+        "poolclass": pool.NullPool,
+        "hide_parameters": True,
+    }
+    if _is_sqlite(database_url):
+        engine_options["connect_args"] = {
+            "timeout": get_settings().sqlite_busy_timeout_ms / 1_000,
+        }
     connectable = engine_from_config(
         config.get_section(config.config_ini_section, {}),
         prefix="sqlalchemy.",
-        poolclass=pool.NullPool,
+        **engine_options,
     )
 
     with connectable.connect() as connection:
