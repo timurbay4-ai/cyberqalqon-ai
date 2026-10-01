@@ -2,9 +2,21 @@
 
 ## 1. Maqsad va qat'iy chegaralar
 
-Ushbu reja `feature/backend-db-v2` branchidagi non-AI baseline uchun yozilgan.
-Branch `279f5e7` commitidan yaratilgan va Milestone 1 o'zgarishlari selektiv
-ko'chirilgan. Reja migratsiyani hozir implement qilmaydi.
+Ushbu hujjat `feature/backend-db-v2` non-AI baseline'idan ajratilgan
+`feature/alembic-foundation-v1` branchi uchun yozilgan. Milestone 2A doirasida
+Alembic foundation, boshlang'ich revision, strict schema verifier va SQLite
+backup/restore yordamchilari implement qilindi. Original user database'lariga
+upgrade, downgrade yoki stamp qo'llanmadi.
+
+Milestone 2A holati:
+
+- Alembic `1.20.0` SQLAlchemy `2.0.54` bilan pin qilindi;
+- boshlang'ich revision: `20261001_0001`;
+- fresh database upgrade va schema equivalence testlangan;
+- downgrade/re-upgrade faqat disposable database'da testlangan;
+- existing schema adoption faqat backupdan tiklangan disposable nusxada
+  verify -> stamp -> no-op upgrade orqali testlangan;
+- startup `create_all` hali saqlangan; managed-migration cutover bajarilmagan.
 
 Alembic faqat quyidagi mavjud non-AI obyektlarni boshqarishi kerak:
 
@@ -83,37 +95,37 @@ Read-only auditda besh fayl tekshirildi. Barchasida `user_version=0`,
 AI jadvali mavjud DB non-AI baseline revisioniga avtomatik stamp qilinmasligi
 kerak. Uning keyingi taqdiri alohida tasdiqlangan qaror talab qiladi.
 
-## 3. Taklif etiladigan Alembic konfiguratsiyasi
+## 3. Implement qilingan Alembic konfiguratsiyasi
 
-Tasdiqdan keyingi implementatsiya quyidagilarni qo'shishi kerak:
+Milestone 2A quyidagilarni qo'shdi:
 
-1. SQLAlchemy 2 bilan mos Alembic versiyasini `backend/requirements.txt`da aniq
-   pin qilish.
+1. `alembic==1.20.0` aniq pin qilindi. Ushbu release Python >=3.10 va
+   SQLAlchemy >=2.0 talab qiladi.
 2. `backend/alembic.ini`, `backend/alembic/env.py`, `script.py.mako` va
-   `backend/alembic/versions/` yaratish.
-3. `env.py`da URL'ni repo ichidagi literal qiymatdan emas, mavjud
-   `get_settings().database_url`dan olish.
-4. Loglarda URL credentiallarini chiqarib yubormaslik.
-5. `target_metadata = Base.metadata` qilish va faqat `incident` hamda `review`
-   modellarini import qilish.
-6. SQLite uchun `render_as_batch=True`; online va offline rejimlarni qo'llash.
-7. `compare_type=True`ni test qilish; SQLite type affinity sabab noto'g'ri
-   autogenerate diff chiqsa, aniq filter bilan cheklash.
-8. Autogenerate natijasini hech qachon ko'rmasdan commit qilmaslik.
+   `backend/alembic/versions/` yaratildi.
+3. CLI database URL'ni mavjud `get_settings().database_url`dan oladi; testlar
+   faqat disposable URL'ni `Config.attributes` orqali inject qiladi.
+4. Repository ichida credential yoki developer-specific absolute path yo'q.
+5. `target_metadata = Base.metadata`; faqat `incident` va `review` modellari
+   import qilinadi.
+6. SQLite online/offline migrationlarda batch mode yoqilgan.
+7. Type comparison yoqilgan, server-default comparison esa Python-side
+   defaultlarni noto'g'ri DB default deb talqin qilmasligi uchun o'chirilgan.
+8. Fresh schema uchun `alembic check` no-op natijasi test bilan tasdiqlangan.
 
 ## 4. Boshlang'ich revision strategiyasi
 
 ### Yangi, bo'sh database
 
-Boshlang'ich revision `incidents`, keyin `reviews` jadvalini hozirgi schema bilan
-yaratadi. Indekslar va FK aniq nomlar bilan yaratiladi. Yangi deployment faqat
-`alembic upgrade head` orqali schema yaratadi.
+`20261001_0001` revision `incidents`, keyin `reviews` jadvalini hozirgi schema
+bilan yaratadi. Indekslar va FK aniq nomlar bilan yaratiladi. Revisionda
+`incident_analyses`, yangi indeks, CHECK constraint yoki boshqa schema
+yaxshilanishi yo'q.
 
 ### Mavjud database'ni qabul qilish
 
-Mavjud DB uchun `stamp`dan oldin majburiy verifier kerak. U SQLAlchemy
-Inspector/SQLite PRAGMA orqali quyidagilarni canonical manifest bilan aniq
-solishtiradi:
+Mavjud DB uchun read-only verifier implement qilindi. U SQLAlchemy Inspector
+orqali quyidagilarni canonical model metadata bilan aniq solishtiradi:
 
 - ruxsat etilgan jadval ro'yxati;
 - har bir ustun nomi, type affinity, nullable va primary-key holati;
@@ -122,10 +134,14 @@ solishtiradi:
 - kutilmagan AI yoki boshqa jadvallar;
 - `alembic_version` mavjudligi va qiymati.
 
-Faqat schema aynan mos, backup tasdiqlangan va yozuvchilar to'xtatilgan bo'lsa,
-boshlang'ich revisionga `alembic stamp <baseline_revision>` qo'llash mumkin.
-Verifier xato yoki drift topsa, jarayon darhol to'xtaydi; jadval yaratish,
-o'chirish yoki stamp qilish avtomatik davom etmaydi.
+Verifier mismatch uchun structured diagnostic va non-zero exit code qaytaradi.
+`incident_analyses` alohida `unexpected_ai_table` diagnostikasi bilan rad
+etiladi. Tool hech qachon avtomatik stamp qilmaydi.
+
+Faqat schema aynan mos, verified backup mavjud, writerlar to'xtatilgan va
+alohida approval berilgan bo'lsa, boshlang'ich revisionga
+`alembic stamp 20261001_0001` qo'llash mumkin. Milestone 2A'da bu jarayon faqat
+restore qilingan disposable nusxada bajarildi.
 
 `create_all` Alembic qabul qilinishidan oldin olib tashlanmaydi. Avval fresh DB,
 populated baseline DB va restore nusxasida upgrade/stamp yo'li isbotlanadi.
@@ -134,6 +150,12 @@ eng ko'pi DB revision `head`da ekanini tekshiradi va mos bo'lmasa tushunarli
 xato bilan ishga tushishni rad etadi.
 
 ## 5. Backup, rollback va avariya tiklash
+
+`app.db.sqlite_backup` SQLite Online Backup API asosida implement qilindi.
+Source read-only/query-only ochiladi, destination mavjud bo'lsa operatsiya rad
+etiladi. Backup va restore'dan keyin integrity check, schema SHA-256, jadval row
+countlari va jadval content SHA-256 qiymatlari taqqoslanadi. Raw evidence
+logga chiqarilmaydi.
 
 Har bir mavjud SQLite migratsiyasidan oldin:
 
@@ -168,7 +190,63 @@ Implementatsiya quyidagilarni avtomatlashtirishi kerak:
 - backend, Wazuh, authentication va summary SQL projection regressionlari;
 - backup restore va qayta ishga tushirish smoke-testi.
 
-## 7. Keyingi revisionlar va performance
+Milestone 2A automated testlari fresh upgrade, exact schema/index/FK
+equivalence, nullable/index drift rejection, unexpected AI table rejection,
+backup/restore integrity, disposable downgrade/re-upgrade, copied existing DB
+adoption hamda Wazuh/summary/review application workflow'larini qamrab oladi.
+
+2026-10-01 yakuniy natijalari:
+
+- migration/database safety targeted testlari: 8 passed;
+- to'liq backend regressiya: 74 passed;
+- frontend regressiya: 72 passed;
+- frontend production build: passed;
+- frontend lint: 0 error, 7 ta avvaldan mavjud warning;
+- `pip check`: broken dependency topilmadi;
+- real CLI smoke: `upgrade`, `current`, `check`, verify, backup va restore passed.
+
+Kod va dastlabki reja orasida schema discrepancy topilmadi. SQLite reflection
+timezone flag'ini qaytarmasligi oldindan qayd etilgan limitation sifatida
+qoldi; ustun DDL'i `DATETIME`, application semantikasi esa `UTCDateTime` bilan
+saqlanadi.
+
+## 7. Ishga tushirish buyruqlari
+
+Quyidagi buyruqlar `backend` katalogidan bajariladi.
+
+Fresh disposable yoki yangi database:
+
+```powershell
+$env:DATABASE_URL = "sqlite:///C:/absolute/path/to/new.db"
+.venv\Scripts\alembic.exe -c alembic.ini upgrade head
+.venv\Scripts\alembic.exe -c alembic.ini current
+.venv\Scripts\alembic.exe -c alembic.ini check
+```
+
+Existing database'ni faqat read-only tekshirish:
+
+```powershell
+.venv\Scripts\python.exe scripts\verify_database_schema.py C:\path\existing.db
+```
+
+Overwrite qilmaydigan backup va yangi destination'ga restore:
+
+```powershell
+.venv\Scripts\python.exe scripts\sqlite_database_copy.py backup C:\path\existing.db C:\backup\existing.backup.db
+.venv\Scripts\python.exe scripts\sqlite_database_copy.py restore C:\backup\existing.backup.db C:\restore-test\restored.db
+```
+
+Quyidagi stamp buyrug'i original DB uchun hali tasdiqlanmagan. U faqat strict
+verifier, verified backup, writer shutdown va alohida approvaldan keyin
+ishlatilishi mumkin:
+
+```powershell
+$env:DATABASE_URL = "sqlite:///C:/path/to/approved-copy.db"
+.venv\Scripts\alembic.exe -c alembic.ini stamp 20261001_0001
+.venv\Scripts\alembic.exe -c alembic.ini upgrade head
+```
+
+## 8. Keyingi revisionlar va performance
 
 Boshlang'ich revision faqat mavjud schemani aks ettiradi; u bilan birga yangi
 indeks yoki constraint qo'shilmaydi. Summary query uchun ehtimoliy composite
@@ -178,7 +256,16 @@ indekslar (`severity`, `priority_score`, `created_at`) keyingi alohida revisiond
 indeksdan foydalana olmaydi; uni normallashtirish alohida schema dizayni va
 data migration talab qiladi.
 
-## 8. Tasdiq gate'lari
+## 9. Qolgan cheklovlar va tasdiq gate'lari
+
+- Startup hali `create_all` chaqiradi; u mavjud schema'ni alter qilmaydi, ammo
+  revision enforcement ham bajarmaydi.
+- SQLite timezone flag'ini reflected DDL'da saqlamaydi; verifier `DATETIME`
+  affinityni solishtiradi, timezone semantikasi application type/testlari bilan
+  himoyalanadi.
+- SQLite foreign-key enforcement hozir default connectionlarda o'chirilgan.
+- Original user DB adoption, stamp va startup cutover testlangan protsedura
+  bo'lsa ham hali approval olmagan.
 
 Alembic implementatsiyasini boshlashdan oldin quyidagilar tasdiqlanishi kerak:
 
@@ -189,5 +276,8 @@ Alembic implementatsiyasini boshlashdan oldin quyidagilar tasdiqlanishi kerak:
 - backup/restore runbook va qabul qilinadigan downtime;
 - downgrade yoki forward-fix siyosati.
 
-Ushbu gate'lar bo'yicha foydalanuvchi roziligisiz Alembic konfiguratsiyasi,
-revision fayli, stamp yoki database o'zgarishi bajarilmaydi.
+Milestone 2A foundation va revision yaratildi. Quyidagi amallar foydalanuvchi
+roziligisiz bajarilmaydi: original DB backup window'ini boshlash, original DB'ni
+stamp/upgrade qilish, startupdan `create_all`ni olib tashlash, revision
+fail-fast tekshiruvini productionga yoqish yoki foreign-key enforcement xulqini
+o'zgartirish.

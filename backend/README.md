@@ -49,7 +49,17 @@ When either token is configured, clients must send `Authorization: Bearer <token
 
 `APP_ENV=production` fails startup unless both token variables are configured, preventing accidental unauthenticated production startup.
 
-Database tables and indexes are initialized idempotently at application startup with SQLAlchemy `create_all`. There is no migration command in Phase 2; back up persistent databases before upgrading and add a reviewed migration before any future model change that alters the stored schema.
+Database tables and indexes are still initialized idempotently at application startup with SQLAlchemy `create_all` during the migration transition. Alembic `20261001_0001` now represents the exact non-AI baseline, but existing databases must pass strict schema verification and backup checks before any separately approved stamp. The application does not automatically run migrations.
+
+For a new database, run from `backend/`:
+
+```powershell
+$env:DATABASE_URL = "sqlite:///C:/absolute/path/to/new.db"
+.venv\Scripts\alembic.exe -c alembic.ini upgrade head
+```
+
+For existing SQLite adoption, backup, restore, and approval requirements, see
+`docs/integration/ALEMBIC_IMPLEMENTATION_PLAN_UZ.md`.
 
 ## API overview
 
