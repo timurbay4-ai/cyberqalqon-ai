@@ -1,68 +1,32 @@
-﻿# Frontend — CyberQalqon AI
+# React + TypeScript + Vite
 
-**Owner:** Frontend Developer
-**Stack:** To be decided by the Frontend Developer
+This template provides a minimal setup to get React working in Vite with HMR and some Oxlint rules.
 
----
+Currently, two official plugins are available:
 
-## Phase 1 Status
+- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Oxc](https://oxc.rs)
+- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/)
 
-The frontend is **not yet implemented**. This directory skeleton is reserved for the Frontend Developer.
+## React Compiler
 
-The frontend developer may work **independently and simultaneously** with the backend developer because the two teams own separate directories.
+The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
 
----
+## Expanding the Oxlint configuration
 
-## Getting Started (Frontend Developer)
+If you are developing a production application, we recommend enabling type-aware lint rules by installing `oxlint-tsgolint` and editing `.oxlintrc.json`:
 
-1. Choose your framework (React, Vue, Next.js, or plain HTML/CSS/JS)
-2. Initialize the project in `frontend/src/`
-3. Use `shared/examples/` as mock data until the backend API is ready
-
-### Using mock data
-
-```javascript
-// During development, load data from shared examples:
-// shared/examples/incident-list-example.json  — 3 example incidents
-// shared/examples/alert-example.json          — 1 example alert
-
-import incidentsMock from '../../shared/examples/incident-list-example.json';
-import alertMock from '../../shared/examples/alert-example.json';
+```json
+{
+  "$schema": "./node_modules/oxlint/configuration_schema.json",
+  "plugins": ["react", "typescript", "oxc"],
+  "options": {
+    "typeAware": true
+  },
+  "rules": {
+    "react/rules-of-hooks": "error",
+    "react/only-export-components": ["warn", { "allowConstantExport": true }]
+  }
+}
 ```
 
----
-
-## Directory Structure
-
-```
-frontend/
-├── src/
-│   ├── api/         ← HTTP client wrappers for backend API
-│   ├── components/  ← Reusable UI components
-│   ├── pages/       ← Page-level views (Dashboard, Incidents, etc.)
-│   ├── layouts/     ← Layout wrappers (sidebar, header, etc.)
-│   ├── hooks/       ← Custom React hooks (or equivalent)
-│   ├── types/       ← TypeScript type definitions matching shared schemas
-│   └── utils/       ← Helper functions
-└── public/          ← Static assets
-```
-
----
-
-## API Contract Reference
-
-The backend will expose endpoints conforming to `shared/schemas/normalized_alert.schema.json`.
-The frontend should produce TypeScript types that mirror this schema.
-
-When the backend API is ready, update `frontend/src/api/` to call real endpoints.
-
----
-
-## Planned Pages
-
-| Page              | Description                                      |
-|-------------------|--------------------------------------------------|
-| Dashboard         | Overview — open incidents, severity distribution |
-| Incident List     | Filterable, sortable incident table              |
-| Incident Detail   | Full context + AI analysis + recommendations     |
-| Alert Explorer    | Raw alert browser (debug/analyst view)           |
+See the [Oxlint rules documentation](https://oxc.rs/docs/guide/usage/linter/rules) for the full list of rules and categories.
