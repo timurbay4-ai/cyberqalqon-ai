@@ -24,9 +24,14 @@ import sys
 from urllib import request as urllib_request
 from urllib.error import HTTPError, URLError
 
+_INGEST_SUFFIX = "/api/v1/ingest/wazuh"
 _DEFAULT_BASE = os.environ.get("CYBERQALQON_BACKEND_URL", "http://127.0.0.1:8000")
-# Strip the ingest path if full URL was provided
-_BASE = _DEFAULT_BASE.rstrip("/").rstrip("/api/v1/ingest/wazuh")
+# If user sets CYBERQALQON_BACKEND_URL to the full ingest URL, derive the base URL
+_BASE = (
+    _DEFAULT_BASE[: -len(_INGEST_SUFFIX)]
+    if _DEFAULT_BASE.endswith(_INGEST_SUFFIX)
+    else _DEFAULT_BASE.rstrip("/")
+)
 
 
 def parse_args() -> argparse.Namespace:
