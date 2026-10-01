@@ -1,0 +1,7 @@
+{
+  "timestamp": "2026-09-30T23:00:00+05:00",
+  "id": "synthetic-config-001",
+  "agent": {"id": "003", "name": "LAB-ENDPOINT-01"},
+  "rule": {"id": "100100", "level": 3, "description": "Synthetic endpoint security configuration change"},
+  "full_log": "Harmless synthetic configuration event"
+}

@@ -1,0 +1,15 @@
+{
+  "timestamp": "2026-09-30T21:00:00+05:00",
+  "id": "synthetic-auth-001",
+  "agent": {"id": "001", "name": "LAB-WIN-01", "ip": "192.0.2.10"},
+  "rule": {
+    "id": "5710",
+    "level": 8,
+    "description": "Synthetic authentication failure",
+    "mitre": {"id": ["T1110"], "tactic": ["Credential Access"], "technique": ["Brute Force"]}
+  },
+  "data": {"srcip": "198.51.100.20", "srcuser": "test-user"},
+  "location": "synthetic-auth.log",
+  "decoder": {"name": "synthetic"},
+  "full_log": "Harmless synthetic authentication failure fixture"
+}
