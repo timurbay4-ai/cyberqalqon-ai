@@ -11,7 +11,7 @@
  * The production application never silently falls back to these.
  */
 
-import type { IncidentResponse, IncidentListResponse } from '@/types';
+import type { IncidentResponse, IncidentListResponse, IncidentStatsResponse } from '@/types';
 
 export const FIXTURE_INCIDENT_1: IncidentResponse = {
   id: 'demo-inc-001',
@@ -149,4 +149,14 @@ export const FIXTURE_INCIDENT_LIST: IncidentListResponse = {
   limit: 50,
   offset: 0,
   items: [FIXTURE_INCIDENT_2, FIXTURE_INCIDENT_1, FIXTURE_INCIDENT_3],
+};
+
+/**
+ * FIXTURE_STATS — demo statistics matching the fixture incident list.
+ * Used only in demo mode (backend offline). Clearly labeled in the UI.
+ */
+export const FIXTURE_STATS: IncidentStatsResponse = {
+  total: 3,
+  severity: { critical: 1, high: 1, medium: 1, low: 0 },
+  review_status: { needs_review: 1, confirmed: 1, false_positive: 1 },
 };

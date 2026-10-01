@@ -1,56 +1,69 @@
 /**
  * Dashboard — Security monitoring overview.
  *
- * Shows real data from the backend where available.
- * Uses a "DEMO SAMPLE DATA" notice when backend is offline and dev fixtures are shown.
- * Never labels fixture data as live monitoring statistics.
+ * Statistics are fetched from GET /api/v1/incidents/stats (accurate DB counts).
+ * Recent incidents are fetched from GET /api/v1/incidents?limit=5.
+ *
+ * When backend is offline:
+ * - Demo fixture data is shown with a clear "SAMPLE DATA" banner.
+ * - Fixture data is never labelled as live monitoring data.
  */
 
 import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { useHealth } from '@/hooks/useHealth';
 import { useIncidents } from '@/hooks/useIncidents';
+import { useStats } from '@/hooks/useStats';
 import { SeverityBadge } from '@/components/SeverityBadge';
 import { ReviewStatusBadge } from '@/components/ReviewStatusBadge';
 import { LoadingState } from '@/components/LoadingState';
 import { ErrorState } from '@/components/ErrorState';
-import type { IncidentResponse, Severity } from '@/types';
-import { formatRelativeTime, truncate } from '@/utils';
-import { FIXTURE_INCIDENT_LIST } from '@/api/fixtures';
+import type { IncidentStatsResponse } from '@/types';
+import { formatRelativeTime, formatDateTime, truncate } from '@/utils';
+import { FIXTURE_INCIDENT_LIST, FIXTURE_STATS } from '@/api/fixtures';
 
-type SeverityCountMap = Record<Severity, number>;
+/** Fixture stats built from the fixture incident list for demo mode */
 
-function computeSeverityCounts(items: IncidentResponse[]): SeverityCountMap {
-  return items.reduce<SeverityCountMap>(
-    (acc, item) => {
-      acc[item.severity as Severity] = (acc[item.severity as Severity] ?? 0) + 1;
-      return acc;
-    },
-    { critical: 0, high: 0, medium: 0, low: 0 },
-  );
-}
 
 export function DashboardPage() {
   const { health } = useHealth();
-  const { state, refetch } = useIncidents({ limit: 50 });
+  const { state: statsState, refetch: refetchStats } = useStats();
+  const { state: listState, refetch: refetchList } = useIncidents({ limit: 5 });
   const [usingDemo, setUsingDemo] = useState(false);
 
-  // If backend is offline and we have no data, show fixture notice
-  const displayData =
-    state.status === 'success'
-      ? state.data
-      : usingDemo
-      ? FIXTURE_INCIDENT_LIST
-      : null;
+  const isNetworkError =
+    (statsState.status === 'error' && statsState.isNetwork) ||
+    (listState.status === 'error' && listState.isNetwork);
 
   useEffect(() => {
-    if (state.status === 'error' && state.isNetwork) {
+    if (isNetworkError) {
       setUsingDemo(true);
     }
-  }, [state]);
+  }, [isNetworkError]);
 
-  const counts = displayData ? computeSeverityCounts(displayData.items) : null;
-  const recentItems = displayData?.items.slice(0, 5) ?? [];
+  const refetch = () => {
+    setUsingDemo(false);
+    refetchStats();
+    refetchList();
+  };
+
+  // Choose data sources: live backend or clearly-labeled fixtures
+  const stats: IncidentStatsResponse | null =
+    statsState.status === 'success'
+      ? statsState.data
+      : usingDemo
+      ? FIXTURE_STATS
+      : null;
+
+  const recentItems =
+    listState.status === 'success'
+      ? listState.data.items
+      : usingDemo
+      ? FIXTURE_INCIDENT_LIST.items.slice(0, 5)
+      : [];
+
+  const isLoading =
+    (statsState.status === 'loading' || statsState.status === 'idle') && !usingDemo;
 
   return (
     <>
@@ -75,25 +88,26 @@ export function DashboardPage() {
         </div>
       </div>
 
-      {/* Demo data notice */}
-      {usingDemo && state.status === 'error' && (
+      {/* Demo data notice — prominently labeled, never ambiguous */}
+      {usingDemo && (
         <div className="demo-notice" role="alert" aria-live="polite">
-          ⚠️ <strong>SAMPLE DATA SHOWN</strong> — Backend is offline.
-          Data below is for UI demonstration only and does not represent live monitoring.
-          Start the backend: <code>uvicorn app.main:app --port 8000</code>
+          ⚠️ <strong>SAMPLE DATA SHOWN</strong> — Backend is offline or unreachable.
+          Statistics and incidents below are UI demonstration data only and do not
+          represent live monitoring.
+          Start backend: <code>cd backend &amp;&amp; uvicorn app.main:app --port 8000</code>
         </div>
       )}
 
       <div className="page-body">
-        {/* Backend status panel */}
-        <section aria-label="Backend status" className="card mb-6">
+        {/* System status panel */}
+        <section aria-label="System status" className="card mb-6">
           <div className="card-header">
             <span className="card-title">System Status</span>
           </div>
           <div className="card-body">
             <div className="flex flex-wrap gap-6">
               <div className="detail-field">
-                <span className="detail-field-label">Backend</span>
+                <span className="detail-field-label">Backend API</span>
                 <span className="flex items-center gap-2">
                   <span
                     className={`status-dot status-dot-${health.status}`}
@@ -111,15 +125,15 @@ export function DashboardPage() {
                 </span>
               </div>
               <div className="detail-field">
-                <span className="detail-field-label">AI Analysis</span>
+                <span className="detail-field-label">Authentication</span>
                 <span className="detail-field-value text-muted">
-                  Not configured (Phase 2)
+                  Optional token (empty = auth disabled for local dev)
                 </span>
               </div>
               <div className="detail-field">
-                <span className="detail-field-label">Wazuh Integration</span>
+                <span className="detail-field-label">AI Analysis</span>
                 <span className="detail-field-value text-muted">
-                  Not connected (planned Phase 3)
+                  Not configured (Phase 3)
                 </span>
               </div>
               <div className="detail-field">
@@ -127,8 +141,8 @@ export function DashboardPage() {
                 <span className="detail-field-value">
                   {usingDemo
                     ? '⚠️ Demo fixtures (backend offline)'
-                    : state.status === 'success'
-                    ? 'Live backend data'
+                    : statsState.status === 'success'
+                    ? 'Live backend — SQLite'
                     : 'Fetching…'}
                 </span>
               </div>
@@ -137,62 +151,80 @@ export function DashboardPage() {
         </section>
 
         {/* Stats */}
-        <section aria-label="Alert severity statistics">
-          {state.status === 'loading' && !displayData && (
-            <LoadingState message="Loading security statistics…" />
-          )}
+        <section aria-label="Incident statistics">
+          {isLoading && <LoadingState message="Loading security statistics…" />}
 
-          {state.status === 'error' && !usingDemo && (
+          {statsState.status === 'error' && !usingDemo && (
             <ErrorState
-              message={state.message}
-              isNetwork={state.isNetwork}
+              message={statsState.message}
+              isNetwork={statsState.isNetwork}
               onRetry={refetch}
             />
           )}
 
-          {counts && (
+          {stats && (
             <>
               <div className="stat-grid mb-6">
-                <div className="stat-card" aria-label={`Total incidents: ${displayData!.total}`}>
+                <div className="stat-card" aria-label={`Total incidents: ${stats.total}`}>
                   <span className="stat-label">Total Incidents</span>
-                  <span className="stat-value">{displayData!.total}</span>
-                  <span className="stat-description">All recorded</span>
+                  <span className="stat-value">{stats.total}</span>
+                  <span className="stat-description">All stored</span>
                 </div>
-                <div className="stat-card" aria-label={`Critical severity: ${counts.critical}`}>
+                <div
+                  className="stat-card"
+                  aria-label={`Critical severity: ${stats.severity.critical}`}
+                >
                   <span className="stat-label" style={{ color: 'var(--sev-critical-text)' }}>
                     ⛔ Critical
                   </span>
                   <span className="stat-value" style={{ color: 'var(--sev-critical-text)' }}>
-                    {counts.critical}
+                    {stats.severity.critical}
                   </span>
                   <span className="stat-description">Rule level 12–15</span>
                 </div>
-                <div className="stat-card" aria-label={`High severity: ${counts.high}`}>
+                <div
+                  className="stat-card"
+                  aria-label={`High severity: ${stats.severity.high}`}
+                >
                   <span className="stat-label" style={{ color: 'var(--sev-high-text)' }}>
                     🔴 High
                   </span>
                   <span className="stat-value" style={{ color: 'var(--sev-high-text)' }}>
-                    {counts.high}
+                    {stats.severity.high}
                   </span>
                   <span className="stat-description">Rule level 8–11</span>
                 </div>
-                <div className="stat-card" aria-label={`Medium severity: ${counts.medium}`}>
+                <div
+                  className="stat-card"
+                  aria-label={`Medium severity: ${stats.severity.medium}`}
+                >
                   <span className="stat-label" style={{ color: 'var(--sev-medium-text)' }}>
                     🟡 Medium
                   </span>
                   <span className="stat-value" style={{ color: 'var(--sev-medium-text)' }}>
-                    {counts.medium}
+                    {stats.severity.medium}
                   </span>
                   <span className="stat-description">Rule level 4–7</span>
                 </div>
-                <div className="stat-card" aria-label={`Low severity: ${counts.low}`}>
+                <div
+                  className="stat-card"
+                  aria-label={`Low severity: ${stats.severity.low}`}
+                >
                   <span className="stat-label" style={{ color: 'var(--sev-low-text)' }}>
                     🔵 Low
                   </span>
                   <span className="stat-value" style={{ color: 'var(--sev-low-text)' }}>
-                    {counts.low}
+                    {stats.severity.low}
                   </span>
                   <span className="stat-description">Rule level 1–3</span>
+                </div>
+                <div
+                  className="stat-card"
+                  aria-label={`Needs review: ${stats.review_status.needs_review}`}
+                >
+                  <span className="stat-label">◉ Needs Review</span>
+                  <span className="stat-value">{stats.review_status.needs_review}</span>
+                  <span className="stat-description">Awaiting analyst</span>
                 </div>
               </div>
 
@@ -206,36 +238,58 @@ export function DashboardPage() {
                 </div>
                 {recentItems.length === 0 ? (
                   <div className="card-body">
-                    <p className="text-muted text-sm">No incidents recorded yet.</p>
+                    <p className="text-muted text-sm">
+                      No incidents yet. Ingest a Wazuh alert via{' '}
+                      <code>POST /api/v1/ingest/wazuh</code> to populate this list.
+                    </p>
                   </div>
                 ) : (
-                  <div className="table-wrapper" style={{ borderRadius: 0, border: 'none' }}>
-                    <table className="data-table" aria-label="Recent incidents">
+                  <div
+                    className="table-wrapper"
+                    style={{ borderRadius: 0, border: 'none' }}
+                  >
+                    <table
+                      className="data-table"
+                      aria-label="Recent security incidents"
+                    >
                       <thead>
                         <tr>
                           <th scope="col">Severity</th>
                           <th scope="col">Agent</th>
                           <th scope="col">Rule</th>
                           <th scope="col">Status</th>
-                          <th scope="col">Received</th>
-                          <th scope="col"><span className="sr-only">Actions</span></th>
+                          <th scope="col">Event Time</th>
+                          <th scope="col">
+                            <span className="sr-only">Actions</span>
+                          </th>
                         </tr>
                       </thead>
                       <tbody>
                         {recentItems.map((incident) => (
-                          <tr key={incident.id} className="clickable">
-                            <td><SeverityBadge severity={incident.severity} /></td>
+                          <tr key={incident.id}>
+                            <td>
+                              <SeverityBadge severity={incident.severity} />
+                            </td>
                             <td className="table-cell-primary">
                               {incident.agent_name ?? '—'}
                             </td>
                             <td>
                               <span title={incident.rule_description ?? ''}>
-                                {truncate(incident.rule_description, 48)}
+                                {truncate(incident.rule_description, 52)}
                               </span>
+                              {incident.rule_id && (
+                                <div className="text-muted text-xs font-mono">
+                                  Rule #{incident.rule_id}
+                                </div>
+                              )}
                             </td>
-                            <td><ReviewStatusBadge status={incident.review_status} /></td>
+                            <td>
+                              <ReviewStatusBadge status={incident.review_status} />
+                            </td>
                             <td className="text-muted text-xs">
-                              {formatRelativeTime(incident.created_at)}
+                              {formatDateTime(
+                                incident.event_timestamp ?? incident.created_at,
+                              )}
                             </td>
                             <td>
                               <Link

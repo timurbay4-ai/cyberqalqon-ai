@@ -16,6 +16,7 @@ import type {
   IncidentListParams,
   IncidentListResponse,
   IncidentResponse,
+  IncidentStatsResponse,
   ReviewCreate,
 } from '@/types';
 
@@ -159,5 +160,15 @@ export const api = {
         body: JSON.stringify(review),
       },
     );
+  },
+
+  /**
+   * GET /api/v1/incidents/stats — pre-computed severity/review counts
+   *
+   * NOTE: This path must be proxied before the /:id route in the backend router.
+   * The backend places /stats before /{incident_id} so "stats" is not treated as an ID.
+   */
+  getStats(): Promise<IncidentStatsResponse> {
+    return apiFetch<IncidentStatsResponse>('/api/v1/incidents/stats');
   },
 };

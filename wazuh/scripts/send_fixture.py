@@ -55,7 +55,9 @@ def load_fixture(path: str) -> dict:
     if not os.path.isfile(path):
         print(f"[ERROR] File not found: {path!r}", file=sys.stderr)
         sys.exit(1)
-    with open(path, "r", encoding="utf-8") as fh:
+    # utf-8-sig strips the UTF-8 BOM (U+FEFF) if present and is backward-compatible
+    # with plain UTF-8 files.  The committed sample fixtures are BOM-encoded.
+    with open(path, "r", encoding="utf-8-sig") as fh:
         data = json.load(fh)
     if not isinstance(data, dict):
         print(f"[ERROR] Fixture must be a JSON object, got {type(data).__name__}", file=sys.stderr)

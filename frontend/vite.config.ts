@@ -12,11 +12,31 @@ export default defineConfig({
   server: {
     port: 3000,
     proxy: {
-      // Proxy API calls to the FastAPI backend during development
+      // -----------------------------------------------------------------------
+      // Development proxy: routes /api, /health, /ready to FastAPI at port 8000
+      //
+      // AUTHENTICATION ARCHITECTURE:
+      //   - The backend supports optional bearer token auth (API_ACCESS_TOKEN).
+      //   - For LOCAL DEVELOPMENT: leave API_ACCESS_TOKEN empty in backend/.env
+      //     (auth disabled by design when token is unset).
+      //   - For a SECURED local demo: set API_ACCESS_TOKEN in backend/.env AND
+      //     set CYBERQALQON_PROXY_TOKEN in the shell before starting the dev server.
+      //     The proxy then injects the Authorization header server-side so the token
+      //     NEVER appears in the browser bundle, browser network inspector cookies,
+      //     or VITE_* environment variables.
+      //   - This proxy pattern is DEVELOPMENT ONLY. For production, implement proper
+      //     user authentication (OAuth2/OIDC) with server-side session management.
+      //
+      // SECURITY: Never use VITE_API_ACCESS_TOKEN or any VITE_ prefixed variable
+      // to pass the backend token. VITE_ vars are embedded in the browser bundle.
+      // -----------------------------------------------------------------------
       '/api': {
         target: 'http://127.0.0.1:8000',
         changeOrigin: true,
-        rewrite: (path) => path,
+        headers: (() => {
+          const token = process.env['CYBERQALQON_PROXY_TOKEN'] ?? '';
+          return token ? { Authorization: `Bearer ${token}` } : {};
+        })(),
       },
       '/health': {
         target: 'http://127.0.0.1:8000',

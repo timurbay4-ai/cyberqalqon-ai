@@ -91,6 +91,25 @@ export interface IncidentListResponse {
 }
 
 // ---------------------------------------------------------------------------
+// Statistics — GET /api/v1/incidents/stats
+// ---------------------------------------------------------------------------
+
+export interface IncidentStatsResponse {
+  total: number;
+  severity: {
+    low: number;
+    medium: number;
+    high: number;
+    critical: number;
+  };
+  review_status: {
+    needs_review: number;
+    confirmed: number;
+    false_positive: number;
+  };
+}
+
+// ---------------------------------------------------------------------------
 // Query params for GET /api/v1/incidents
 // ---------------------------------------------------------------------------
 
