@@ -40,8 +40,16 @@ python -m pytest -q
 | `LOG_LEVEL` | `INFO` | Application log level |
 | `CORS_ORIGINS` | `http://localhost:5173` | Comma-separated allowed browser origins |
 | `MAX_REQUEST_BODY_BYTES` | `1048576` | Maximum HTTP request body size |
+| `API_ACCESS_TOKEN` | empty | Optional bearer token protecting incident and review APIs |
+| `WAZUH_INGEST_TOKEN` | empty | Optional bearer token protecting Wazuh ingestion |
 
 The default SQLite file is `backend/cyberqalqon.db` when Uvicorn is started from `backend/`. No `.env` file is required. Environment variables can be supplied directly by the shell or deployment platform.
+
+When either token is configured, clients must send `Authorization: Bearer <token>`. Empty token settings preserve the local-development behavior and do not enable authentication. Use independent, high-entropy values outside source control in a shared environment.
+
+`APP_ENV=production` fails startup unless both token variables are configured, preventing accidental unauthenticated production startup.
+
+Database tables and indexes are initialized idempotently at application startup with SQLAlchemy `create_all`. There is no migration command in Phase 2; back up persistent databases before upgrading and add a reviewed migration before any future model change that alters the stored schema.
 
 ## API overview
 
@@ -51,6 +59,7 @@ The default SQLite file is `backend/cyberqalqon.db` when Uvicorn is started from
 | GET | `/ready` | Database readiness |
 | POST | `/api/v1/ingest/wazuh` | Normalize and persist one raw Wazuh alert |
 | GET | `/api/v1/incidents` | Paginated and filtered incidents |
+| GET | `/api/v1/incidents/stats` | Counts by severity and analyst-review status |
 | GET | `/api/v1/incidents/{id}` | Incident detail and evidence |
 | POST | `/api/v1/incidents/{id}/review` | Append analyst review history |
 
@@ -77,4 +86,13 @@ Every incident exposes `ai_status: "not_configured"`. No model, local LLM, remot
 
 ## Security baseline
 
-The body is restricted to a JSON object and one MiB by default. Extracted strings and lists have bounds, SQL is parameterized through SQLAlchemy, raw evidence is stored as JSON but never executed, and ordinary API failures use sanitized error envelopes. Authentication and authorization are not part of Phase 2 and must be added before exposure outside a trusted network.
+The body is restricted to a JSON object and one MiB by default. Extracted strings and lists have bounds, SQL is parameterized through SQLAlchemy, raw evidence is stored as JSON but never executed, and ordinary API failures use sanitized error envelopes. Optional constant-time bearer-token checks can protect ingestion and analyst APIs. Configure both tokens before exposure outside a trusted development machine; this is shared-token access control, not user-level authorization.
+
+All API timestamps include an explicit timezone and are serialized in UTC. Incoming Wazuh timestamps without an offset are rejected rather than silently interpreted.
+
+## Troubleshooting
+
+- `GET /ready` returning `503`: verify `DATABASE_URL`, directory permissions, and database availability.
+- `401 UNAUTHORIZED`: supply the token corresponding to the endpoint (`WAZUH_INGEST_TOKEN` or `API_ACCESS_TOKEN`).
+- `422 INVALID_WAZUH_ALERT`: inspect the error message; timestamps must be ISO 8601 with an offset and rule level must be 0–15.
+- SQLite `database is locked`: ensure only short transactions are used and avoid multiple write-heavy server processes; use PostgreSQL for higher write concurrency.

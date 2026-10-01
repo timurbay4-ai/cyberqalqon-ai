@@ -3,9 +3,10 @@
 from datetime import datetime, timezone
 from typing import Any
 import uuid
-from sqlalchemy import DateTime, Integer, JSON, String, Text
+from sqlalchemy import Integer, JSON, String, Text
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 from app.db.base import Base
+from app.db.types import UTCDateTime
 
 
 def utc_now() -> datetime:
@@ -17,9 +18,9 @@ class Incident(Base):
     id: Mapped[str] = mapped_column(String(36), primary_key=True, default=lambda: str(uuid.uuid4()))
     dedupe_key: Mapped[str] = mapped_column(String(128), unique=True, nullable=False, index=True)
     alert_id: Mapped[str | None] = mapped_column(String(256), nullable=True, index=True)
-    event_timestamp: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
-    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utc_now, nullable=False)
-    updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utc_now, onupdate=utc_now, nullable=False)
+    event_timestamp: Mapped[datetime | None] = mapped_column(UTCDateTime(), nullable=True)
+    created_at: Mapped[datetime] = mapped_column(UTCDateTime(), default=utc_now, nullable=False)
+    updated_at: Mapped[datetime] = mapped_column(UTCDateTime(), default=utc_now, onupdate=utc_now, nullable=False)
     agent_id: Mapped[str | None] = mapped_column(String(128), nullable=True)
     agent_name: Mapped[str | None] = mapped_column(String(256), nullable=True, index=True)
     agent_ip: Mapped[str | None] = mapped_column(String(64), nullable=True)

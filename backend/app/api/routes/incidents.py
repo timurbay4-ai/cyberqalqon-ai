@@ -4,10 +4,15 @@ from typing import Literal
 from fastapi import APIRouter, Depends, Query
 from sqlalchemy.orm import Session
 from app.db.session import get_db
-from app.schemas.incident import IncidentListResponse, IncidentResponse
+from app.core.security import require_api_auth
+from app.schemas.incident import IncidentListResponse, IncidentResponse, IncidentStatsResponse
 from app.services.incident_service import IncidentService
 
-router = APIRouter(prefix="/incidents", tags=["Incidents"])
+router = APIRouter(
+    prefix="/incidents",
+    tags=["Incidents"],
+    dependencies=[Depends(require_api_auth)],
+)
 
 
 @router.get("", response_model=IncidentListResponse)
@@ -21,6 +26,11 @@ def list_incidents(
 ) -> IncidentListResponse:
     total, incidents = IncidentService(session).list(limit=limit, offset=offset, severity=severity, agent=agent, mitre_id=mitre_id)
     return IncidentListResponse(total=total, limit=limit, offset=offset, items=[IncidentResponse.model_validate(item) for item in incidents])
+
+
+@router.get("/stats", response_model=IncidentStatsResponse)
+def get_incident_stats(session: Session = Depends(get_db)) -> IncidentStatsResponse:
+    return IncidentStatsResponse.model_validate(IncidentService(session).stats())
 
 
 @router.get("/{incident_id}", response_model=IncidentResponse)

@@ -1,4 +1,10 @@
 import copy
+import json
+from pathlib import Path
+
+import pytest
+
+from app.core.config import get_settings, validate_runtime_settings
 
 
 def test_health(client):
@@ -23,6 +29,8 @@ def test_valid_wazuh_alert_is_normalized(client, wazuh_alert):
     assert body["source_ip"] == "198.51.100.20"
     assert body["priority_score"] == 40
     assert body["severity"] == "high"
+    assert body["event_timestamp"] == "2026-09-30T16:00:00Z"
+    assert body["created_at"].endswith("Z")
 
 
 def test_missing_optional_source_ip(client, wazuh_alert):
@@ -178,3 +186,94 @@ def test_out_of_range_rule_level_is_rejected(client, wazuh_alert):
     wazuh_alert["rule"]["level"] = 16
     response = client.post("/api/v1/ingest/wazuh", json=wazuh_alert)
     assert response.status_code == 422
+
+
+def test_timestamp_without_timezone_is_rejected(client, wazuh_alert):
+    wazuh_alert["timestamp"] = "2026-09-30T21:00:00"
+    response = client.post("/api/v1/ingest/wazuh", json=wazuh_alert)
+    assert response.status_code == 422
+    assert response.json()["error"]["code"] == "INVALID_WAZUH_ALERT"
+
+
+def test_unexpected_optional_field_types_are_preserved_but_not_trusted(client, wazuh_alert):
+    wazuh_alert["agent"] = ["not", "an", "object"]
+    wazuh_alert["data"] = "not-an-object"
+    response = client.post("/api/v1/ingest/wazuh", json=wazuh_alert)
+    assert response.status_code == 201
+    assert response.json()["agent_name"] is None
+    assert response.json()["source_ip"] is None
+    assert response.json()["raw_event"]["agent"] == ["not", "an", "object"]
+
+
+def test_incident_stats_are_derived_from_database(client, wazuh_alert):
+    for index, level in enumerate((3, 8, 15)):
+        alert = copy.deepcopy(wazuh_alert)
+        alert["id"] = f"stats-{index}"
+        alert["rule"]["level"] = level
+        client.post("/api/v1/ingest/wazuh", json=alert)
+    stats = client.get("/api/v1/incidents/stats")
+    assert stats.status_code == 200
+    assert stats.json() == {
+        "total": 3,
+        "severity": {"low": 1, "medium": 0, "high": 1, "critical": 1},
+        "review_status": {"needs_review": 3, "confirmed": 0, "false_positive": 0},
+    }
+
+
+def test_configured_tokens_protect_event_endpoints(client, wazuh_alert, configured_tokens):
+    assert client.get("/health").status_code == 200
+    unauthorized_ingest = client.post("/api/v1/ingest/wazuh", json=wazuh_alert)
+    assert unauthorized_ingest.status_code == 401
+    assert unauthorized_ingest.headers["www-authenticate"] == "Bearer"
+    assert unauthorized_ingest.json()["error"]["code"] == "UNAUTHORIZED"
+
+    created = client.post(
+        "/api/v1/ingest/wazuh",
+        json=wazuh_alert,
+        headers=configured_tokens["wazuh"],
+    )
+    assert created.status_code == 201
+    assert client.get("/api/v1/incidents").status_code == 401
+    authorized_list = client.get(
+        "/api/v1/incidents",
+        headers=configured_tokens["api"],
+    )
+    assert authorized_list.status_code == 200
+    assert authorized_list.json()["total"] == 1
+
+
+def test_auth_configuration_is_not_left_cached():
+    assert get_settings().api_access_token is None
+    assert get_settings().wazuh_ingest_token is None
+
+
+def test_production_configuration_requires_both_tokens(monkeypatch):
+    monkeypatch.setenv("APP_ENV", "production")
+    get_settings.cache_clear()
+    with pytest.raises(RuntimeError, match="required in production"):
+        validate_runtime_settings(get_settings())
+    get_settings.cache_clear()
+
+
+@pytest.mark.parametrize(
+    ("fixture_name", "expected_level", "expected_mitre"),
+    [
+        ("auth_failure.json", 10, ["T1110"]),
+        ("fim_change.json", 7, ["T1565.001", "T1036"]),
+        ("low_severity_event.json", 3, []),
+        ("privileged_group_change.json", 8, ["T1098"]),
+    ],
+)
+def test_actual_wazuh_fixtures_are_accepted(
+    client,
+    fixture_name,
+    expected_level,
+    expected_mitre,
+):
+    fixture_path = Path(__file__).parents[3] / "wazuh" / "samples" / fixture_name
+    payload = json.loads(fixture_path.read_text(encoding="utf-8-sig"))
+    response = client.post("/api/v1/ingest/wazuh", json=payload)
+    assert response.status_code == 201
+    assert response.json()["rule_level"] == expected_level
+    assert response.json()["mitre_ids"] == expected_mitre
+    assert response.json()["raw_event"] == payload

@@ -3,12 +3,17 @@
 from fastapi import APIRouter, Depends, status
 from sqlalchemy.orm import Session
 from app.db.session import get_db
+from app.core.security import require_api_auth
 from app.schemas.incident import IncidentResponse
 from app.schemas.review import ReviewCreate
 from app.services.incident_service import IncidentService
 from app.services.review_service import ReviewService
 
-router = APIRouter(prefix="/incidents", tags=["Reviews"])
+router = APIRouter(
+    prefix="/incidents",
+    tags=["Reviews"],
+    dependencies=[Depends(require_api_auth)],
+)
 
 
 @router.post("/{incident_id}/review", response_model=IncidentResponse, status_code=status.HTTP_201_CREATED)

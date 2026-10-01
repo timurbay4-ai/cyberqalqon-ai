@@ -46,3 +46,22 @@ class IncidentListResponse(BaseModel):
     limit: int
     offset: int
     items: list[IncidentResponse]
+
+
+class SeverityCounts(BaseModel):
+    low: int
+    medium: int
+    high: int
+    critical: int
+
+
+class ReviewStatusCounts(BaseModel):
+    needs_review: int
+    confirmed: int
+    false_positive: int
+
+
+class IncidentStatsResponse(BaseModel):
+    total: int
+    severity: SeverityCounts
+    review_status: ReviewStatusCounts

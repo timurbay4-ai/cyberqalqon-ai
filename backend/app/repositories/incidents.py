@@ -38,3 +38,18 @@ class IncidentRepository:
             .limit(limit)
         )
         return total, list(self.session.scalars(statement).all())
+
+    def stats(self) -> dict[str, dict[str, int] | int]:
+        severity_rows = self.session.execute(
+            select(Incident.severity, func.count()).group_by(Incident.severity)
+        ).all()
+        review_rows = self.session.execute(
+            select(Incident.review_status, func.count()).group_by(Incident.review_status)
+        ).all()
+        severity = {name: count for name, count in severity_rows}
+        review_status = {name: count for name, count in review_rows}
+        return {
+            "total": sum(severity.values()),
+            "severity": severity,
+            "review_status": review_status,
+        }

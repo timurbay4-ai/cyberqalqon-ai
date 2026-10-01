@@ -1,6 +1,6 @@
 """Defensive extraction of common fields from raw Wazuh alerts."""
 
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import Any
 from pydantic import TypeAdapter, ValidationError
 from app.schemas.alert import AgentData, EndpointData, MitreData, NormalizedAlert, RuleData
@@ -35,9 +35,12 @@ def _timestamp(value: Any) -> datetime | None:
     if value is None:
         return None
     try:
-        return DATETIME_ADAPTER.validate_python(value)
+        parsed = DATETIME_ADAPTER.validate_python(value)
     except ValidationError as exc:
         raise ValueError("timestamp must be a valid ISO 8601 date-time") from exc
+    if parsed.tzinfo is None or parsed.utcoffset() is None:
+        raise ValueError("timestamp must include a timezone offset")
+    return parsed.astimezone(timezone.utc)
 
 
 def _rule_level(value: Any) -> int | None:

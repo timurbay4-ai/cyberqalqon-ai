@@ -1,5 +1,7 @@
-fastapi==0.115.12
-uvicorn[standard]==0.34.3
-sqlalchemy==2.0.43
+fastapi==0.141.1
+starlette==1.7.0
+pydantic==2.13.5
+uvicorn[standard]==0.54.0
+sqlalchemy==2.0.54
 pytest==8.4.2
 httpx==0.28.1

@@ -18,3 +18,22 @@ class IncidentService:
 
     def list(self, **filters) -> tuple[int, list[Incident]]:
         return self.repository.list(**filters)
+
+    def stats(self) -> dict:
+        raw = self.repository.stats()
+        severity = raw["severity"]
+        review_status = raw["review_status"]
+        return {
+            "total": raw["total"],
+            "severity": {
+                "low": severity.get("low", 0),
+                "medium": severity.get("medium", 0),
+                "high": severity.get("high", 0),
+                "critical": severity.get("critical", 0),
+            },
+            "review_status": {
+                "needs_review": review_status.get("needs_review", 0),
+                "confirmed": review_status.get("confirmed", 0),
+                "false_positive": review_status.get("false_positive", 0),
+            },
+        }

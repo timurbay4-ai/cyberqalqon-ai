@@ -2,9 +2,10 @@
 
 from datetime import datetime, timezone
 import uuid
-from sqlalchemy import DateTime, ForeignKey, String, Text
+from sqlalchemy import ForeignKey, String, Text
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 from app.db.base import Base
+from app.db.types import UTCDateTime
 
 
 class Review(Base):
@@ -14,5 +15,5 @@ class Review(Base):
     status: Mapped[str] = mapped_column(String(32), nullable=False)
     analyst: Mapped[str] = mapped_column(String(128), nullable=False)
     note: Mapped[str | None] = mapped_column(Text, nullable=True)
-    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=lambda: datetime.now(timezone.utc), nullable=False)
+    created_at: Mapped[datetime] = mapped_column(UTCDateTime(), default=lambda: datetime.now(timezone.utc), nullable=False)
     incident = relationship("Incident", back_populates="reviews")

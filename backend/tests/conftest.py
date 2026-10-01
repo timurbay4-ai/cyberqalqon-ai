@@ -10,6 +10,7 @@ from sqlalchemy.pool import StaticPool
 from app.db.base import Base
 from app.db.session import get_db
 from app.main import app
+from app.core.config import get_settings
 
 
 @pytest.fixture
@@ -38,3 +39,15 @@ def client(session_factory):
 def wazuh_alert():
     path = Path(__file__).parent / "fixtures" / "authentication_failure.json"
     return json.loads(path.read_text(encoding="utf-8"))
+
+
+@pytest.fixture
+def configured_tokens(monkeypatch):
+    monkeypatch.setenv("API_ACCESS_TOKEN", "frontend-test-token")
+    monkeypatch.setenv("WAZUH_INGEST_TOKEN", "wazuh-test-token")
+    get_settings.cache_clear()
+    yield {
+        "api": {"Authorization": "Bearer frontend-test-token"},
+        "wazuh": {"Authorization": "Bearer wazuh-test-token"},
+    }
+    get_settings.cache_clear()
