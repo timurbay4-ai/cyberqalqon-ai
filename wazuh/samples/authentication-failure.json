@@ -1,0 +1,35 @@
+{
+  "timestamp": "2026-09-30T21:00:00.123+0500",
+  "rule": {
+    "level": 10,
+    "description": "Multiple authentication failures",
+    "id": "5712",
+    "groups": ["syslog", "sshd", "authentication_failed"],
+    "mitre": {
+      "id": ["T1110"],
+      "tactic": ["Credential Access"],
+      "technique": ["Brute Force"]
+    }
+  },
+  "agent": {
+    "id": "001",
+    "name": "demo-linux-host",
+    "ip": "192.0.2.10"
+  },
+  "manager": {
+    "name": "demo-wazuh-manager"
+  },
+  "id": "1790798400.123456",
+  "decoder": {
+    "name": "sshd"
+  },
+  "data": {
+    "srcip": "198.51.100.25",
+    "srcport": "49152",
+    "dstip": "192.0.2.10",
+    "dstport": "22",
+    "srcuser": "demo-user"
+  },
+  "location": "/var/log/auth.log",
+  "full_log": "Sanitized failed login event for demo-user from 198.51.100.25"
+}

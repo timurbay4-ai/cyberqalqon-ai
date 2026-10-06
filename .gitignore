@@ -20,6 +20,13 @@ credentials/
 *.log.*
 logs/
 
+# ----- Local Databases -----
+*.db
+*.db-shm
+*.db-wal
+*.sqlite
+*.sqlite3
+
 # ----- Python -----
 __pycache__/
 *.py[cod]

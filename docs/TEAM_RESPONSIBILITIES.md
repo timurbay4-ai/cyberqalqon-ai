@@ -1,115 +1,31 @@
-﻿# Team Responsibilities & Ownership Boundaries
+# Project Responsibilities
 
-This document defines who owns each directory and what responsibilities each role carries.
-**No developer should casually modify another developer's owned directory without explicit coordination.**
+CyberQalqon-AI currently has one lead development owner responsible for backend, database, Wazuh,
+REST APIs, incidents, frontend, MITRE integration, local AI, authentication, testing,
+infrastructure, documentation, and final integration.
 
----
+Directory ownership is therefore not split between agents. The lead may modify any area when a
+milestone requires it, but changes must remain incremental and dependency-ordered.
 
-## Ownership Map
+## Engineering boundaries
 
-| Directory             | Owner / Role                        |
-|-----------------------|-------------------------------------|
-| `wazuh/`              | Security / Integration Lead         |
-| `tests/integration/`  | Security / Integration Lead         |
-| `docs/security/`      | Security / Integration Lead         |
-| `backend/`            | Backend Developer / Codex Agent     |
-| `frontend/`           | Frontend Developer                  |
-| `ai/`                 | AI Engine / Future Agent            |
-| `shared/`             | All (contracts only, review needed) |
-| `docs/`               | All (collaborative)                 |
-| `infra/`              | DevOps / Lead (TBD)                 |
-| `scripts/`            | DevOps / Lead (TBD)                 |
+| Area | Responsibility |
+|---|---|
+| `backend/` | FastAPI, SQLite migrations, persistence, deterministic domain logic, tests |
+| `frontend/` | Typed API boundary and SOC analyst interface |
+| `wazuh/` | Manager-side delivery, rules, decoders, retries, and telemetry |
+| `ai/` | Provider abstraction, Ollama integration, validation, and prompt-injection defenses |
+| `shared/` | Cross-layer JSON contracts and sanitized examples |
+| `infra/` | Reproducible local runtime and health checks |
+| `docs/` | Architecture, API, security, testing, and operational guidance |
 
----
+## Change rules
 
-## Role Descriptions
-
-### 🔐 Security / Integration Lead
-
-**Owns:** `wazuh/`, `tests/integration/`, `docs/security/`
-
-**Responsibilities:**
-- Wazuh agent configuration and deployment
-- Custom Wazuh rules and decoders for security events
-- MITRE ATT&CK tactic/technique mapping
-- Security event normalization into shared schemas
-- Integration test scenarios and fixtures
-- Final system integration testing
-- Security documentation and threat modeling
-
----
-
-### ⚙️ Backend Developer / Codex Agent
-
-**Owns:** `backend/`
-
-**Responsibilities:**
-- FastAPI application structure and routing (`backend/app/api/routes/`)
-- Data models and ORM schemas (`backend/app/models/`, `backend/app/schemas/`)
-- Database migrations and access layer (`backend/app/db/`)
-- Alert normalization pipeline (`backend/app/services/`)
-- Incident management logic
-- Priority scoring engine (`backend/app/detection/`)
-- Integration adapters for Wazuh events
-- Unit tests in `backend/tests/`
-
----
-
-### 🖥️ Frontend Developer
-
-**Owns:** `frontend/`
-
-**Responsibilities:**
-- SOC dashboard layout and pages (`frontend/src/pages/`)
-- Reusable UI components (`frontend/src/components/`)
-- API consumption layer (`frontend/src/api/`)
-- UX/UI design and responsiveness
-- TypeScript types for shared contracts (`frontend/src/types/`)
-- Utility functions (`frontend/src/utils/`)
-- Use `shared/examples/` for development mock data until the backend API is ready
-
----
-
-### 🤖 AI Engine / Future Agent
-
-**Owns:** `ai/`
-
-**Responsibilities:**
-- Local LLM client implementation (`ai/client/`)
-- Prompt templates for security analysis (`ai/prompts/`)
-- Structured JSON output schemas (`ai/schemas/`)
-- AI analysis services (`ai/services/`)
-- AI safety checks and guardrails (`ai/safety/`)
-- Fallback logic when AI is unavailable (`ai/fallback/`)
-- Uzbek and Russian language explanations
-- AI-specific tests (`ai/tests/`)
-
----
-
-## Shared Contracts (`shared/`)
-
-The `shared/` directory is a **contract zone** only.
-
-It may contain:
-- JSON Schema definitions used by **more than one module**
-- Shared constants referenced by multiple modules
-- Example fixtures for development and testing
-
-**Rules:**
-- No business logic in `shared/`
-- Any change to a shared schema requires review from all affected module owners
-- Treat breaking changes to shared schemas as a team-level decision
-
----
-
-## Cross-Boundary Work Policy
-
-When a change requires touching another developer's directory:
-
-1. Open an issue or discussion to describe the change needed
-2. The owning developer must review and approve any cross-boundary PR
-3. Document the reason for the cross-boundary change in the PR description
-4. Tag the owning developer as a required reviewer
-
-Frontend and Backend developers may work **simultaneously** because they own **separate, non-overlapping directories**.
-The only synchronization point is the shared API contract in `shared/schemas/`.
+- Preserve verified behavior instead of rewriting working slices.
+- Treat `shared/` as a compatibility boundary; review every consumer before changing a schema.
+- Keep ingestion machine credentials separate from future human analyst authentication.
+- Treat all security-event strings as untrusted data.
+- Keep AI advisory and unable to mutate authoritative alert or incident state.
+- Run relevant tests, compilation, contract validation, and builds after every meaningful slice.
+- Keep commits focused and never commit secrets, databases, virtual environments, caches, or build
+  output.

@@ -1,13 +1,13 @@
 ﻿# Wazuh Integration — CyberQalqon AI
 
 **Owner:** Security / Integration Lead
-**Status:** ⏸️ DEFERRED — Not installed in Phase 1
+**Status:** Wazuh manager setup and forwarding are not implemented; the backend receiver is available
 
 ---
 
 ## Important Note
 
-**Wazuh is NOT installed in Phase 1.**
+**Wazuh is not installed by this repository.**
 Do not attempt to install or configure Wazuh agents until the backend API is ready to receive events.
 
 ---
@@ -21,7 +21,9 @@ Do not attempt to install or configure Wazuh agents until the backend API is rea
 
 ### Custom Integration
 - Create a custom Wazuh integration script in `wazuh/integrations/`
-- The integration script will forward normalized alerts to the CyberQalqon backend API (`POST /api/v1/alerts/ingest`)
+- The future integration script will forward raw Wazuh alert JSON to the CyberQalqon backend API (`POST /api/v1/alerts/ingest`)
+- The request must include the configured `WAZUH_INGEST_API_KEY` in the `X-API-Key` header
+- The backend performs deterministic normalization, validation, and idempotent persistence
 - Use the `NormalizedAlert` schema in `shared/schemas/normalized_alert.schema.json`
 
 ### Rule Mapping

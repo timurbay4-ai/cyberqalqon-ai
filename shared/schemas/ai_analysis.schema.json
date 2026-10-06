@@ -1,8 +1,8 @@
-﻿{
+{
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://cyberqalqon.ai/schemas/ai_analysis.schema.json",
   "title": "AIAnalysis",
-  "description": "Contract for the structured output returned by the local AI engine after analyzing a NormalizedAlert. This schema defines the interface only — no LLM is implemented in Phase 1.",
+  "description": "Contract for future structured output from a local AI engine after analyzing a NormalizedAlert. This schema defines an interface only; no LLM is implemented yet.",
   "type": "object",
   "required": ["status", "summary_uz", "summary_ru", "why_it_matters", "investigation_steps"],
   "additionalProperties": false,

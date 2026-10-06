@@ -2,7 +2,7 @@
 
 **Privacy-first AI-assisted SOC investigation platform designed around open-source security tooling.**
 
-> Phase 1 — Repository Foundation | Built in Uzbekistan
+> Early MVP — Ingestion, alert reads, and deterministic incident workflow | Built in Uzbekistan
 
 ---
 
@@ -21,7 +21,7 @@ The platform ingests security events from Wazuh, normalizes and correlates them 
                    │           Wazuh Manager           │
                    │  (Security Event Detection SIEM)  │
                    └──────────────┬───────────────────┘
-                                  │ NormalizedAlert (JSON)
+                                  │ Raw Wazuh alert (JSON)
                                   ▼
                    ┌──────────────────────────────────┐
                    │        Backend API (FastAPI)      │
@@ -41,7 +41,7 @@ The platform ingests security events from Wazuh, normalizes and correlates them 
 ### Data Flow
 
 ```
-Wazuh → NormalizedAlert → Backend → Incident → AI Engine → AIAnalysis → Frontend
+Wazuh → authenticated ingestion → normalization → SQLite → alert APIs → SOC workflow
 ```
 
 ---
@@ -50,10 +50,10 @@ Wazuh → NormalizedAlert → Backend → Incident → AI Engine → AIAnalysis 
 
 ```
 cyberqalqon-ai/
-├── backend/          ← FastAPI backend API (Backend Developer)
-├── frontend/         ← SOC dashboard (Frontend Developer)
-├── ai/               ← Local LLM AI engine (AI Developer — deferred)
-├── wazuh/            ← Wazuh integration & rules (Security Lead)
+├── backend/          ← FastAPI API, migrations, and persistence
+├── frontend/         ← React/Vite SOC application
+├── ai/               ← Local AI provider and safety boundary (deferred)
+├── wazuh/            ← Wazuh delivery integration and rules
 ├── shared/           ← Shared JSON schemas and example fixtures
 ├── tests/            ← Integration and end-to-end tests
 ├── infra/            ← Docker/Compose infrastructure
@@ -62,22 +62,15 @@ cyberqalqon-ai/
 └── .github/          ← CI/CD workflows and PR templates
 ```
 
-See [`docs/TEAM_RESPONSIBILITIES.md`](docs/TEAM_RESPONSIBILITIES.md) for full ownership boundaries.
+See [`docs/TEAM_RESPONSIBILITIES.md`](docs/TEAM_RESPONSIBILITIES.md) for current responsibility rules.
 
 ---
 
-## Team Development Model
+## Development Model
 
-Three developers (or coding agents) can work **simultaneously and independently**:
-
-| Role                        | Branch           | Directory         |
-|-----------------------------|------------------|-------------------|
-| Backend Developer / Codex   | `dev-backend`    | `backend/`        |
-| Frontend Developer          | `dev-frontend`   | `frontend/`       |
-| AI Engine Developer         | `dev-ai`         | `ai/`             |
-| Security / Integration Lead | `dev-backend`\*  | `wazuh/`, `tests/`|
-
-\* Security Lead coordinates with the Backend Developer. Merges go through Pull Requests to `main`.
+One lead development agent currently owns integration across the full repository. Work proceeds in
+small dependency-ordered milestones on `dev/cyberqalqon`; `main` remains the stable PR target.
+Shared contracts still require deliberate compatibility review before they change.
 
 See [`docs/GIT_WORKFLOW.md`](docs/GIT_WORKFLOW.md) for the full branching strategy.
 
@@ -85,7 +78,7 @@ See [`docs/GIT_WORKFLOW.md`](docs/GIT_WORKFLOW.md) for the full branching strate
 
 ## Current MVP Status
 
-### ✅ DONE (Phase 1)
+### ✅ IMPLEMENTED
 
 | Item                          | Details                                              |
 |-------------------------------|------------------------------------------------------|
@@ -93,32 +86,28 @@ See [`docs/GIT_WORKFLOW.md`](docs/GIT_WORKFLOW.md) for the full branching strate
 | Shared JSON schemas           | `normalized_alert.schema.json`, `ai_analysis.schema.json` |
 | Example fixtures              | Alert example, 3 synthetic incidents                 |
 | Backend health service        | `GET /health` → `{"status": "ok", "service": "cyberqalqon-backend"}` |
+| Wazuh alert ingestion         | Authenticated raw JSON ingestion with deterministic normalization |
+| SQLite persistence            | Raw + normalized retention and idempotent duplicate handling |
+| Versioned migrations          | Transactional upgrades with legacy-row preservation and drift checks |
+| Alert read APIs               | Typed list/detail responses, filtering, search, and cursor pagination |
+| Incident management API       | Lifecycle, alert links, notes, assignment, audit, and cursor pagination |
+| SOC frontend                  | Live dashboard, alert investigation, and incident workflow |
+| Analyst security boundary     | Argon2id accounts, server sessions, CSRF, roles, verified audit actors |
+| Backend test suite            | Ingestion, contracts, migrations, reads, validation, and security boundaries |
 | Git workflow documentation    | Branch strategy, commit conventions, PR process      |
 | Team responsibilities map     | Directory ownership clearly defined                  |
 | Security baseline             | `.gitignore`, `.env.example`, no secrets committed   |
 | Contributing guide            | Branch, commit, review, ownership rules              |
 
-### 🚧 IN PROGRESS
-
-*(Nothing currently in progress — awaiting Phase 2 kickoff)*
-
 ### 📋 PLANNED
 
 | Component                  | Phase | Owner                    |
 |----------------------------|-------|--------------------------|
-| Wazuh agent integration    | 2     | Security Lead            |
-| Alert ingestion API        | 2     | Backend Developer        |
-| PostgreSQL + SQLAlchemy    | 2     | Backend Developer        |
-| Incident management API    | 2     | Backend Developer        |
-| Priority scoring engine    | 2     | Backend Developer        |
-| Frontend dashboard         | 2     | Frontend Developer       |
-| Incident pages (UI)        | 2     | Frontend Developer       |
-| Local LLM client (Ollama)  | 3     | AI Developer             |
-| Prompt engineering         | 3     | AI Developer             |
-| Uzbek/Russian summaries    | 3     | AI Developer             |
-| MITRE ATT&CK enrichment    | 3     | Security Lead            |
-| Docker Compose stack       | 3     | DevOps / Lead            |
-| End-to-end tests           | 4     | All                      |
+| Wazuh delivery integration | 3     | Lead development agent   |
+| MITRE catalog enrichment   | 4     | Lead development agent   |
+| Local Ollama analyst       | 5     | Lead development agent   |
+| Docker Compose stack       | 6     | Lead development agent   |
+| End-to-end tests           | 6     | Lead development agent   |
 
 ---
 
@@ -126,13 +115,14 @@ See [`docs/GIT_WORKFLOW.md`](docs/GIT_WORKFLOW.md) for the full branching strate
 
 ### Wazuh (Security Event Ingestion)
 - Custom rules mapped to MITRE ATT&CK techniques
-- Integration script forwarding normalized events to the backend API
+- Integration script forwarding raw Wazuh events to the authenticated backend API
 
 ### Backend API
-- Alert normalization and deduplication
+- Alert normalization, deduplication, versioned migrations, and query APIs
 - Incident management with lifecycle states
+- Human analyst sessions with enforced read/write/admin roles
 - Investigation priority scoring (rule level + MITRE severity + context)
-- Adapter for receiving Wazuh integration webhook events
+- Deterministic incident correlation and lifecycle management
 
 ### AI Engine (Privacy-First, Local Only)
 - Runs entirely on local hardware — no external API calls
@@ -141,9 +131,10 @@ See [`docs/GIT_WORKFLOW.md`](docs/GIT_WORKFLOW.md) for the full branching strate
 - Graceful fallback when LLM is unavailable or returns invalid output
 
 ### Frontend Dashboard
-- Incident list with priority sorting and filtering
-- Incident detail view with AI analysis and MITRE ATT&CK context
-- Alert explorer for raw event investigation
+- Live operational totals backed by alert and incident APIs
+- Alert explorer with server-side filtering, pagination, detail, and MITRE context
+- Incident lifecycle, alert links, notes, assignment, and audit history
+- Backend-validated login/logout and role-aware mutation controls
 
 ---
 
@@ -162,7 +153,7 @@ See [`docs/GIT_WORKFLOW.md`](docs/GIT_WORKFLOW.md) for the full branching strate
 ### Prerequisites
 
 - Python 3.11+
-- Node.js 20+ (for frontend, when implemented)
+- Node.js 24+ (frontend CI/runtime baseline)
 - Git 2.x
 
 ### Backend Quick Start
@@ -173,7 +164,7 @@ python -m venv .venv
 source .venv/bin/activate    # Linux/macOS
 .venv\Scripts\activate       # Windows
 
-pip install -r requirements.txt
+pip install -r requirements-dev.txt
 uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
 ```
 
@@ -188,13 +179,11 @@ API docs: http://localhost:8000/docs
 ### Branch Setup
 
 ```bash
-git clone https://github.com/<org>/cyberqalqon-ai.git
+git clone https://github.com/timurbay4-ai/cyberqalqon-ai.git
 cd cyberqalqon-ai
 cp .env.example .env
 
-git checkout dev-backend    # Backend Developer
-git checkout dev-frontend   # Frontend Developer
-git checkout dev-ai         # AI Developer
+git checkout dev/cyberqalqon
 ```
 
 ---

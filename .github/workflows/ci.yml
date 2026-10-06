@@ -1,20 +1,50 @@
 ﻿# ============================================================
-# CyberQalqon AI — CI Workflow (Phase 1)
+# CyberQalqon AI — CI Workflow
 # ============================================================
-# Validates the backend health endpoint on every push/PR.
-# Expand this workflow in Phase 2 when real tests are added.
+# Runs backend tests and validates shared JSON syntax.
 
 name: CI
 
 on:
   push:
-    branches: [main, dev-backend, dev-frontend, dev-ai]
+    branches: [main, "dev/**"]
   pull_request:
     branches: [main]
 
 jobs:
-  backend-health:
-    name: Backend Health Check
+  frontend-checks:
+    name: Frontend Checks
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "24"
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+
+      - name: Install frontend dependencies
+        run: npm ci
+        working-directory: frontend
+
+      - name: Typecheck frontend
+        run: npm run typecheck
+        working-directory: frontend
+
+      - name: Test frontend
+        run: npm test
+        working-directory: frontend
+
+      - name: Build frontend
+        run: npm run build
+        working-directory: frontend
+
+  backend-tests:
+    name: Backend Tests
     runs-on: ubuntu-latest
 
     steps:
@@ -29,25 +59,22 @@ jobs:
       - name: Install backend dependencies
         run: |
           cd backend
-          pip install -r requirements.txt
+          pip install -r requirements-dev.txt
 
-      - name: Start backend server
+      - name: Check installed dependencies
         run: |
           cd backend
-          uvicorn app.main:app --host 0.0.0.0 --port 8000 &
-          sleep 3
+          pip check
 
-      - name: Test /health endpoint
+      - name: Compile backend sources
         run: |
-          response=$(curl -sf http://localhost:8000/health)
-          echo "Response: $response"
-          echo "$response" | python3 -c "
-          import sys, json
-          data = json.load(sys.stdin)
-          assert data['status'] == 'ok', f'Expected status ok, got: {data}'
-          assert data['service'] == 'cyberqalqon-backend', f'Unexpected service: {data}'
-          print('Health check PASSED')
-          "
+          cd backend
+          python -m compileall -q app tests
+
+      - name: Run backend tests
+        run: |
+          cd backend
+          pytest -q
 
   validate-json:
     name: Validate JSON Files
