@@ -3,6 +3,24 @@
 Use this after reading [DEPLOYMENT.md](DEPLOYMENT.md) and
 [BACKUP_RESTORE.md](BACKUP_RESTORE.md).
 
+## Staging acceptance status
+
+Observed on 2026-10-07 at Git commit `c087f7d`:
+
+| Gate | Status | Evidence or next requirement |
+|---|---|---|
+| Local Docker | PENDING | Docker CLI 29.8.0 and Compose v5.5.1 are installed, but the local Docker Desktop Linux engine is unavailable. |
+| CI Docker | PASS | Production image build, image/config inspection, and isolated HTTPS Compose smoke passed on `main`. |
+| Local HTTPS | PENDING | The local stack was not started because the Docker engine is unavailable. |
+| Trusted production TLS | PENDING | CI used synthetic self-signed QA TLS; an operator must supply and validate the trusted staging/production chain. |
+| Real Ollama | PENDING | Ollama CLI 0.34.0 is installed, but the local daemon is unavailable; no model was downloaded. |
+| Real Wazuh manager | PENDING | Only a local Wazuh agent was detected; no manager endpoint was available for acceptance. |
+| Native browser | PENDING | Requires the local HTTPS stack before Chrome/Edge authenticated and responsive acceptance. |
+
+Do not promote any `PENDING` external gate to `PASS` from deterministic tests
+alone. Do not weaken TLS, origin, CSRF, cookie, or AI isolation controls to make
+an acceptance environment work.
+
 ## Health, startup, and shutdown
 
 - `GET /health`: liveness only; returns minimal service status and does not
@@ -79,12 +97,13 @@ the deterministic sender E2E.
 1. Install the sender on the staging Wazuh manager.
 2. Protect and configure the matching machine API key.
 3. Configure the HTTPS CyberQalqon origin.
-4. Install/start the retry worker.
-5. Add the Wazuh custom integration and validate manager configuration.
-6. Generate a known safe test alert.
-7. Confirm enqueue/delivery counters and no unexpected dead letter.
-8. Confirm backend ingestion.
-9. Log in and confirm the alert appears to an analyst.
+4. Configure the trusted CA through the system trust store or protected sender
+   CA bundle; never disable verification.
+5. Start the sender retry worker.
+6. Register the custom Wazuh integration and validate manager configuration.
+7. Generate a known safe test alert.
+8. Verify the sender queue and delivery counters have no unexpected dead letter.
+9. Confirm the backend receives the alert and an analyst can read it.
 10. Stop the backend.
 11. Generate a second safe alert.
 12. Confirm durable queued state without payload/secret logging.
