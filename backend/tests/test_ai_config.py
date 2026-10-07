@@ -30,6 +30,21 @@ def test_ai_accepts_loopback_and_requires_explicit_private_network_opt_in() -> N
     assert Settings(ai_enabled=True, ollama_model="model", ollama_base_url="http://10.10.10.4:11434", ollama_allow_private_network=True).ai_configuration_error is None
 
 
+def test_ai_container_hostname_requires_private_opt_in_and_exact_allowlist() -> None:
+    base = {
+        "ai_enabled": True,
+        "ollama_model": "model",
+        "ollama_base_url": "http://ollama:11434",
+    }
+    assert Settings(**base).ai_configuration_error is not None
+    assert Settings(**base, ollama_allow_private_network=True).ai_configuration_error is not None
+    assert Settings(
+        **base,
+        ollama_allow_private_network=True,
+        ollama_allowed_hosts=("ollama",),
+    ).ai_configuration_error is None
+
+
 def test_ai_numeric_limits_fail_fast() -> None:
     with pytest.raises(ValueError, match="ai_max_context_bytes"):
         Settings(ai_max_context_bytes=0)

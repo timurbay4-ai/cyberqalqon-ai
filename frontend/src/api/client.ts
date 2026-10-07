@@ -25,6 +25,7 @@ import type {
 
 type Parser<T> = (value: unknown) => T;
 type Fetcher = (input: RequestInfo | URL, init?: RequestInit) => Promise<Response>;
+const DEFAULT_API_BASE_URL = import.meta.env.DEV ? "http://localhost:8000" : "";
 
 export class ApiError extends Error {
   constructor(
@@ -78,10 +79,10 @@ export class HttpBackendApi implements BackendApi {
   private readonly unauthorizedHandlers = new Set<() => void>();
 
   constructor(
-    baseUrl = import.meta.env.VITE_API_BASE_URL || "http://localhost:8000",
+    baseUrl = import.meta.env.VITE_API_BASE_URL ?? DEFAULT_API_BASE_URL,
     private readonly fetcher: Fetcher = fetch,
   ) {
-    this.baseUrl = baseUrl.replace(/\/$/, "");
+    this.baseUrl = baseUrl.trim().replace(/\/$/, "");
   }
 
   private async request<T>(

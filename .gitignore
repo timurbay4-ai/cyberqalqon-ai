@@ -6,6 +6,7 @@
 .env
 .env.*
 !.env.example
+!.env.production.example
 *.key
 *.pem
 *.p12
@@ -14,6 +15,7 @@
 *.crt
 secrets/
 credentials/
+backups/
 
 # ----- Logs -----
 *.log

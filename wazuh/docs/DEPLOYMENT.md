@@ -327,3 +327,18 @@ Verified by automation:
 
 Not yet verified: installation and invocation on a real production Wazuh manager. Validate the
 release-specific Integrator configuration and manager service account in staging before production.
+
+## Production CyberQalqon endpoint acceptance
+
+The sender targets the public CyberQalqon HTTPS origin; it never connects to the
+private backend container. Prefer the system CA store. For internal PKI, install
+the CA or set the protected `CYBERQALQON_CA_BUNDLE`; never set verification off.
+
+Staging acceptance must install the sender and worker, configure the protected
+key and HTTPS origin, enable the custom integration, generate a safe alert,
+confirm enqueue/backend/analyst visibility, stop the backend, generate another
+alert, confirm durable queueing, restore the backend, confirm retry delivery,
+and inspect logs for secret leakage. The full numbered checklist is in
+[`../../docs/OPERATIONS.md`](../../docs/OPERATIONS.md). Backend database backups
+do not include the sender spool; use a separate SQLite-safe policy if that
+transient/dead-letter evidence must be retained.

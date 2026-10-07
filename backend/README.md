@@ -5,6 +5,7 @@
 ## Implemented capabilities
 
 - `GET /health`
+- `GET /readiness` for DB/migration readiness without sensitive details
 - `POST /api/v1/alerts/ingest` with an `X-API-Key` machine credential
 - Deterministic Wazuh normalization and strict validation
 - Idempotent persistence with alert-ID conflict detection
@@ -137,6 +138,19 @@ An initial request returns `201 Created`; an identical replay returns `200 OK` w
 | `LOGIN_LOCKOUT_SECONDS` | Temporary account lock duration | `900` |
 
 All AI variables and defaults are documented in [`../docs/AI_ANALYST.md`](../docs/AI_ANALYST.md).
+
+Production may provide the ingestion key through the mutually exclusive
+`WAZUH_INGEST_API_KEY_FILE` setting. This is used by the Compose secret mount and
+keeps the key out of image and environment metadata.
+
+## Production backup and restore
+
+Use `python -m app.cli.backup create --output-dir PATH` for a verified online
+SQLite backup and `python -m app.cli.backup verify BACKUP` before retention or
+restore. Restore is offline-only through `python -m app.cli.restore ...
+--confirm-restore`; it preserves the current DB, migrates the restored snapshot,
+and invalidates restored sessions. See
+[`../docs/BACKUP_RESTORE.md`](../docs/BACKUP_RESTORE.md).
 
 ## Human authentication boundary
 

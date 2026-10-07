@@ -5,7 +5,7 @@ from __future__ import annotations
 from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
 
-from fastapi import FastAPI, Request
+from fastapi import FastAPI, Request, status
 from fastapi.exceptions import RequestValidationError
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
@@ -22,6 +22,7 @@ from app.db.alerts import AlertRepository
 from app.db.auth import AuthRepository
 from app.db.incidents import IncidentRepository
 from app.db.ai import AIRepository
+from app.version import APPLICATION_VERSION
 
 
 def create_app(settings: Settings | None = None, *, ai_provider: AIProvider | None = None) -> FastAPI:
@@ -57,7 +58,7 @@ def create_app(settings: Settings | None = None, *, ai_provider: AIProvider | No
     application = FastAPI(
         title="CyberQalqon AI Backend",
         description="Privacy-first AI-assisted SOC investigation platform.",
-        version="0.6.0",
+        version=APPLICATION_VERSION,
         docs_url="/docs",
         redoc_url="/redoc",
         lifespan=lifespan,
@@ -103,6 +104,19 @@ def create_app(settings: Settings | None = None, *, ai_provider: AIProvider | No
     )
     async def health() -> dict[str, str]:
         return {"status": "ok", "service": "cyberqalqon-backend"}
+
+    @application.get(
+        "/readiness",
+        tags=["System"],
+        summary="Storage readiness check",
+        response_description="Service readiness status",
+    )
+    async def readiness(request: Request) -> JSONResponse:
+        ready = request.app.state.alert_repository.is_ready()
+        return JSONResponse(
+            status_code=status.HTTP_200_OK if ready else status.HTTP_503_SERVICE_UNAVAILABLE,
+            content={"status": "ready" if ready else "not_ready"},
+        )
 
     return application
 

@@ -34,7 +34,9 @@ npm run dev
 Open `http://localhost:5173`.
 
 `VITE_API_BASE_URL` is the only frontend environment setting and defaults to
-`http://localhost:8000`. It is a public browser destination, not a secret. Never put
+`http://localhost:8000` only in Vite development. A production build defaults to
+the current browser origin, so `/health` and `/api/v1/*` traverse the same TLS
+reverse proxy as the static UI. It is a public browser destination, not a secret. Never put
 `WAZUH_INGEST_API_KEY`, credentials, tokens, or private configuration in a `VITE_*` variable.
 
 The backend default origin list explicitly includes `http://localhost:5173`. If Vite is deliberately
@@ -45,6 +47,22 @@ CORS_ORIGINS=http://127.0.0.1:5173
 ```
 
 Do not enable wildcard origins.
+
+If a browser environment cannot call a second localhost port directly, the
+development server can proxy without changing application code:
+
+```dotenv
+VITE_API_BASE_URL=/
+CYBERQALQON_DEV_PROXY_TARGET=http://localhost:8000
+```
+
+The proxy setting is consumed only by Vite configuration and is not a browser
+secret or production routing mechanism.
+
+The production image is a multi-stage Node build plus unprivileged Nginx. Its
+CSP permits only same-origin scripts/styles/connections and normal React text
+rendering; no inline script, direct Ollama call, or runtime secret is required.
+See [`../docs/DEPLOYMENT.md`](../docs/DEPLOYMENT.md).
 
 ## Architecture
 

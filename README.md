@@ -92,6 +92,7 @@ See [`docs/GIT_WORKFLOW.md`](docs/GIT_WORKFLOW.md) for the full branching strate
 | Shared JSON schemas           | `normalized_alert.schema.json`, `ai_analysis.schema.json` |
 | Example fixtures              | Alert example, 3 synthetic incidents                 |
 | Backend health service        | `GET /health` → `{"status": "ok", "service": "cyberqalqon-backend"}` |
+| Production readiness          | DB/migration-aware `GET /readiness` without sensitive diagnostics |
 | Wazuh alert ingestion         | Authenticated raw JSON ingestion with deterministic normalization |
 | Reliable Wazuh delivery       | Enqueue-first sender, bounded SQLite retry spool, dead letters, CLI, and systemd/Wazuh entrypoints |
 | SQLite persistence            | Raw + normalized retention and idempotent duplicate handling |
@@ -101,6 +102,8 @@ See [`docs/GIT_WORKFLOW.md`](docs/GIT_WORKFLOW.md) for the full branching strate
 | SOC frontend                  | Live dashboard, alert investigation, and incident workflow |
 | Analyst security boundary     | Argon2id accounts, server sessions, CSRF, roles, verified audit actors |
 | Local AI analyst              | Ollama provider, bounded server context, structured validation, provenance, history, and safe UI |
+| Production deployment         | Non-root images, HTTPS reverse proxy, same-origin UI/API, private services, persistent volumes |
+| Backup and recovery           | Online verified SQLite backup, deliberate restore, safety copy, session invalidation |
 | Backend test suite            | Ingestion, contracts, migrations, reads, validation, and security boundaries |
 | Git workflow documentation    | Branch strategy, commit conventions, PR process      |
 | Team responsibilities map     | Directory ownership clearly defined                  |
@@ -113,8 +116,8 @@ See [`docs/GIT_WORKFLOW.md`](docs/GIT_WORKFLOW.md) for the full branching strate
 |-----------------------------------|-------|--------------------------|
 | Real Wazuh staging verification   | 7     | Lead development agent   |
 | MITRE catalog enrichment          | Future | Lead development agent  |
-| Reproducible deployment stack     | 7     | Lead development agent   |
-| Full product deployment E2E       | 7     | Lead development agent   |
+| Reproducible deployment stack     | 7     | Implemented; external acceptance pending |
+| Full product deployment E2E       | 7     | Deterministic CI path implemented |
 
 ---
 
@@ -187,6 +190,21 @@ curl http://localhost:8000/health
 
 API docs: http://localhost:8000/docs
 
+### Production
+
+The supported single-node production foundation uses Docker Compose, an
+unprivileged TLS Nginx/React image, a non-root one-worker FastAPI image, a
+persistent SQLite volume, protected runtime secrets, and optional private
+Ollama. Start with:
+
+- [`docs/DEPLOYMENT.md`](docs/DEPLOYMENT.md)
+- [`docs/BACKUP_RESTORE.md`](docs/BACKUP_RESTORE.md)
+- [`docs/OPERATIONS.md`](docs/OPERATIONS.md)
+
+Do not deploy directly from `.env.production.example`; copy it to the ignored
+`.env.production`, replace deployment values, supply trusted TLS material, and
+complete the production checklist.
+
 ### Branch Setup
 
 ```bash
@@ -206,7 +224,7 @@ git checkout dev/cyberqalqon
 | 1–4   | SOC platform foundation ✅                     | Done            |
 | 5     | Reliable Wazuh alert delivery ✅               | Done            |
 | 6     | Secure bounded local Ollama analyst ✅          | Done            |
-| 7     | Reproducible production deployment            | Planned         |
+| 7     | Reproducible production deployment ✅          | Implemented; external gates remain |
 
 ---
 

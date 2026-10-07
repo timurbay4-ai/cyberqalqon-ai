@@ -151,6 +151,7 @@ def test_production_session_uses_secure_host_cookie(database_path: Path) -> None
     assert "secure" in cookie
     assert "httponly" in cookie
     assert "samesite=strict" in cookie
+    assert "path=/" in cookie
 
 
 def test_login_requires_trusted_origin_and_malformed_data_is_structured(

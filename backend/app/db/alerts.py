@@ -6,13 +6,14 @@ import base64
 import binascii
 import json
 import sqlite3
+from contextlib import closing
 from dataclasses import dataclass
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
 from app.core.config import REPOSITORY_ROOT
-from app.db.migrations import apply_migrations
+from app.db.migrations import MIGRATIONS, MigrationError, applied_migration_versions, apply_migrations
 from app.schemas.alerts import JsonObject, NormalizedAlert
 from app.services.alert_index import alert_search_document, mitre_ids_document
 from app.services.wazuh_normalizer import canonical_json
@@ -114,9 +115,22 @@ class AlertRepository:
 
     def initialize(self) -> None:
         self.path.parent.mkdir(parents=True, exist_ok=True)
-        with self._connect() as connection:
-            connection.execute("PRAGMA journal_mode = WAL")
-            apply_migrations(connection)
+        with closing(self._connect()) as connection:
+            with connection:
+                connection.execute("PRAGMA journal_mode = WAL")
+                apply_migrations(connection)
+
+    def is_ready(self) -> bool:
+        """Return whether storage is reachable and at this build's schema version."""
+
+        try:
+            with closing(self._connect()) as connection:
+                versions = applied_migration_versions(connection)
+                expected = tuple(migration.version for migration in MIGRATIONS)
+                user_version = int(connection.execute("PRAGMA user_version").fetchone()[0])
+                return versions == expected and user_version == expected[-1]
+        except (OSError, sqlite3.Error, MigrationError):
+            return False
 
     def ingest(self, alert: NormalizedAlert, raw_event: JsonObject, fingerprint: str) -> StoredAlert:
         normalized_json = canonical_json(alert.model_dump(mode="json", exclude_none=True))

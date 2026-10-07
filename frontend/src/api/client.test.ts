@@ -4,6 +4,19 @@ import { HttpBackendApi } from "./client";
 import { ALERT_PAGE, SAMPLE_AI_ANALYSIS, SAMPLE_SESSION } from "../test/fixtures";
 
 describe("HttpBackendApi", () => {
+  it("supports the production same-origin boundary without a host override", async () => {
+    const fetcher = vi.fn().mockResolvedValue(
+      new Response(JSON.stringify({ status: "ok", service: "cyberqalqon-backend" }), {
+        status: 200,
+      }),
+    );
+    const client = new HttpBackendApi("", fetcher);
+
+    await client.health();
+
+    expect(fetcher.mock.calls[0][0]).toBe("/health");
+  });
+
   it("serializes authoritative alert filters and never adds an ingestion key", async () => {
     const fetcher = vi.fn().mockResolvedValue(new Response(JSON.stringify(ALERT_PAGE), { status: 200 }));
     const client = new HttpBackendApi("http://backend.test", fetcher);

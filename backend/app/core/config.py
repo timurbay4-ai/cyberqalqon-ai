@@ -26,6 +26,25 @@ def _parse_bool(value: str | None, *, default: bool = False) -> bool:
     return value.strip().lower() in {"1", "true", "yes", "on"}
 
 
+def _secret_from_env(name: str) -> str | None:
+    """Read one secret from either NAME or NAME_FILE without logging its value."""
+
+    direct = os.getenv(name)
+    secret_file = os.getenv(f"{name}_FILE")
+    if direct is not None and secret_file:
+        raise ValueError(f"Configure only one of {name} or {name}_FILE")
+    if secret_file:
+        path = Path(secret_file)
+        try:
+            value = path.read_text(encoding="utf-8")
+        except OSError as exc:
+            raise ValueError(f"Unable to read {name}_FILE") from exc
+        if "\x00" in value:
+            raise ValueError(f"{name}_FILE contains invalid data")
+        direct = value
+    return direct.strip() if direct is not None else None
+
+
 def _parse_positive_int(value: str | None, *, default: int, name: str) -> int:
     if value is None:
         return default
@@ -57,7 +76,12 @@ def _parse_positive_float(value: str | None, *, default: float, name: str) -> fl
     return parsed
 
 
-def validate_ollama_base_url(value: str, *, allow_private_network: bool) -> str | None:
+def validate_ollama_base_url(
+    value: str,
+    *,
+    allow_private_network: bool,
+    allowed_hosts: tuple[str, ...] = (),
+) -> str | None:
     """Return a safe diagnostic when an Ollama URL is not an allowed local endpoint."""
 
     try:
@@ -76,6 +100,8 @@ def validate_ollama_base_url(value: str, *, allow_private_network: bool) -> str 
     try:
         address = ipaddress.ip_address(hostname)
     except ValueError:
+        if allow_private_network and hostname in allowed_hosts:
+            return None
         if allow_private_network and hostname.endswith(".local"):
             return None
         return "OLLAMA_BASE_URL must use localhost, a loopback address, or an explicitly allowed private endpoint"
@@ -97,6 +123,21 @@ def _parse_origins(value: str | None) -> tuple[str, ...]:
     return origins
 
 
+def _parse_host_allowlist(value: str | None) -> tuple[str, ...]:
+    if not value:
+        return ()
+    hosts = tuple(host.strip().lower().rstrip(".") for host in value.split(",") if host.strip())
+    for host in hosts:
+        if not host or ":" in host or "/" in host or any(character.isspace() for character in host):
+            raise ValueError("OLLAMA_ALLOWED_HOSTS must contain hostnames only")
+        try:
+            ipaddress.ip_address(host)
+        except ValueError:
+            continue
+        raise ValueError("OLLAMA_ALLOWED_HOSTS is for DNS hostnames; private IPs use the existing network opt-in")
+    return hosts
+
+
 @dataclass(frozen=True, slots=True)
 class Settings:
     """Runtime settings with secure defaults for the ingestion boundary."""
@@ -115,6 +156,7 @@ class Settings:
     ollama_base_url: str = "http://127.0.0.1:11434"
     ollama_model: str = ""
     ollama_allow_private_network: bool = False
+    ollama_allowed_hosts: tuple[str, ...] = ()
     ollama_connect_timeout_seconds: float = 3.0
     ollama_request_timeout_seconds: float = 90.0
     ai_max_context_bytes: int = 32_768
@@ -169,15 +211,14 @@ class Settings:
         return validate_ollama_base_url(
             self.ollama_base_url,
             allow_private_network=self.ollama_allow_private_network,
+            allowed_hosts=self.ollama_allowed_hosts,
         )
 
     @classmethod
     def from_env(cls) -> "Settings":
         load_dotenv(REPOSITORY_ROOT / ".env", override=False)
         app_env = os.getenv("APP_ENV", "development").strip().lower()
-        api_key = os.getenv("WAZUH_INGEST_API_KEY")
-        if api_key is not None:
-            api_key = api_key.strip() or None
+        api_key = _secret_from_env("WAZUH_INGEST_API_KEY") or None
         session_cookie_secure = _parse_bool(
             os.getenv("SESSION_COOKIE_SECURE"),
             default=app_env not in {"development", "test"},
@@ -215,6 +256,7 @@ class Settings:
             ollama_base_url=os.getenv("OLLAMA_BASE_URL", "http://127.0.0.1:11434").strip(),
             ollama_model=os.getenv("OLLAMA_MODEL", "").strip(),
             ollama_allow_private_network=_parse_bool(os.getenv("OLLAMA_ALLOW_PRIVATE_NETWORK")),
+            ollama_allowed_hosts=_parse_host_allowlist(os.getenv("OLLAMA_ALLOWED_HOSTS")),
             ollama_connect_timeout_seconds=_parse_positive_float(
                 os.getenv("OLLAMA_CONNECT_TIMEOUT_SECONDS"), default=3.0, name="OLLAMA_CONNECT_TIMEOUT_SECONDS"
             ),

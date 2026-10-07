@@ -42,6 +42,7 @@ No external AI provider or public-cloud fallback exists.
 | `OLLAMA_BASE_URL` | `http://127.0.0.1:11434` | Ollama origin; no path, query, fragment, or embedded credentials. |
 | `OLLAMA_MODEL` | empty | Required when AI is enabled; exact configured model/tag. |
 | `OLLAMA_ALLOW_PRIVATE_NETWORK` | `false` | Allows private IP literals and `.local` hosts in addition to loopback. Public endpoints remain rejected. |
+| `OLLAMA_ALLOWED_HOSTS` | empty | Comma-separated exact DNS names accepted only with the private-network opt-in (for example `ollama`). |
 | `OLLAMA_CONNECT_TIMEOUT_SECONDS` | `3` | Positive connection timeout. |
 | `OLLAMA_REQUEST_TIMEOUT_SECONDS` | `90` | Positive end-to-end request bound. |
 | `AI_MAX_CONTEXT_BYTES` | `32768` | Maximum canonical serialized evidence bytes. |
@@ -129,3 +130,13 @@ The React client calls only the CyberQalqon backend, disables duplicate generati
 - `ai_response_too_large`: choose a model that follows the requested bounds or adjust the operator-approved output limit carefully.
 
 Automated tests use deterministic fake providers and a real HTTP fake-Ollama server; CI does not require a daemon, GPU, model download, or production secret.
+
+## Container deployment
+
+Compose can run an optional private `ollama` profile with a persistent model
+volume and no published port. The backend accepts the `ollama` service name only
+when both `OLLAMA_ALLOW_PRIVATE_NETWORK=true` and
+`OLLAMA_ALLOWED_HOSTS=ollama` are explicit. A host-managed endpoint similarly
+requires an exact allowlist entry such as `host.docker.internal`. Models are
+pulled manually; neither image build nor startup downloads one. See
+[`DEPLOYMENT.md`](DEPLOYMENT.md) for commands and network constraints.
