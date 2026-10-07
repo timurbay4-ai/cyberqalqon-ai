@@ -2,10 +2,12 @@ from __future__ import annotations
 
 import asyncio
 import json
+import logging
 import sqlite3
 from collections.abc import Iterator
 from contextlib import contextmanager
 from pathlib import Path
+from urllib.parse import quote
 
 import pytest
 from fastapi.testclient import TestClient
@@ -182,6 +184,25 @@ def test_alert_analysis_uses_server_context_rejects_client_context_and_persists_
         assert history.status_code == 200
         assert history.json()["items"][0]["analysis_id"] == body["analysis_id"]
         assert client.get(f"/api/v1/ai/analyses/{body['analysis_id']}").json()["result"] == body["result"]
+
+
+def test_ai_audit_log_escapes_untrusted_target_identifier(
+    database_path: Path,
+    sample_alert: dict,
+    caplog: pytest.LogCaptureFixture,
+) -> None:
+    alert_id = "AI-ALERT-1\nforged=accepted\x1b[31m"
+    caplog.set_level(logging.INFO, logger="cyberqalqon.ai")
+    with _client(database_path, CaptureProvider()) as client:
+        _ingest(client, sample_alert, alert_id=alert_id)
+        response = client.post(f"/api/v1/ai/alerts/{quote(alert_id, safe='')}/analyze", json={})
+
+    assert response.status_code == 200, response.text
+    messages = [record.getMessage() for record in caplog.records if record.name == "cyberqalqon.ai"]
+    assert len(messages) == 1
+    assert "\n" not in messages[0]
+    assert "\x1b" not in messages[0]
+    assert 'target_id="AI-ALERT-1\\nforged=accepted\\u001b[31m"' in messages[0]
 
 
 def test_missing_targets_and_question_bounds_are_structured(database_path: Path, sample_alert: dict) -> None:

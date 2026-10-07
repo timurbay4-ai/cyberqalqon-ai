@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import asyncio
+import json
 import logging
 import time
 import uuid
@@ -27,6 +28,12 @@ from app.schemas.auth import AnalystPrincipal
 
 
 LOGGER = logging.getLogger("cyberqalqon.ai")
+
+
+def _safe_log_field(value: str) -> str:
+    """Encode untrusted text as one ASCII JSON string for line-oriented logs."""
+
+    return json.dumps(value, ensure_ascii=True)
 
 
 class AIDisabled(RuntimeError):
@@ -205,9 +212,9 @@ class AIService:
                 "ai_analysis analysis_id=%s target_type=%s target_id=%s analyst_id=%s provider=ollama model=%s duration_ms=%d outcome=%s failure_category=%s context_bytes=%d context_truncated=%s",
                 analysis_id,
                 target_type.value,
-                target_id,
+                _safe_log_field(target_id),
                 principal.analyst_id,
-                self.settings.ollama_model,
+                _safe_log_field(self.settings.ollama_model),
                 int((time.monotonic() - started) * 1000),
                 outcome,
                 failure_category,

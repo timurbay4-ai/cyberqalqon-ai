@@ -190,6 +190,37 @@ def test_corrupt_or_tampered_backup_is_rejected(tmp_path: Path) -> None:
         verify_backup(artifact.database_path, artifact.metadata_path)
 
 
+def test_restore_rejects_backup_changed_after_verification(
+    tmp_path: Path,
+    sample_alert: dict,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    import app.db.backup as backup_module
+
+    source = tmp_path / "source.db"
+    identifiers = _populate(source, sample_alert)
+    artifact = create_backup(source, tmp_path, filename="raced.db")
+    target = tmp_path / "target.db"
+    _repository(target)
+    original_copy = backup_module._copy_database
+
+    def mutate_then_copy(source_path: Path, destination_path: Path) -> None:
+        with sqlite3.connect(source_path) as connection:
+            connection.execute(
+                "UPDATE incidents SET description = ? WHERE incident_id = ?",
+                ("Changed after verification", identifiers["incident_id"]),
+            )
+        original_copy(source_path, destination_path)
+
+    monkeypatch.setattr(backup_module, "_copy_database", mutate_then_copy)
+
+    with pytest.raises(BackupError, match="changed during restore preparation"):
+        restore_backup(artifact.database_path, artifact.metadata_path, target, tmp_path)
+
+    with sqlite3.connect(target) as connection:
+        assert connection.execute("SELECT COUNT(*) FROM alerts").fetchone()[0] == 0
+
+
 def test_restore_preserves_existing_database_migrates_and_invalidates_sessions(
     tmp_path: Path, sample_alert: dict
 ) -> None:

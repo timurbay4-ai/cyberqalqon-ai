@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 
 import { ApiError } from "../api/client";
 import { IncidentCreateForm } from "../components/incident-create-form";
@@ -33,6 +33,8 @@ export function IncidentsPage({ api, canMutate = true }: { api: BackendApi; canM
   const [mutationBusy, setMutationBusy] = useState(false);
   const [mutationError, setMutationError] = useState<string | null>(null);
   const [mutationSuccess, setMutationSuccess] = useState<string | null>(null);
+  const selectedIdRef = useRef(selectedId);
+  selectedIdRef.current = selectedId;
 
   const query = useMemo(() => ({
     statuses: filters.status ? [filters.status] : undefined,
@@ -96,16 +98,19 @@ export function IncidentsPage({ api, canMutate = true }: { api: BackendApi; canM
   };
 
   const mutate = async (operation: () => Promise<IncidentDetailModel>, success: string): Promise<boolean> => {
+    const mutationTarget = selectedId;
     setMutationBusy(true);
     setMutationError(null);
     setMutationSuccess(null);
     try {
       const updated = await operation();
+      setRevision((value) => value + 1);
+      if (selectedIdRef.current !== mutationTarget) return false;
       setDetail(updated);
       setMutationSuccess(success);
-      setRevision((value) => value + 1);
       return true;
     } catch (reason) {
+      if (selectedIdRef.current !== mutationTarget) return false;
       setMutationError(errorMessage(reason));
       return false;
     } finally {

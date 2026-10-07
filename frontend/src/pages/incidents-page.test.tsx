@@ -1,9 +1,10 @@
-import { fireEvent, render, screen, waitFor, within } from "@testing-library/react";
+import { act, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
 
 import { ApiError } from "../api/client";
 import { IncidentsPage } from "./incidents-page";
 import { SAMPLE_INCIDENT, createMockApi } from "../test/fixtures";
+import type { IncidentDetail } from "../types/incidents";
 
 async function openIncident() {
   fireEvent.click(await screen.findByRole("button", { name: "<script>incidentAttack()</script>" }));
@@ -45,6 +46,40 @@ describe("IncidentsPage", () => {
     fireEvent.click(within(detail).getByRole("button", { name: "Update status" }));
     expect(await within(detail).findByText("Permission denied [permission_denied]")).toBeInTheDocument();
     expect(within(detail).queryByText("Status changed to TRIAGED.")).not.toBeInTheDocument();
+  });
+
+  it("does not let a late mutation response replace a newly selected incident", async () => {
+    const secondIncident: IncidentDetail = {
+      ...SAMPLE_INCIDENT,
+      incident_id: "INC-002",
+      title: "Second incident",
+    };
+    let resolveUpdate!: (incident: IncidentDetail) => void;
+    const updatePromise = new Promise<IncidentDetail>((resolve) => { resolveUpdate = resolve; });
+    const api = createMockApi({
+      listIncidents: vi.fn().mockResolvedValue({
+        items: [SAMPLE_INCIDENT, secondIncident],
+        page: { limit: 25, next_cursor: null, total: 2 },
+      }),
+      getIncident: vi.fn().mockImplementation((incidentId: string) => Promise.resolve(
+        incidentId === secondIncident.incident_id ? secondIncident : SAMPLE_INCIDENT,
+      )),
+      updateIncidentStatus: vi.fn().mockReturnValue(updatePromise),
+    });
+    render(<IncidentsPage api={api} />);
+    const firstDetail = await openIncident();
+    fireEvent.click(within(firstDetail).getByRole("button", { name: "Update status" }));
+    await waitFor(() => expect(api.updateIncidentStatus).toHaveBeenCalled());
+
+    fireEvent.click(screen.getByRole("button", { name: "Second incident" }));
+    expect(await screen.findByRole("heading", { name: "Second incident" })).toBeInTheDocument();
+    await act(async () => {
+      resolveUpdate({ ...SAMPLE_INCIDENT, status: "TRIAGED" });
+      await updatePromise;
+    });
+
+    const currentDetail = screen.getByRole("complementary", { name: "Incident detail" });
+    expect(within(currentDetail).getByRole("heading", { name: "Second incident" })).toBeInTheDocument();
   });
 
   it("submits notes and assignment through the typed API boundary", async () => {

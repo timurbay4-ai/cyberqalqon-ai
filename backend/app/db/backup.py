@@ -260,7 +260,7 @@ def restore_backup(
     metadata_path = metadata_path.resolve()
     target_path = target_path.resolve()
     preserve_dir = preserve_dir.resolve()
-    verify_backup(backup_path, metadata_path)
+    verified_backup = verify_backup(backup_path, metadata_path)
     if backup_path == target_path:
         raise BackupError("Backup and restore target must be different files")
     if not target_path.parent.is_dir():
@@ -288,6 +288,8 @@ def restore_backup(
         temporary_path = Path(temporary_name)
         temporary_path.unlink()
         _copy_database(backup_path, temporary_path)
+        if inspect_backup(temporary_path) != verified_backup:
+            raise BackupError("Backup changed during restore preparation")
         with closing(sqlite3.connect(temporary_path, timeout=30)) as restored:
             restored.execute("PRAGMA foreign_keys = ON")
             restored.execute("PRAGMA busy_timeout = 5000")
