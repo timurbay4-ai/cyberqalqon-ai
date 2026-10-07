@@ -1,8 +1,7 @@
 ﻿# ============================================================
-# CyberQalqon AI — Backend Dependencies (Phase 1)
+# CyberQalqon AI — Backend Dependencies
 # ============================================================
-# Phase 1: Minimal dependencies for the health-check placeholder only.
-# Future phases will expand this list.
+# Runtime dependencies for the FastAPI ingestion service.
 
 # --- Web Framework ---
 fastapi==0.115.12
@@ -10,9 +9,17 @@ fastapi==0.115.12
 # --- ASGI Server ---
 uvicorn[standard]==0.34.3
 
-# --- Future (not yet installed — placeholders for Phase 2+) ---
-# sqlalchemy==2.x          # ORM (Phase 2)
+# --- Configuration ---
+python-dotenv==1.2.4
+
+# --- Human analyst authentication ---
+argon2-cffi==25.1.0
+
+# --- Local Ollama HTTP boundary ---
+httpx==0.28.1
+
+# --- Future (not installed) ---
+# sqlalchemy==2.x          # ORM (only when SQLite access outgrows stdlib sqlite3)
 # alembic==1.x             # Database migrations (Phase 2)
-# psycopg2-binary==2.x     # PostgreSQL driver (Phase 2)
+# psycopg2-binary==2.x     # PostgreSQL driver if a future migration requires it
 # pydantic-settings==2.x   # Settings management (Phase 2)
-# httpx==0.x               # HTTP client for Wazuh API (Phase 3)

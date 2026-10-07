@@ -1,0 +1,7 @@
+#!/opt/cyberqalqon-sender/.venv/bin/python
+"""Thin Wazuh Integrator entrypoint; all event data remains argv/file data."""
+
+from cyberqalqon_sender.wazuh_entry import main
+
+
+raise SystemExit(main())

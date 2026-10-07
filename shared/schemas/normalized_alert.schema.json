@@ -1,4 +1,4 @@
-﻿{
+{
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://cyberqalqon.ai/schemas/normalized_alert.schema.json",
   "title": "NormalizedAlert",
@@ -33,6 +33,13 @@
           "type": "string",
           "description": "Hostname or label of the agent.",
           "examples": ["WIN-PC-01"]
+        },
+        "ip": {
+          "anyOf": [
+            {"type": "string", "format": "ipv4"},
+            {"type": "string", "format": "ipv6"}
+          ],
+          "description": "IP address reported for the Wazuh agent. Optional."
         }
       }
     },
@@ -49,32 +56,48 @@
         },
         "level": {
           "type": "integer",
-          "description": "Wazuh rule severity level (1–15).",
-          "minimum": 1,
-          "maximum": 15
+          "description": "Wazuh rule severity level (0–16).",
+          "minimum": 0,
+          "maximum": 16
         },
         "description": {
           "type": "string",
           "description": "Human-readable description of the rule.",
           "examples": ["Multiple authentication failures"]
+        },
+        "groups": {
+          "type": "array",
+          "description": "Wazuh rule groups.",
+          "items": {"type": "string"},
+          "uniqueItems": true
         }
       }
     },
     "mitre": {
       "type": "object",
       "description": "MITRE ATT&CK context for this alert.",
-      "required": ["ids"],
+      "required": ["ids", "tactics", "techniques"],
       "additionalProperties": false,
       "properties": {
         "ids": {
           "type": "array",
-          "description": "One or more MITRE ATT&CK technique IDs.",
+          "description": "Upstream MITRE ATT&CK technique IDs. The array may be empty.",
           "items": {
             "type": "string",
             "pattern": "^T[0-9]{4}(\\.[0-9]{3})?$"
           },
-          "minItems": 1,
+          "uniqueItems": true,
           "examples": [["T1110"], ["T1110", "T1078"]]
+        },
+        "tactics": {
+          "type": "array",
+          "items": {"type": "string"},
+          "uniqueItems": true
+        },
+        "techniques": {
+          "type": "array",
+          "items": {"type": "string"},
+          "uniqueItems": true
         }
       }
     },
@@ -84,16 +107,40 @@
       "additionalProperties": false,
       "properties": {
         "ip": {
-          "type": "string",
-          "format": "ipv4",
-          "description": "IPv4 address of the event source."
-        }
+          "anyOf": [
+            {"type": "string", "format": "ipv4"},
+            {"type": "string", "format": "ipv6"}
+          ]
+        },
+        "port": {"type": "integer", "minimum": 1, "maximum": 65535}
+      }
+    },
+    "destination": {
+      "type": "object",
+      "description": "Destination network information. Optional.",
+      "additionalProperties": false,
+      "properties": {
+        "ip": {
+          "anyOf": [
+            {"type": "string", "format": "ipv4"},
+            {"type": "string", "format": "ipv6"}
+          ]
+        },
+        "port": {"type": "integer", "minimum": 1, "maximum": 65535}
       }
     },
     "user": {
       "type": "string",
       "description": "Username associated with the event. Optional.",
       "examples": ["jsmith"]
+    },
+    "location": {
+      "type": "string",
+      "description": "Wazuh event source location. Optional."
+    },
+    "decoder_name": {
+      "type": "string",
+      "description": "Wazuh decoder name. Optional."
     }
   }
 }

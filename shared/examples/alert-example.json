@@ -1,4 +1,4 @@
-﻿{
+{
   "alert_id": "demo-001",
   "timestamp": "2026-09-30T21:00:00+05:00",
   "agent": {
@@ -11,7 +11,9 @@
     "description": "Multiple authentication failures"
   },
   "mitre": {
-    "ids": ["T1110"]
+    "ids": ["T1110"],
+    "tactics": ["Credential Access"],
+    "techniques": ["Brute Force"]
   },
   "source": {
     "ip": "192.168.1.25"

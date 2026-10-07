@@ -1,0 +1,11 @@
+<!-- Add inside <ossec_config> in /var/ossec/etc/ossec.conf. -->
+<integration>
+  <name>custom-cyberqalqon</name>
+  <hook_url>https://cyberqalqon.example</hook_url>
+  <api_key>REPLACE_WITH_MACHINE_INGESTION_KEY</api_key>
+  <level>0</level>
+  <alert_format>json</alert_format>
+  <!-- Must exceed CYBERQALQON_REQUEST_TIMEOUT_SECONDS. -->
+  <timeout>30</timeout>
+  <retries>1</retries>
+</integration>

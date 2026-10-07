@@ -1,46 +1,65 @@
-﻿{
+{
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://cyberqalqon.ai/schemas/ai_analysis.schema.json",
-  "title": "AIAnalysis",
-  "description": "Contract for the structured output returned by the local AI engine after analyzing a NormalizedAlert. This schema defines the interface only — no LLM is implemented in Phase 1.",
+  "title": "CyberQalqon AI Advisory Result v1",
+  "description": "Strict structured output contract for local, advisory-only SOC analysis. Strings are untrusted display data.",
   "type": "object",
-  "required": ["status", "summary_uz", "summary_ru", "why_it_matters", "investigation_steps"],
   "additionalProperties": false,
+  "required": [
+    "summary",
+    "assessment",
+    "key_evidence",
+    "mitre_context",
+    "timeline_summary",
+    "hypotheses",
+    "investigation_steps",
+    "possible_false_positive_reasons",
+    "recommended_actions",
+    "containment_considerations",
+    "uncertainties"
+  ],
   "properties": {
-    "status": {
-      "type": "string",
-      "description": "Status of the AI analysis result.",
-      "enum": ["success", "partial", "failed", "unavailable"],
-      "examples": ["success"]
-    },
-    "summary_uz": {
-      "type": "string",
-      "description": "Short summary of the security event in Uzbek language.",
-      "examples": ["Bir nechta muvaffaqiyatsiz autentifikatsiya urinishlari aniqlandi."]
-    },
-    "summary_ru": {
-      "type": "string",
-      "description": "Short summary of the security event in Russian language.",
-      "examples": ["Обнаружено несколько неудачных попыток аутентификации."]
-    },
-    "why_it_matters": {
-      "type": "string",
-      "description": "Explanation of the potential security significance of this event in English.",
-      "examples": ["Multiple failed login attempts may indicate a brute-force or credential stuffing attack targeting this host."]
-    },
-    "investigation_steps": {
+    "summary": { "type": "string", "minLength": 1, "maxLength": 2000 },
+    "assessment": { "type": "string", "minLength": 1, "maxLength": 4000 },
+    "key_evidence": { "$ref": "#/$defs/boundedList12" },
+    "mitre_context": {
       "type": "array",
-      "description": "Ordered list of recommended investigation actions for the SOC analyst.",
+      "maxItems": 12,
       "items": {
-        "type": "string"
-      },
-      "minItems": 1,
-      "examples": [["Check the source IP reputation.", "Review adjacent authentication logs.", "Verify if the target account was ultimately compromised."]]
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["technique_id", "explanation", "basis"],
+        "properties": {
+          "technique_id": { "type": "string", "minLength": 1, "maxLength": 32 },
+          "explanation": { "type": "string", "minLength": 1, "maxLength": 1200 },
+          "basis": { "type": "string", "enum": ["observed", "inferred"] }
+        }
+      }
     },
-    "limitations": {
-      "type": "string",
-      "description": "Optional note about known limitations or low-confidence areas of this analysis.",
-      "examples": ["Analysis is based solely on alert metadata. Full log context was not available."]
+    "timeline_summary": {
+      "anyOf": [
+        { "type": "string", "minLength": 1, "maxLength": 2400 },
+        { "type": "null" }
+      ]
+    },
+    "hypotheses": { "$ref": "#/$defs/boundedList10" },
+    "investigation_steps": { "$ref": "#/$defs/boundedList12" },
+    "possible_false_positive_reasons": { "$ref": "#/$defs/boundedList10" },
+    "recommended_actions": { "$ref": "#/$defs/boundedList12" },
+    "containment_considerations": { "$ref": "#/$defs/boundedList10" },
+    "uncertainties": { "$ref": "#/$defs/boundedList10" }
+  },
+  "$defs": {
+    "boundedText": { "type": "string", "minLength": 1, "maxLength": 1200 },
+    "boundedList10": {
+      "type": "array",
+      "maxItems": 10,
+      "items": { "$ref": "#/$defs/boundedText" }
+    },
+    "boundedList12": {
+      "type": "array",
+      "maxItems": 12,
+      "items": { "$ref": "#/$defs/boundedText" }
     }
   }
 }

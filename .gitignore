@@ -6,6 +6,7 @@
 .env
 .env.*
 !.env.example
+!.env.production.example
 *.key
 *.pem
 *.p12
@@ -14,11 +15,19 @@
 *.crt
 secrets/
 credentials/
+backups/
 
 # ----- Logs -----
 *.log
 *.log.*
 logs/
+
+# ----- Local Databases -----
+*.db
+*.db-shm
+*.db-wal
+*.sqlite
+*.sqlite3
 
 # ----- Python -----
 __pycache__/

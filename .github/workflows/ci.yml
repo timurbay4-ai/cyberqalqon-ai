@@ -1,20 +1,54 @@
 ﻿# ============================================================
-# CyberQalqon AI — CI Workflow (Phase 1)
+# CyberQalqon AI — CI Workflow
 # ============================================================
-# Validates the backend health endpoint on every push/PR.
-# Expand this workflow in Phase 2 when real tests are added.
+# Runs backend tests and validates shared JSON syntax.
 
 name: CI
 
 on:
   push:
-    branches: [main, dev-backend, dev-frontend, dev-ai]
+    branches: [main, "dev/**"]
   pull_request:
     branches: [main]
 
 jobs:
-  backend-health:
-    name: Backend Health Check
+  frontend-checks:
+    name: Frontend Checks
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "24"
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+
+      - name: Install frontend dependencies
+        run: npm ci
+        working-directory: frontend
+
+      - name: Typecheck frontend
+        run: npm run typecheck
+        working-directory: frontend
+
+      - name: Test frontend
+        run: npm test
+        working-directory: frontend
+
+      - name: Build frontend
+        run: npm run build
+        working-directory: frontend
+
+      - name: Audit frontend dependencies
+        run: npm audit --audit-level=high
+        working-directory: frontend
+
+  backend-tests:
+    name: Backend Tests
     runs-on: ubuntu-latest
 
     steps:
@@ -29,25 +63,55 @@ jobs:
       - name: Install backend dependencies
         run: |
           cd backend
-          pip install -r requirements.txt
+          pip install -r requirements-dev.txt
 
-      - name: Start backend server
+      - name: Check installed dependencies
         run: |
           cd backend
-          uvicorn app.main:app --host 0.0.0.0 --port 8000 &
-          sleep 3
+          pip check
 
-      - name: Test /health endpoint
+      - name: Compile backend sources
         run: |
-          response=$(curl -sf http://localhost:8000/health)
-          echo "Response: $response"
-          echo "$response" | python3 -c "
-          import sys, json
-          data = json.load(sys.stdin)
-          assert data['status'] == 'ok', f'Expected status ok, got: {data}'
-          assert data['service'] == 'cyberqalqon-backend', f'Unexpected service: {data}'
-          print('Health check PASSED')
-          "
+          cd backend
+          python -m compileall -q app tests
+
+      - name: Run backend tests
+        run: |
+          cd backend
+          pytest -q
+
+      - name: Run fake-Ollama real HTTP E2E
+        run: pytest -q tests/e2e/test_ai_analyst.py
+
+  wazuh-sender-tests:
+    name: Wazuh Sender Tests
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install sender and E2E dependencies
+        run: |
+          pip install -r tests/requirements-e2e.txt
+          pip install -e wazuh
+
+      - name: Check installed dependencies
+        run: pip check
+
+      - name: Compile sender and E2E sources
+        run: python -m compileall -q wazuh/cyberqalqon_sender wazuh/tests tests/e2e
+
+      - name: Run sender unit tests
+        run: pytest -q wazuh/tests
+
+      - name: Run live HTTP delivery E2E
+        run: pytest -q tests/e2e/test_wazuh_sender_delivery.py
 
   validate-json:
     name: Validate JSON Files
@@ -63,3 +127,93 @@ jobs:
             echo "Validating $f"
             python3 -m json.tool "$f" > /dev/null && echo "  OK: $f"
           done
+
+  deployment-checks:
+    name: Production Deployment Checks
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Validate rendered deployment contract
+        run: python -m unittest discover -s tests/deployment -p "test_*.py"
+
+      - name: Prepare synthetic deployment inputs
+        run: |
+          mkdir -p .qa/secrets .qa/backups
+          smoke_ingest_key="$(openssl rand -hex 32)"
+          smoke_password="Qa9!$(openssl rand -hex 24)"
+          echo "::add-mask::$smoke_ingest_key"
+          echo "::add-mask::$smoke_password"
+          printf '%s\n' "$smoke_ingest_key" > .qa/secrets/wazuh-ingest-api-key
+          printf 'CYBERQALQON_SMOKE_INGEST_KEY=%s\n' "$smoke_ingest_key" >> "$GITHUB_ENV"
+          printf 'CYBERQALQON_SMOKE_PASSWORD=%s\n' "$smoke_password" >> "$GITHUB_ENV"
+          openssl req -x509 -newkey rsa:2048 -nodes -days 1 \
+            -keyout .qa/secrets/tls.key -out .qa/secrets/tls.crt \
+            -subj '/CN=localhost' -addext 'subjectAltName=DNS:localhost'
+          chmod 400 .qa/secrets/wazuh-ingest-api-key .qa/secrets/tls.key
+          chmod 444 .qa/secrets/tls.crt
+          sudo chown 10001:10001 .qa/secrets/wazuh-ingest-api-key
+          sudo chown 101:101 .qa/secrets/tls.crt .qa/secrets/tls.key
+
+      - name: Build production images
+        env:
+          CYBERQALQON_ORIGIN: https://localhost:18443
+          HTTP_PORT: "18080"
+          HTTPS_PORT: "18443"
+          WAZUH_INGEST_API_KEY_FILE: ./.qa/secrets/wazuh-ingest-api-key
+          TLS_CERT_PATH: ./.qa/secrets/tls.crt
+          TLS_KEY_PATH: ./.qa/secrets/tls.key
+          BACKUP_DIR: ./.qa/backups
+          APP_GIT_COMMIT: ${{ github.sha }}
+          APP_BUILD_TIMESTAMP: ci-build
+        run: docker compose --env-file .env.production.example build backend web
+
+      - name: Inspect images and Nginx configuration
+        run: |
+          test "$(docker image inspect cyberqalqon/backend:0.7.0 --format '{{.Config.User}}')" = '10001:10001'
+          test "$(docker image inspect cyberqalqon/web:0.7.0 --format '{{.Config.User}}')" = '101:101'
+          test -z "$(docker image inspect cyberqalqon/backend:0.7.0 --format '{{range .Config.Env}}{{println .}}{{end}}' | grep -F "$CYBERQALQON_SMOKE_INGEST_KEY" || true)"
+          test -z "$(docker image inspect cyberqalqon/backend:0.7.0 --format '{{range .Config.Env}}{{println .}}{{end}}' | grep -E 'WAZUH_INGEST_API_KEY=' || true)"
+          test -z "$(docker history --no-trunc cyberqalqon/backend:0.7.0 | grep -F "$CYBERQALQON_SMOKE_INGEST_KEY" || true)"
+          docker run --rm --entrypoint sh cyberqalqon/backend:0.7.0 -c \
+            'test -z "$(find /opt/cyberqalqon -type f \( -name ".env" -o -name "*.db" -o -name "*.sqlite*" -o -name "*.key" -o -name "*.pem" \) -print -quit)"'
+          docker run --rm --entrypoint sh cyberqalqon/web:0.7.0 -c \
+            'test -z "$(find /usr/share/nginx/html -type f \( -name ".env" -o -name "*.db" -o -name "*.sqlite*" -o -name "*.key" -o -name "*.pem" \) -print -quit)"'
+          docker run --rm --entrypoint nginx \
+            -v "$PWD/.qa/secrets:/etc/nginx/tls:ro" \
+            cyberqalqon/web:0.7.0 -t
+
+      - name: Run isolated HTTPS Compose smoke test
+        env:
+          CYBERQALQON_ORIGIN: https://localhost:18443
+          HTTP_PORT: "18080"
+          HTTPS_PORT: "18443"
+          WAZUH_INGEST_API_KEY_FILE: ./.qa/secrets/wazuh-ingest-api-key
+          TLS_CERT_PATH: ./.qa/secrets/tls.crt
+          TLS_KEY_PATH: ./.qa/secrets/tls.key
+          BACKUP_DIR: ./.qa/backups
+          CYBERQALQON_SMOKE_URL: https://localhost:18443
+          CYBERQALQON_SMOKE_ORIGIN: https://localhost:18443
+          CYBERQALQON_SMOKE_USERNAME: ci-admin
+          CYBERQALQON_SMOKE_ALLOW_SELF_SIGNED: "true"
+        run: |
+          set -euo pipefail
+          cleanup() {
+            docker compose --env-file .env.production.example logs --no-color || true
+            docker compose --env-file .env.production.example down --volumes --remove-orphans || true
+            rm -rf .qa
+          }
+          trap cleanup EXIT
+          docker compose --env-file .env.production.example up -d backend web
+          for attempt in $(seq 1 30); do
+            if curl --silent --show-error --fail --insecure https://localhost:18443/readiness >/dev/null; then break; fi
+            if [ "$attempt" = 30 ]; then exit 1; fi
+            sleep 2
+          done
+          test "$(curl --silent --output /dev/null --write-out '%{http_code}' http://localhost:18080/)" = '308'
+          printf '%s\n' "$CYBERQALQON_SMOKE_PASSWORD" | docker compose --env-file .env.production.example exec -T backend \
+            python -m app.cli.bootstrap_analyst --username "$CYBERQALQON_SMOKE_USERNAME" \
+            --display-name 'CI Administrator' --password-stdin
+          python scripts/compose_smoke.py
