@@ -103,7 +103,7 @@ export function AlertsPage({ api }: { api: BackendApi }) {
       </section>
       {selectedAlertId && !selectedAlert && !detailError && <aside className="detail-panel detail-panel--state"><StatePanel kind="loading" title="Loading alert" message="Reading alert detail…" /></aside>}
       {detailError && <aside className="detail-panel detail-panel--state"><StatePanel kind="error" title="Alert detail unavailable" message={detailError} actionLabel="Close" onAction={() => setSelectedAlertId(null)} /></aside>}
-      {selectedAlert && <AlertDetail alert={selectedAlert} onClose={() => setSelectedAlertId(null)} />}
+      {selectedAlert && <AlertDetail alert={selectedAlert} api={api} onClose={() => setSelectedAlertId(null)} />}
     </div>
   );
 }

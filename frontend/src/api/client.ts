@@ -1,5 +1,8 @@
 import {
   parseAlertList,
+  parseAIAnalysis,
+  parseAIAnalysisHistory,
+  parseAIStatus,
   parseHealth,
   parseIncidentDetail,
   parseIncidentList,
@@ -9,6 +12,7 @@ import {
 } from "./contracts";
 import type { AlertQuery } from "../types/alerts";
 import type { LoginCredentials } from "../types/auth";
+import type { AIAnalysisRequest } from "../types/ai";
 import type { BackendApi } from "../types/api";
 import type {
   IncidentAlertLink,
@@ -280,6 +284,55 @@ export class HttpBackendApi implements BackendApi {
       `/api/v1/incidents/${encodeURIComponent(incidentId)}/assignment`,
       parseIncidentDetail,
       this.mutation({ method: "PATCH", body: JSON.stringify(payload) }),
+      signal,
+    );
+  }
+
+  getAIStatus(signal?: AbortSignal) {
+    return this.request("/api/v1/ai/status", parseAIStatus, {}, signal);
+  }
+
+  analyzeAlert(alertId: string, payload: AIAnalysisRequest = {}, signal?: AbortSignal) {
+    return this.request(
+      `/api/v1/ai/alerts/${encodeURIComponent(alertId)}/analyze`,
+      parseAIAnalysis,
+      this.mutation({ method: "POST", body: JSON.stringify(payload) }),
+      signal,
+    );
+  }
+
+  analyzeIncident(incidentId: string, payload: AIAnalysisRequest = {}, signal?: AbortSignal) {
+    return this.request(
+      `/api/v1/ai/incidents/${encodeURIComponent(incidentId)}/analyze`,
+      parseAIAnalysis,
+      this.mutation({ method: "POST", body: JSON.stringify(payload) }),
+      signal,
+    );
+  }
+
+  getAIAnalysis(analysisId: string, signal?: AbortSignal) {
+    return this.request(
+      `/api/v1/ai/analyses/${encodeURIComponent(analysisId)}`,
+      parseAIAnalysis,
+      {},
+      signal,
+    );
+  }
+
+  listAlertAnalyses(alertId: string, signal?: AbortSignal) {
+    return this.request(
+      `/api/v1/ai/alerts/${encodeURIComponent(alertId)}/analyses`,
+      parseAIAnalysisHistory,
+      {},
+      signal,
+    );
+  }
+
+  listIncidentAnalyses(incidentId: string, signal?: AbortSignal) {
+    return this.request(
+      `/api/v1/ai/incidents/${encodeURIComponent(incidentId)}/analyses`,
+      parseAIAnalysisHistory,
+      {},
       signal,
     );
   }

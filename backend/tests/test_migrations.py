@@ -41,8 +41,8 @@ def test_fresh_database_applies_every_migration(database_path: Path) -> None:
         )]
         columns = {row[1] for row in connection.execute("PRAGMA table_info(alerts)")}
         user_version = connection.execute("PRAGMA user_version").fetchone()[0]
-    assert versions == [1, 2, 3, 4]
-    assert user_version == 4
+    assert versions == [1, 2, 3, 4, 5]
+    assert user_version == 5
     assert {"agent_name", "has_mitre", "mitre_ids_text", "search_text"} <= columns
     with sqlite3.connect(database_path) as connection:
         incident_tables = {
@@ -57,6 +57,10 @@ def test_fresh_database_applies_every_migration(database_path: Path) -> None:
         "incident_notes",
         "incident_history",
     } <= incident_tables
+    with sqlite3.connect(database_path) as connection:
+        assert connection.execute(
+            "SELECT COUNT(*) FROM sqlite_master WHERE type = 'table' AND name = 'ai_analyses'"
+        ).fetchone()[0] == 1
 
 
 def test_migrations_are_idempotent(database_path: Path) -> None:
@@ -66,7 +70,39 @@ def test_migrations_are_idempotent(database_path: Path) -> None:
     repository.initialize()
 
     with sqlite3.connect(database_path) as connection:
-        assert connection.execute("SELECT COUNT(*) FROM schema_migrations").fetchone()[0] == 4
+        assert connection.execute("SELECT COUNT(*) FROM schema_migrations").fetchone()[0] == 5
+
+
+def test_milestone_four_database_upgrades_to_ai_history_without_rewriting_auth(database_path: Path) -> None:
+    with sqlite3.connect(database_path) as connection:
+        connection.execute(
+            "CREATE TABLE schema_migrations (version INTEGER PRIMARY KEY, name TEXT NOT NULL, applied_at TEXT NOT NULL)"
+        )
+        for migration in MIGRATIONS[:4]:
+            migration.apply(connection)
+            connection.execute(
+                "INSERT INTO schema_migrations VALUES (?, ?, ?)",
+                (migration.version, migration.name, "2026-10-06T00:00:00+00:00"),
+            )
+            connection.execute(f"PRAGMA user_version = {migration.version}")
+        connection.execute(
+            """
+            INSERT INTO analysts (
+                analyst_id, username, username_normalized, display_name, role,
+                password_hash, is_active, failed_login_count, created_at, updated_at
+            ) VALUES ('USR-LEGACY', 'legacy', 'legacy', 'Legacy Analyst', 'VIEWER',
+                      'preserve-hash', 1, 0, ?, ?)
+            """,
+            ("2026-10-06T00:00:00+00:00", "2026-10-06T00:00:00+00:00"),
+        )
+
+    _repository(database_path).initialize()
+
+    with sqlite3.connect(database_path) as connection:
+        assert connection.execute("PRAGMA user_version").fetchone()[0] == 5
+        assert connection.execute("SELECT password_hash FROM analysts WHERE analyst_id = 'USR-LEGACY'").fetchone()[0] == "preserve-hash"
+        indexes = {row[1] for row in connection.execute("PRAGMA index_list(ai_analyses)")}
+        assert "idx_ai_analyses_target_history" in indexes
 
 
 def test_milestone_three_database_upgrades_without_losing_incident_audit(
@@ -128,7 +164,7 @@ def test_milestone_three_database_upgrades_without_losing_incident_audit(
     assert incident == ("Existing case",)
     assert note == ("Preserve me", None)
     assert history == ("legacy-analyst", None, "legacy-analyst")
-    assert version == 4
+    assert version == 5
 
 
 def test_milestone_one_database_upgrades_without_losing_alerts(
@@ -192,8 +228,8 @@ def test_milestone_one_database_upgrades_without_losing_alerts(
         alert_count = connection.execute("SELECT COUNT(*) FROM alerts").fetchone()[0]
         incident_count = connection.execute("SELECT COUNT(*) FROM incidents").fetchone()[0]
         user_version = connection.execute("PRAGMA user_version").fetchone()[0]
-    assert versions == [1, 2, 3, 4]
-    assert user_version == 4
+    assert versions == [1, 2, 3, 4, 5]
+    assert user_version == 5
     assert alert_count == 1
     assert incident_count == 0
     assert repository.get(alert.alert_id) == alert

@@ -1,5 +1,6 @@
 import type { AlertQuery, NormalizedAlert } from "./alerts";
 import type { LoginCredentials, SessionResponse } from "./auth";
+import type { AIAnalysisHistory, AIAnalysisRecord, AIAnalysisRequest, AIStatus } from "./ai";
 import type {
   IncidentAlertLink,
   IncidentAssignmentUpdate,
@@ -64,4 +65,10 @@ export interface BackendApi {
     payload: IncidentAssignmentUpdate,
     signal?: AbortSignal,
   ): Promise<IncidentDetail>;
+  getAIStatus(signal?: AbortSignal): Promise<AIStatus>;
+  analyzeAlert(alertId: string, payload?: AIAnalysisRequest, signal?: AbortSignal): Promise<AIAnalysisRecord>;
+  analyzeIncident(incidentId: string, payload?: AIAnalysisRequest, signal?: AbortSignal): Promise<AIAnalysisRecord>;
+  getAIAnalysis(analysisId: string, signal?: AbortSignal): Promise<AIAnalysisRecord>;
+  listAlertAnalyses(alertId: string, signal?: AbortSignal): Promise<AIAnalysisHistory>;
+  listIncidentAnalyses(incidentId: string, signal?: AbortSignal): Promise<AIAnalysisHistory>;
 }

@@ -12,6 +12,8 @@ contracts.
 - Runtime response validation before backend JSON enters the component tree
 - Responsive desktop and narrow-width analyst layouts
 - Backend-validated login/logout/session restoration and role-aware incident controls
+- Explicit local-AI alert/incident analysis with availability, loading/error, structured sections,
+  history, provenance, truncation, and stale indicators
 
 There is no demo adapter or silent fallback. If the backend is unavailable, the UI displays that
 failure and never substitutes synthetic SOC records.
@@ -74,10 +76,13 @@ is in [docs/BACKEND_CONTRACT.md](docs/BACKEND_CONTRACT.md).
   protected mutations.
 - Incident audit actors come from backend principals; no actor-impersonation input exists.
 - Frontend role checks are UX only. FastAPI remains the authorization boundary.
+- The browser sends only target IDs and an optional bounded question to FastAPI; it never contacts
+  Ollama, supplies authoritative telemetry, or receives provider credentials.
+- AI/model output is attacker-influenced untrusted text and is never interpreted as HTML or a command.
 
 ## Current limitations
 
 - Analyst account administration currently has an API/CLI boundary but no dedicated admin UI.
 - Incident correlation remains explicit and analyst-directed.
 - There is no automatic refresh or real-time event stream.
-- AI/Ollama is not implemented and no fake AI output is displayed.
+- No fake AI result is substituted when Ollama is disabled, unavailable, slow, or invalid.

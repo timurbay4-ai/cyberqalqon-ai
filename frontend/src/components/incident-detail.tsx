@@ -3,6 +3,8 @@ import { useEffect, useState, type FormEvent } from "react";
 import { ALLOWED_STATUS_TRANSITIONS, type IncidentDetail as IncidentDetailModel, type IncidentStatus } from "../types/incidents";
 import { formatTimestamp, humanize } from "../utils/format";
 import { IncidentSeverityBadge, IncidentStatusBadge } from "./incident-badges";
+import { AIAnalysisPanel } from "./ai-analysis-panel";
+import type { BackendApi } from "../types/api";
 
 interface IncidentDetailProps {
   incident: IncidentDetailModel;
@@ -10,6 +12,7 @@ interface IncidentDetailProps {
   error: string | null;
   success: string | null;
   canMutate: boolean;
+  api: BackendApi;
   onClose(): void;
   onStatus(status: IncidentStatus): Promise<boolean>;
   onLink(alertId: string): Promise<boolean>;
@@ -17,7 +20,7 @@ interface IncidentDetailProps {
   onAssignment(assignedTo: string | null): Promise<boolean>;
 }
 
-export function IncidentDetail({ incident, busy, error, success, canMutate, onClose, onStatus, onLink, onNote, onAssignment }: IncidentDetailProps) {
+export function IncidentDetail({ incident, api, busy, error, success, canMutate, onClose, onStatus, onLink, onNote, onAssignment }: IncidentDetailProps) {
   const transitions = ALLOWED_STATUS_TRANSITIONS[incident.status];
   const [nextStatus, setNextStatus] = useState<IncidentStatus>(transitions[0]);
   const [alertId, setAlertId] = useState("");
@@ -58,6 +61,7 @@ export function IncidentDetail({ incident, busy, error, success, canMutate, onCl
         <section className="detail-section"><h3>Analyst notes</h3>{incident.notes.length ? <ol className="timeline notes-list">{incident.notes.map((item) => <li key={item.note_id}><div><strong>{item.author}</strong><time>{formatTimestamp(item.created_at)}</time></div><p>{item.body}</p></li>)}</ol> : <p className="muted">No notes recorded.</p>}{canMutate && <form className="stack-form" onSubmit={submit(() => onNote(note), () => setNote(""))}><label className="field"><span>New note</span><textarea required maxLength={4096} rows={3} value={note} onChange={(event) => setNote(event.target.value)} /></label><button className="button button--secondary" disabled={busy} type="submit">Add note</button></form>}</section>
 
         <section className="detail-section"><h3>Audit history</h3><ol className="timeline audit-list">{incident.history.map((event) => <li key={event.event_id}><div><strong>{humanize(event.event_type)}</strong><time>{formatTimestamp(event.occurred_at)}</time></div><p>Actor: {event.actor}</p><code>{JSON.stringify(event.details)}</code></li>)}</ol></section>
+        <AIAnalysisPanel api={api} targetType="incident" targetId={incident.incident_id} />
       </div>
     </aside>
   );

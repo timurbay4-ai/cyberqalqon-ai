@@ -15,8 +15,11 @@
 - Typed incident create/list/detail/status/link/note/assignment APIs
 - Argon2id analyst credentials, opaque server-side sessions, CSRF protection, and enforced roles
 - Operator-controlled first-administrator bootstrap with no default credentials
+- Secure local Ollama analyst with bounded server-selected context, strict output validation,
+  provenance/history, concurrency control, and stale detection
 
-AI analysis, automatic incident correlation, and Wazuh-side forwarding are not implemented yet.
+Automatic incident correlation remains intentionally out of scope. The AI path is advisory only and
+cannot mutate incidents or execute tools. See [`../docs/AI_ANALYST.md`](../docs/AI_ANALYST.md).
 
 ## Run locally
 
@@ -96,6 +99,8 @@ records them in `schema_migrations` plus SQLite `user_version`.
   ordered audit history without changing existing alert rows.
 - Migration 4 adds analysts, digest-only server sessions, authentication indexes, and nullable
   stable analyst identifiers on existing note/history tables without rewriting prior audit text.
+- Migration 5 adds append-only validated AI analysis provenance and indexed target history without
+  rewriting alerts, incidents, authentication data, or incident audit history.
 - Unknown future versions, inconsistent migration history, incompatible legacy schemas, or invalid
   stored normalized alerts stop startup. No database is dropped or silently rebuilt.
 
@@ -130,6 +135,8 @@ An initial request returns `201 Created`; an identical replay returns `200 OK` w
 | `SESSION_COOKIE_SECURE` | Require HTTPS delivery for the analyst cookie | false in development; true otherwise |
 | `LOGIN_MAX_FAILURES` | Failed passwords before temporary account lock | `5` |
 | `LOGIN_LOCKOUT_SECONDS` | Temporary account lock duration | `900` |
+
+All AI variables and defaults are documented in [`../docs/AI_ANALYST.md`](../docs/AI_ANALYST.md).
 
 ## Human authentication boundary
 

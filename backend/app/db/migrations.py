@@ -345,11 +345,62 @@ def _migration_004_analyst_authentication(connection: sqlite3.Connection) -> Non
     )
 
 
+def _migration_005_ai_analysis_history(connection: sqlite3.Connection) -> None:
+    connection.execute(
+        """
+        CREATE TABLE IF NOT EXISTS ai_analyses (
+            analysis_id TEXT PRIMARY KEY,
+            analysis_type TEXT NOT NULL CHECK (
+                analysis_type IN ('ALERT_SUMMARY', 'INCIDENT_SUMMARY', 'ANALYST_QUESTION')
+            ),
+            target_type TEXT NOT NULL CHECK (target_type IN ('alert', 'incident')),
+            target_id TEXT NOT NULL,
+            requested_by TEXT NOT NULL,
+            requested_by_display TEXT NOT NULL,
+            requested_at TEXT NOT NULL,
+            completed_at TEXT NOT NULL,
+            provider TEXT NOT NULL,
+            model TEXT NOT NULL,
+            model_digest TEXT,
+            policy_version TEXT NOT NULL,
+            schema_version TEXT NOT NULL,
+            context_fingerprint TEXT NOT NULL,
+            context_bytes INTEGER NOT NULL CHECK (context_bytes >= 0),
+            context_truncated INTEGER NOT NULL CHECK (context_truncated IN (0, 1)),
+            context_metadata_json TEXT NOT NULL,
+            target_updated_at TEXT,
+            result_json TEXT NOT NULL,
+            FOREIGN KEY (requested_by) REFERENCES analysts(analyst_id) ON DELETE RESTRICT
+        )
+        """
+    )
+    _require_columns(
+        connection,
+        "ai_analyses",
+        {
+            "analysis_id", "analysis_type", "target_type", "target_id",
+            "requested_by", "requested_by_display", "requested_at", "completed_at",
+            "provider", "model", "model_digest", "policy_version", "schema_version",
+            "context_fingerprint", "context_bytes", "context_truncated",
+            "context_metadata_json", "target_updated_at", "result_json",
+        },
+    )
+    connection.execute(
+        "CREATE INDEX IF NOT EXISTS idx_ai_analyses_target_history "
+        "ON ai_analyses(target_type, target_id, completed_at DESC, analysis_id DESC)"
+    )
+    connection.execute(
+        "CREATE INDEX IF NOT EXISTS idx_ai_analyses_requester "
+        "ON ai_analyses(requested_by, completed_at DESC)"
+    )
+
+
 MIGRATIONS = (
     Migration(1, "initial_alerts", _migration_001_initial_alerts),
     Migration(2, "alert_read_indexes", _migration_002_alert_read_indexes),
     Migration(3, "incident_foundation", _migration_003_incident_foundation),
     Migration(4, "analyst_authentication", _migration_004_analyst_authentication),
+    Migration(5, "ai_analysis_history", _migration_005_ai_analysis_history),
 )
 
 

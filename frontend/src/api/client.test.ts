@@ -1,7 +1,7 @@
 import { describe, expect, it, vi } from "vitest";
 
 import { HttpBackendApi } from "./client";
-import { ALERT_PAGE, SAMPLE_SESSION } from "../test/fixtures";
+import { ALERT_PAGE, SAMPLE_AI_ANALYSIS, SAMPLE_SESSION } from "../test/fixtures";
 
 describe("HttpBackendApi", () => {
   it("serializes authoritative alert filters and never adds an ingestion key", async () => {
@@ -65,5 +65,30 @@ describe("HttpBackendApi", () => {
     const fetcher = vi.fn().mockResolvedValue(new Response("not-json", { status: 200 }));
     const client = new HttpBackendApi("http://backend.test", fetcher);
     await expect(client.health()).rejects.toMatchObject({ code: "invalid_response" });
+  });
+
+  it("sends only an alert identifier and bounded question through the CSRF-protected backend boundary", async () => {
+    const fetcher = vi.fn()
+      .mockResolvedValueOnce(new Response(JSON.stringify(SAMPLE_SESSION), { status: 200 }))
+      .mockResolvedValueOnce(new Response(JSON.stringify(SAMPLE_AI_ANALYSIS), { status: 200 }));
+    const client = new HttpBackendApi("http://backend.test", fetcher);
+    await client.login({ username: "analyst-1", password: "not-persisted" });
+    await client.analyzeAlert("alert/with spaces", { question: "What next?" });
+
+    const [url, init] = fetcher.mock.calls[1] as [string, RequestInit];
+    expect(new URL(url).pathname).toBe("/api/v1/ai/alerts/alert%2Fwith%20spaces/analyze");
+    expect(JSON.parse(String(init.body))).toEqual({ question: "What next?" });
+    expect(new Headers(init.headers).get("X-CSRF-Token")).toBe("csrf-test-token");
+    expect(JSON.stringify(init)).not.toContain("X-API-Key");
+    expect(url).not.toContain("11434");
+  });
+
+  it("notifies the application when an AI request reports session expiry", async () => {
+    const fetcher = vi.fn().mockResolvedValue(new Response(JSON.stringify({ detail: { code: "authentication_required", message: "Session expired" } }), { status: 401 }));
+    const client = new HttpBackendApi("http://backend.test", fetcher);
+    const expired = vi.fn();
+    client.subscribeUnauthorized(expired);
+    await expect(client.analyzeAlert("alert-1")).rejects.toMatchObject({ status: 401, code: "authentication_required" });
+    expect(expired).toHaveBeenCalledOnce();
   });
 });

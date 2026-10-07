@@ -103,6 +103,22 @@ def require_authenticated_mutation(
     return _require_csrf(request, x_csrf_token).principal
 
 
+def require_ai_analysis(
+    request: Request,
+    x_csrf_token: str | None = Header(default=None),
+) -> AnalystPrincipal:
+    session = _require_csrf(request, x_csrf_token)
+    if Permission.SOC_READ not in session.principal.permissions:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail=_error(
+                "permission_denied",
+                "The authenticated analyst lacks permission for this operation",
+            ),
+        )
+    return session.principal
+
+
 def require_incident_mutation(
     request: Request,
     x_csrf_token: str | None = Header(default=None),

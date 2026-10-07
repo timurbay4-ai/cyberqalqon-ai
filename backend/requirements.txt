@@ -15,6 +15,9 @@ python-dotenv==1.2.4
 # --- Human analyst authentication ---
 argon2-cffi==25.1.0
 
+# --- Local Ollama HTTP boundary ---
+httpx==0.28.1
+
 # --- Future (not installed) ---
 # sqlalchemy==2.x          # ORM (only when SQLite access outgrows stdlib sqlite3)
 # alembic==1.x             # Database migrations (Phase 2)

@@ -352,4 +352,4 @@ def test_incident_persists_across_application_restart(database_path: Path) -> No
         ]
 
     with sqlite3.connect(database_path) as connection:
-        assert connection.execute("PRAGMA user_version").fetchone()[0] == 4
+        assert connection.execute("PRAGMA user_version").fetchone()[0] == 5

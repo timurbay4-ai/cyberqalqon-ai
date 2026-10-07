@@ -5,6 +5,7 @@ from pathlib import Path
 
 from jsonschema import Draft202012Validator, FormatChecker
 
+from app.schemas.ai import AIAnalysisResult
 from app.services.wazuh_normalizer import normalize_wazuh_alert
 
 
@@ -37,3 +38,23 @@ def test_shared_contract_accepts_level_16_without_mitre_mapping(sample_alert: di
     normalized = normalize_wazuh_alert(sample_alert).model_dump(mode="json", exclude_none=True)
 
     _validator().validate(normalized)
+
+
+def test_shared_ai_schema_matches_backend_structured_result_contract() -> None:
+    schema_path = REPOSITORY_ROOT / "shared" / "schemas" / "ai_analysis.schema.json"
+    schema = json.loads(schema_path.read_text(encoding="utf-8"))
+    Draft202012Validator.check_schema(schema)
+    result = AIAnalysisResult(
+        summary="Review the alert.",
+        assessment="Evidence is incomplete.",
+        key_evidence=[],
+        mitre_context=[],
+        timeline_summary=None,
+        hypotheses=[],
+        investigation_steps=["Review adjacent events."],
+        possible_false_positive_reasons=[],
+        recommended_actions=[],
+        containment_considerations=[],
+        uncertainties=["Source evidence is limited."],
+    )
+    Draft202012Validator(schema).validate(result.model_dump(mode="json"))

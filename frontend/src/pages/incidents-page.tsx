@@ -135,6 +135,7 @@ export function IncidentsPage({ api, canMutate = true }: { api: BackendApi; canM
       {detail && selectedId === detail.incident_id && (
         <IncidentDetail
           incident={detail}
+          api={api}
           busy={mutationBusy}
           error={mutationError}
           success={mutationSuccess}

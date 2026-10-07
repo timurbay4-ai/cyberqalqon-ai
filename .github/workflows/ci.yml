@@ -43,6 +43,10 @@ jobs:
         run: npm run build
         working-directory: frontend
 
+      - name: Audit frontend dependencies
+        run: npm audit --audit-level=high
+        working-directory: frontend
+
   backend-tests:
     name: Backend Tests
     runs-on: ubuntu-latest
@@ -75,6 +79,9 @@ jobs:
         run: |
           cd backend
           pytest -q
+
+      - name: Run fake-Ollama real HTTP E2E
+        run: pytest -q tests/e2e/test_ai_analyst.py
 
   wazuh-sender-tests:
     name: Wazuh Sender Tests

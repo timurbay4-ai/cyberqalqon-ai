@@ -2,7 +2,7 @@
 
 **Privacy-first AI-assisted SOC investigation platform designed around open-source security tooling.**
 
-> Early MVP — Reliable Wazuh delivery, SOC ingestion, and deterministic incident workflow | Built in Uzbekistan
+> Early MVP — Deterministic SOC workflow with a secure local advisory AI analyst | Built in Uzbekistan
 
 ---
 
@@ -32,22 +32,22 @@ The platform ingests security events from Wazuh, normalizes and correlates them 
                    ┌──────────────────────────────────┐
                    │        Backend API (FastAPI)      │
                    │  Alert Ingestion · Normalization  │
-                   │  Incident Management · Scoring    │
+                   │  Incidents · Auth · AI Boundary   │
                    └──────────┬───────────────────────┘
                               │           │
-                 AIAnalysis   │           │  Incidents / Alerts
+                              │           │  Incidents / Alerts
                               ▼           ▼
               ┌─────────────────────┐  ┌─────────────────────────┐
-              │    AI Engine        │  │   Frontend Dashboard     │
-              │  (Local LLM Only)   │  │  SOC Analyst Interface   │
-              │  Uzbek · Russian    │  │  (Browser-based)         │
+              │ Local Ollama        │  │   Frontend Dashboard     │
+              │ bounded + validated │  │  Human decision boundary │
+              │ advisory output     │  │  (Browser-based)         │
               └─────────────────────┘  └─────────────────────────┘
 ```
 
 ### Data Flow
 
 ```
-Wazuh → durable sender → authenticated ingestion → normalization → SQLite → alert APIs → SOC workflow
+Wazuh → durable sender → authenticated ingestion → normalization → SQLite → alerts/incidents → human session → explicit AI request → bounded context → local Ollama → validated advisory result → human decision
 ```
 
 ---
@@ -58,7 +58,7 @@ Wazuh → durable sender → authenticated ingestion → normalization → SQLit
 cyberqalqon-ai/
 ├── backend/          ← FastAPI API, migrations, and persistence
 ├── frontend/         ← React/Vite SOC application
-├── ai/               ← Local AI provider and safety boundary (deferred)
+├── ai/               ← Local AI operator documentation (implementation is backend-owned)
 ├── wazuh/            ← Wazuh delivery integration and rules
 ├── shared/           ← Shared JSON schemas and example fixtures
 ├── tests/            ← Integration and end-to-end tests
@@ -100,6 +100,7 @@ See [`docs/GIT_WORKFLOW.md`](docs/GIT_WORKFLOW.md) for the full branching strate
 | Incident management API       | Lifecycle, alert links, notes, assignment, audit, and cursor pagination |
 | SOC frontend                  | Live dashboard, alert investigation, and incident workflow |
 | Analyst security boundary     | Argon2id accounts, server sessions, CSRF, roles, verified audit actors |
+| Local AI analyst              | Ollama provider, bounded server context, structured validation, provenance, history, and safe UI |
 | Backend test suite            | Ingestion, contracts, migrations, reads, validation, and security boundaries |
 | Git workflow documentation    | Branch strategy, commit conventions, PR process      |
 | Team responsibilities map     | Directory ownership clearly defined                  |
@@ -110,9 +111,8 @@ See [`docs/GIT_WORKFLOW.md`](docs/GIT_WORKFLOW.md) for the full branching strate
 
 | Component                         | Phase | Owner                    |
 |-----------------------------------|-------|--------------------------|
-| Real Wazuh staging verification   | 6     | Lead development agent   |
-| MITRE catalog enrichment          | 6     | Lead development agent   |
-| Local Ollama analyst              | 6     | Lead development agent   |
+| Real Wazuh staging verification   | 7     | Lead development agent   |
+| MITRE catalog enrichment          | Future | Lead development agent  |
 | Reproducible deployment stack     | 7     | Lead development agent   |
 | Full product deployment E2E       | 7     | Lead development agent   |
 
@@ -134,10 +134,11 @@ See [`docs/GIT_WORKFLOW.md`](docs/GIT_WORKFLOW.md) for the full branching strate
 - Deterministic incident correlation and lifecycle management
 
 ### AI Engine (Privacy-First, Local Only)
-- Runs entirely on local hardware — no external API calls
-- Ollama-based LLM client (model TBD based on Uzbek/Russian capability)
-- Structured JSON output validated against `ai_analysis.schema.json`
-- Graceful fallback when LLM is unavailable or returns invalid output
+- Ollama-only HTTP provider with a configurable operator-installed model
+- Server-selected bounded context and explicit untrusted-telemetry separation
+- Strict `ai-analysis-v1` validation, provenance, fingerprints, history, and staleness
+- Graceful unavailable/error states with no fake or cloud fallback
+- Advisory text only: no tools, commands, remediation, or incident mutation
 
 ### Frontend Dashboard
 - Live operational totals backed by alert and incident APIs
@@ -153,7 +154,8 @@ See [`docs/GIT_WORKFLOW.md`](docs/GIT_WORKFLOW.md) for the full branching strate
 2. **Local LLM Only** — AI inference runs on-premises
 3. **No Secrets in Git** — `.env` is always git-ignored; only `.env.example` is committed
 4. **Least Privilege** — Each module communicates through defined contracts only
-5. **Audit Trail** — All incidents and AI analyses are stored with timestamps and context
+5. **Audit Trail** — Incident state and validated AI analyses have separate provenance histories
+6. **Advisory AI** — AI output never becomes identity, authorization, SOC state, or an executed action
 
 ---
 
@@ -203,7 +205,7 @@ git checkout dev/cyberqalqon
 |-------|------------------------------------------------|-----------------|
 | 1–4   | SOC platform foundation ✅                     | Done            |
 | 5     | Reliable Wazuh alert delivery ✅               | Done            |
-| 6     | Wazuh staging, MITRE catalog, bounded local AI | Next            |
+| 6     | Secure bounded local Ollama analyst ✅          | Done            |
 | 7     | Reproducible production deployment            | Planned         |
 
 ---

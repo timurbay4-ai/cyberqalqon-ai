@@ -53,6 +53,24 @@ Incident writes require `incident:write`. The client sends no `actor`; the backe
 authenticated principal's stable analyst ID and display snapshot. Mutations include the in-memory
 `X-CSRF-Token` and are accepted only from configured origins.
 
+## Local AI analyst
+
+- `GET /api/v1/ai/status`
+- `POST /api/v1/ai/alerts/{alert_id}/analyze`
+- `POST /api/v1/ai/incidents/{incident_id}/analyze`
+- `GET /api/v1/ai/analyses/{analysis_id}`
+- `GET /api/v1/ai/alerts/{alert_id}/analyses`
+- `GET /api/v1/ai/incidents/{incident_id}/analyses`
+
+AI routes require a human `soc:read` session; POST requests also require the existing Origin/CSRF
+boundary. The mutation body contains only optional `{ "question": "..." }`. The server loads all
+alert/incident facts and derives `requested_by`. Availability is one of `DISABLED`, `AVAILABLE`,
+`UNAVAILABLE`, or `MISCONFIGURED`.
+
+Results use `ai-analysis-v1`, carry provider/model/policy/context provenance, and may be marked
+truncated or stale. Every result string is untrusted. The client renders ordinary React text only,
+never sends telemetry to Ollama directly, and never converts a recommendation into an action.
+
 ## Errors
 
 ```json

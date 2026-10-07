@@ -11,10 +11,10 @@ milestone requires it, but changes must remain incremental and dependency-ordere
 
 | Area | Responsibility |
 |---|---|
-| `backend/` | FastAPI, SQLite migrations, persistence, deterministic domain logic, tests |
+| `backend/` | FastAPI, SQLite migrations, persistence, deterministic domain logic, local AI provider/safety boundary, tests |
 | `frontend/` | Typed API boundary and SOC analyst interface |
 | `wazuh/` | Manager-side delivery, rules, decoders, retries, and telemetry |
-| `ai/` | Provider abstraction, Ollama integration, validation, and prompt-injection defenses |
+| `ai/` | Local AI operator/developer entrypoint documentation |
 | `shared/` | Cross-layer JSON contracts and sanitized examples |
 | `infra/` | Reproducible local runtime and health checks |
 | `docs/` | Architecture, API, security, testing, and operational guidance |
