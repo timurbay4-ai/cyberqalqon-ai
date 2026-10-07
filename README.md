@@ -2,7 +2,7 @@
 
 **Privacy-first AI-assisted SOC investigation platform designed around open-source security tooling.**
 
-> Early MVP — Ingestion, alert reads, and deterministic incident workflow | Built in Uzbekistan
+> Early MVP — Reliable Wazuh delivery, SOC ingestion, and deterministic incident workflow | Built in Uzbekistan
 
 ---
 
@@ -24,6 +24,12 @@ The platform ingests security events from Wazuh, normalizes and correlates them 
                                   │ Raw Wazuh alert (JSON)
                                   ▼
                    ┌──────────────────────────────────┐
+                   │ Durable CyberQalqon Sender        │
+                   │ Queue · Retry · Dead Letter       │
+                   └──────────────┬───────────────────┘
+                                  │ Authenticated at-least-once delivery
+                                  ▼
+                   ┌──────────────────────────────────┐
                    │        Backend API (FastAPI)      │
                    │  Alert Ingestion · Normalization  │
                    │  Incident Management · Scoring    │
@@ -41,7 +47,7 @@ The platform ingests security events from Wazuh, normalizes and correlates them 
 ### Data Flow
 
 ```
-Wazuh → authenticated ingestion → normalization → SQLite → alert APIs → SOC workflow
+Wazuh → durable sender → authenticated ingestion → normalization → SQLite → alert APIs → SOC workflow
 ```
 
 ---
@@ -87,6 +93,7 @@ See [`docs/GIT_WORKFLOW.md`](docs/GIT_WORKFLOW.md) for the full branching strate
 | Example fixtures              | Alert example, 3 synthetic incidents                 |
 | Backend health service        | `GET /health` → `{"status": "ok", "service": "cyberqalqon-backend"}` |
 | Wazuh alert ingestion         | Authenticated raw JSON ingestion with deterministic normalization |
+| Reliable Wazuh delivery       | Enqueue-first sender, bounded SQLite retry spool, dead letters, CLI, and systemd/Wazuh entrypoints |
 | SQLite persistence            | Raw + normalized retention and idempotent duplicate handling |
 | Versioned migrations          | Transactional upgrades with legacy-row preservation and drift checks |
 | Alert read APIs               | Typed list/detail responses, filtering, search, and cursor pagination |
@@ -101,13 +108,13 @@ See [`docs/GIT_WORKFLOW.md`](docs/GIT_WORKFLOW.md) for the full branching strate
 
 ### 📋 PLANNED
 
-| Component                  | Phase | Owner                    |
-|----------------------------|-------|--------------------------|
-| Wazuh delivery integration | 3     | Lead development agent   |
-| MITRE catalog enrichment   | 4     | Lead development agent   |
-| Local Ollama analyst       | 5     | Lead development agent   |
-| Docker Compose stack       | 6     | Lead development agent   |
-| End-to-end tests           | 6     | Lead development agent   |
+| Component                         | Phase | Owner                    |
+|-----------------------------------|-------|--------------------------|
+| Real Wazuh staging verification   | 6     | Lead development agent   |
+| MITRE catalog enrichment          | 6     | Lead development agent   |
+| Local Ollama analyst              | 6     | Lead development agent   |
+| Reproducible deployment stack     | 7     | Lead development agent   |
+| Full product deployment E2E       | 7     | Lead development agent   |
 
 ---
 
@@ -115,7 +122,9 @@ See [`docs/GIT_WORKFLOW.md`](docs/GIT_WORKFLOW.md) for the full branching strate
 
 ### Wazuh (Security Event Ingestion)
 - Custom rules mapped to MITRE ATT&CK techniques
-- Integration script forwarding raw Wazuh events to the authenticated backend API
+- Wazuh Integrator entrypoint commits raw JSON to a bounded sender spool before HTTP delivery
+- Restartable retry worker provides exponential backoff, dead letters, status, and manual replay
+- Deployment and operational procedures are in [`wazuh/docs/DEPLOYMENT.md`](wazuh/docs/DEPLOYMENT.md)
 
 ### Backend API
 - Alert normalization, deduplication, versioned migrations, and query APIs
@@ -190,13 +199,12 @@ git checkout dev/cyberqalqon
 
 ## Roadmap
 
-| Phase | Milestone                           | Target          |
-|-------|-------------------------------------|-----------------|
-| 1     | Repository foundation ✅            | Done            |
-| 2     | Backend API + Wazuh integration     | TBD             |
-| 3     | AI engine + Frontend dashboard      | TBD             |
-| 4     | Integration tests + Polish          | TBD             |
-| 5     | Production deployment               | TBD             |
+| Phase | Milestone                                      | Target          |
+|-------|------------------------------------------------|-----------------|
+| 1–4   | SOC platform foundation ✅                     | Done            |
+| 5     | Reliable Wazuh alert delivery ✅               | Done            |
+| 6     | Wazuh staging, MITRE catalog, bounded local AI | Next            |
+| 7     | Reproducible production deployment            | Planned         |
 
 ---
 

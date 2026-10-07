@@ -1,0 +1,22 @@
+[build-system]
+requires = ["setuptools>=75"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "cyberqalqon-wazuh-sender"
+version = "0.1.0"
+description = "Durable Wazuh-to-CyberQalqon alert delivery"
+requires-python = ">=3.11"
+dependencies = [
+  "httpx==0.28.1",
+]
+
+[project.scripts]
+cyberqalqon-sender = "cyberqalqon_sender.cli:main"
+
+[tool.setuptools]
+packages = ["cyberqalqon_sender"]
+
+[tool.pytest.ini_options]
+addopts = "-ra"
+testpaths = ["tests"]

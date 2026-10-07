@@ -11,6 +11,20 @@ Read responses expose normalized alerts only; raw Wazuh event JSON remains priva
 `X-API-Key` credential. This credential must never be sent to a browser or reused for analyst
 authentication.
 
+The request must use `Content-Type: application/json` and remain within `MAX_INGEST_BYTES`
+(default 1 MiB). The response contract used by the standalone sender is:
+
+- `201` with `status: "created"` and `duplicate: false` for first persistence.
+- `200` with `status: "duplicate"` and `duplicate: true` for an identical replay.
+- `409` for the same explicit alert ID with different raw content; this is not a duplicate.
+- `400`, `413`, `415`, and `422` are terminal request/payload failures.
+- `401`/`403` are terminal machine credential/configuration failures.
+- `429` and server/network failures are retryable by the sender.
+
+The sender uses at-least-once delivery. A malformed or unexpected success response is retried
+conservatively because the backend may already have committed; backend idempotency makes that
+uncertain replay safe. Operational details are in `wazuh/docs/DEPLOYMENT.md`.
+
 ## List alerts
 
 Requires an authenticated human principal with `soc:read`. An ingestion API key is not accepted.

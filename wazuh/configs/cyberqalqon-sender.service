@@ -1,0 +1,22 @@
+[Unit]
+Description=CyberQalqon durable Wazuh alert retry worker
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=wazuh
+Group=wazuh
+UMask=0077
+EnvironmentFile=/etc/cyberqalqon/sender.env
+ExecStart=/opt/cyberqalqon-sender/.venv/bin/cyberqalqon-sender worker
+Restart=on-failure
+RestartSec=5s
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectHome=true
+ProtectSystem=strict
+ReadWritePaths=/var/lib/cyberqalqon-sender
+
+[Install]
+WantedBy=multi-user.target

@@ -76,6 +76,36 @@ jobs:
           cd backend
           pytest -q
 
+  wazuh-sender-tests:
+    name: Wazuh Sender Tests
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install sender and E2E dependencies
+        run: |
+          pip install -r tests/requirements-e2e.txt
+          pip install -e wazuh
+
+      - name: Check installed dependencies
+        run: pip check
+
+      - name: Compile sender and E2E sources
+        run: python -m compileall -q wazuh/cyberqalqon_sender wazuh/tests tests/e2e
+
+      - name: Run sender unit tests
+        run: pytest -q wazuh/tests
+
+      - name: Run live HTTP delivery E2E
+        run: pytest -q tests/e2e/test_wazuh_sender_delivery.py
+
   validate-json:
     name: Validate JSON Files
     runs-on: ubuntu-latest
