@@ -152,10 +152,10 @@ jobs:
           openssl req -x509 -newkey rsa:2048 -nodes -days 1 \
             -keyout .qa/secrets/tls.key -out .qa/secrets/tls.crt \
             -subj '/CN=localhost' -addext 'subjectAltName=DNS:localhost'
-          sudo chown 10001:10001 .qa/secrets/wazuh-ingest-api-key
-          sudo chown 101:101 .qa/secrets/tls.crt .qa/secrets/tls.key
           chmod 400 .qa/secrets/wazuh-ingest-api-key .qa/secrets/tls.key
           chmod 444 .qa/secrets/tls.crt
+          sudo chown 10001:10001 .qa/secrets/wazuh-ingest-api-key
+          sudo chown 101:101 .qa/secrets/tls.crt .qa/secrets/tls.key
 
       - name: Build production images
         env:
