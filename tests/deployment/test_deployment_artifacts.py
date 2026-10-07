@@ -41,6 +41,9 @@ class DeploymentArtifactsTest(unittest.TestCase):
         targets = {int(port["target"]) for port in services["web"]["ports"]}
         self.assertEqual(targets, {8080, 8443})
         self.assertTrue(self.config["networks"]["private"]["internal"])
+        self.assertEqual(set(services["backend"]["networks"]), {"private"})
+        self.assertEqual(set(services["ollama"]["networks"]), {"private"})
+        self.assertEqual(set(services["web"]["networks"]), {"edge", "private"})
 
     def test_backend_production_security_contract(self) -> None:
         backend = self.config["services"]["backend"]

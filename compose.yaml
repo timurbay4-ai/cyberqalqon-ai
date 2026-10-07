@@ -87,6 +87,7 @@ services:
         target: /etc/nginx/tls/tls.key
         read_only: true
     networks:
+      - edge
       - private
     read_only: true
     tmpfs:
@@ -134,6 +135,7 @@ services:
         max-file: ${CONTAINER_LOG_MAX_FILES:-5}
 
 networks:
+  edge:
   private:
     internal: true
 

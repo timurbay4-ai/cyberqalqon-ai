@@ -11,7 +11,7 @@ browser / Wazuh manager
           |
        TCP 443
           v
-unprivileged Nginx + React (web)
+unprivileged Nginx + React (web) -- edge Docker network
           |
    private Docker network
           |
@@ -22,10 +22,11 @@ unprivileged Nginx + React (web)
  protected host backup directory
 ```
 
-Only `web` publishes host ports: 80 redirects to HTTPS and 443 terminates TLS.
-`backend:8000` and `ollama:11434` are exposed only inside the Compose-private
-network. The Wazuh sender remains on the Wazuh manager and delivers through the
-same public HTTPS origin as the browser.
+Only `web` joins the edge network and publishes host ports: 80 redirects to
+HTTPS and 443 terminates TLS. It also joins the internal private network to
+proxy the API. `backend:8000` and `ollama:11434` remain attached only to that
+private network and are never published. The Wazuh sender remains on the Wazuh
+manager and delivers through the same public HTTPS origin as the browser.
 
 One backend worker is intentional. SQLite is the single-node persistence layer,
 and the M6 AI concurrency limiter is process-local. Adding Uvicorn workers would
