@@ -33,6 +33,9 @@ export interface IncidentSummary {
   created_at: string;
   updated_at: string;
   alert_count: number;
+  auto_correlated: boolean;
+  correlation_rule: string | null;
+  classification: string | null;
 }
 
 export interface IncidentNote {
@@ -52,10 +55,39 @@ export interface IncidentHistoryEvent {
   details: Record<string, unknown>;
 }
 
+export type CorrelationConfidence = "EXACT_MATCH" | "STRONG_MATCH";
+
+export interface IncidentCorrelation {
+  correlation_rule: string;
+  classification: string;
+  confidence: CorrelationConfidence;
+  source_identity: string;
+  target_identity: string;
+  explanation: string;
+  first_seen: string;
+  last_seen: string;
+  related_alert_count: number;
+}
+
+export interface IncidentTimelineAlert {
+  alert_id: string;
+  occurred_at: string;
+  rule_id: string;
+  rule_level: number;
+  rule_description: string;
+  agent_id: string;
+  agent_name: string;
+  source_ip: string | null;
+  destination_ip: string | null;
+  mitre_ids: string[];
+}
+
 export interface IncidentDetail extends IncidentSummary {
   alert_ids: string[];
   notes: IncidentNote[];
   history: IncidentHistoryEvent[];
+  correlation: IncidentCorrelation | null;
+  timeline: IncidentTimelineAlert[];
 }
 
 export interface IncidentQuery {

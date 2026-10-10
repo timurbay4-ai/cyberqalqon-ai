@@ -41,8 +41,8 @@ def test_fresh_database_applies_every_migration(database_path: Path) -> None:
         )]
         columns = {row[1] for row in connection.execute("PRAGMA table_info(alerts)")}
         user_version = connection.execute("PRAGMA user_version").fetchone()[0]
-    assert versions == [1, 2, 3, 4, 5]
-    assert user_version == 5
+    assert versions == list(range(1, len(MIGRATIONS) + 1))
+    assert user_version == len(MIGRATIONS)
     assert {"agent_name", "has_mitre", "mitre_ids_text", "search_text"} <= columns
     with sqlite3.connect(database_path) as connection:
         incident_tables = {
@@ -56,11 +56,22 @@ def test_fresh_database_applies_every_migration(database_path: Path) -> None:
         "incident_alerts",
         "incident_notes",
         "incident_history",
+        "incident_correlations",
     } <= incident_tables
     with sqlite3.connect(database_path) as connection:
         assert connection.execute(
             "SELECT COUNT(*) FROM sqlite_master WHERE type = 'table' AND name = 'ai_analyses'"
         ).fetchone()[0] == 1
+        assert connection.execute(
+            "SELECT COUNT(*) FROM sqlite_master WHERE type = 'table' "
+            "AND name = 'auto_correlation_alerts'"
+        ).fetchone()[0] == 1
+        assert connection.execute(
+            "SELECT COUNT(*) FROM sqlite_master WHERE type = 'table' "
+            "AND name IN ('saved_event_searches', 'security_audit_events')"
+        ).fetchone()[0] == 2
+        event_indexes = {row[1] for row in connection.execute("PRAGMA index_list(security_events)")}
+        assert {"idx_security_events_category", "idx_security_events_outcome"} <= event_indexes
 
 
 def test_migrations_are_idempotent(database_path: Path) -> None:
@@ -70,7 +81,7 @@ def test_migrations_are_idempotent(database_path: Path) -> None:
     repository.initialize()
 
     with sqlite3.connect(database_path) as connection:
-        assert connection.execute("SELECT COUNT(*) FROM schema_migrations").fetchone()[0] == 5
+        assert connection.execute("SELECT COUNT(*) FROM schema_migrations").fetchone()[0] == len(MIGRATIONS)
 
 
 def test_milestone_four_database_upgrades_to_ai_history_without_rewriting_auth(database_path: Path) -> None:
@@ -99,7 +110,7 @@ def test_milestone_four_database_upgrades_to_ai_history_without_rewriting_auth(d
     _repository(database_path).initialize()
 
     with sqlite3.connect(database_path) as connection:
-        assert connection.execute("PRAGMA user_version").fetchone()[0] == 5
+        assert connection.execute("PRAGMA user_version").fetchone()[0] == len(MIGRATIONS)
         assert connection.execute("SELECT password_hash FROM analysts WHERE analyst_id = 'USR-LEGACY'").fetchone()[0] == "preserve-hash"
         indexes = {row[1] for row in connection.execute("PRAGMA index_list(ai_analyses)")}
         assert "idx_ai_analyses_target_history" in indexes
@@ -164,7 +175,7 @@ def test_milestone_three_database_upgrades_without_losing_incident_audit(
     assert incident == ("Existing case",)
     assert note == ("Preserve me", None)
     assert history == ("legacy-analyst", None, "legacy-analyst")
-    assert version == 5
+    assert version == len(MIGRATIONS)
 
 
 def test_milestone_one_database_upgrades_without_losing_alerts(
@@ -228,8 +239,8 @@ def test_milestone_one_database_upgrades_without_losing_alerts(
         alert_count = connection.execute("SELECT COUNT(*) FROM alerts").fetchone()[0]
         incident_count = connection.execute("SELECT COUNT(*) FROM incidents").fetchone()[0]
         user_version = connection.execute("PRAGMA user_version").fetchone()[0]
-    assert versions == [1, 2, 3, 4, 5]
-    assert user_version == 5
+    assert versions == list(range(1, len(MIGRATIONS) + 1))
+    assert user_version == len(MIGRATIONS)
     assert alert_count == 1
     assert incident_count == 0
     assert repository.get(alert.alert_id) == alert

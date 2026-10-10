@@ -1,0 +1,20 @@
+{
+  "win": {
+    "system": {
+      "providerName": "Microsoft-Windows-Windows Defender",
+      "eventID": "1116",
+      "level": "3",
+      "channel": "Microsoft-Windows-Windows Defender/Operational",
+      "computer": "WIN-M10-SYNTHETIC",
+      "severityValue": "WARNING",
+      "message": "Synthetic Defender detection fixture; no malware was executed"
+    },
+    "eventdata": {
+      "productName": "Microsoft Defender Antivirus",
+      "threatName": "Synthetic:Fixture",
+      "severityName": "Low",
+      "path": "file:_C:\\M10-SYNTHETIC-NOT-A-REAL-FILE.txt",
+      "processName": "Unknown"
+    }
+  }
+}

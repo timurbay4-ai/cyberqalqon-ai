@@ -1,0 +1,12 @@
+<!-- High-signal probes for nonexistent sensitive paths on the local Nginx lab. -->
+<group name="local,web,reconnaissance,">
+  <rule id="100120" level="8">
+    <if_sid>31101</if_sid>
+    <url type="pcre2">^/(?:\.env|\.git/config|wp-admin|server-status|actuator/env)(?:\?.*)?$</url>
+    <description>Suspicious request for a sensitive web path from $(srcip): $(url) returned HTTP $(id).</description>
+    <mitre>
+      <id>T1595.002</id>
+    </mitre>
+    <group>web,active_scanning,sensitive_path_probe,attack,</group>
+  </rule>
+</group>

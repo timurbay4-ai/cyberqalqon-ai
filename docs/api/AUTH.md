@@ -32,6 +32,9 @@ account or password. The command refuses every attempt after the first analyst e
 | `POST` | `/api/v1/auth/login` | Public credentials plus trusted `Origin` |
 | `GET` | `/api/v1/auth/session` | Authenticated session |
 | `POST` | `/api/v1/auth/logout` | Authenticated session plus CSRF |
+| `GET` | `/api/v1/auth/sessions` | Current authenticated analyst |
+| `POST` | `/api/v1/auth/sessions/revoke-others` | Current analyst plus CSRF |
+| `PATCH` | `/api/v1/auth/password` | Current analyst plus CSRF and current password |
 | `GET` | `/api/v1/auth/analysts` | `ADMIN` |
 | `POST` | `/api/v1/auth/analysts` | `ADMIN` plus CSRF |
 | `PATCH` | `/api/v1/auth/analysts/{analyst_id}` | `ADMIN` plus CSRF |
@@ -40,6 +43,11 @@ Login returns the current analyst and a per-session CSRF value while setting an 
 SameSite=Strict cookie. Only the cookie's SHA-256 digest is stored. Sessions expire server-side,
 logout deletes the row, inactive accounts cannot resolve existing sessions, and active sessions are
 capped at ten per analyst.
+
+Password change verifies the current password, writes a new Argon2id hash, and revokes every other
+session atomically. It does not reveal hashes and does not reset another account. Authentication
+success/denial, logout, password changes, session revocation, and analyst administration emit
+bounded security-audit events without credentials or session tokens.
 
 State-changing requests require `X-CSRF-Token` and an exact allowed `Origin`. Production must use
 HTTPS with `SESSION_COOKIE_SECURE=true`. Credentials and session identifiers must never appear in

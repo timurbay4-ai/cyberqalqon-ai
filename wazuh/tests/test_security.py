@@ -4,12 +4,13 @@ import io
 import json
 import logging
 import sqlite3
+import sys
 from pathlib import Path
 
 import pytest
 
 from cyberqalqon_sender.config import SenderConfig
-from cyberqalqon_sender.logging import log_event
+from cyberqalqon_sender.logging import configure_logging, log_event
 from cyberqalqon_sender.models import (
     AlertPayload,
     DeliveryClassification,
@@ -158,6 +159,26 @@ def test_structured_log_is_one_physical_line_for_hostile_text() -> None:
     assert parsed["event"] == "failure forged"
     assert "\n" not in parsed["alert_id"]
     assert "\x1b" not in parsed["alert_id"]
+
+
+def test_configure_logging_refreshes_its_stderr_stream(monkeypatch) -> None:
+    logger = logging.getLogger("cyberqalqon_sender")
+    original_handlers = logger.handlers[:]
+    logger.handlers.clear()
+    first = io.StringIO()
+    second = io.StringIO()
+    try:
+        monkeypatch.setattr(sys, "stderr", first)
+        configure_logging()
+        monkeypatch.setattr(sys, "stderr", second)
+        refreshed = configure_logging()
+        log_event(refreshed, logging.ERROR, "stream_refresh")
+    finally:
+        logger.handlers.clear()
+        logger.handlers.extend(original_handlers)
+
+    assert first.getvalue() == ""
+    assert json.loads(second.getvalue())["event"] == "stream_refresh"
 
 
 def test_payload_parser_rejects_non_objects_invalid_utf8_nan_and_oversize() -> None:

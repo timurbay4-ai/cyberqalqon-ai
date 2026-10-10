@@ -1,0 +1,9 @@
+--- ossec.conf
++++ ossec.conf
+@@ -332,5 +332,6 @@
+ <ossec_config>
+   <localfile>
+     <log_format>journald</log_format>
+     <location>journald</location>
++    <filter field="_TRANSPORT" ignore_if_missing="yes">^(?!kernel$).*$</filter>
+   </localfile>

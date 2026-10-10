@@ -1,0 +1,19 @@
+<!-- Realtime FIM validation for the isolated local-lab configuration directory. -->
+<group name="local,syscheck,fim,">
+  <rule id="100130" level="7">
+    <if_sid>554</if_sid>
+    <field name="file" type="pcre2">^/etc/cyberqalqon-lab/[^/]+$</field>
+    <description>File added to the monitored CyberQalqon lab configuration directory: $(file).</description>
+    <group>syscheck,syscheck_entry_added,lab_configuration_change,</group>
+  </rule>
+
+  <rule id="100131" level="9">
+    <if_sid>550</if_sid>
+    <field name="file" type="pcre2">^/etc/cyberqalqon-lab/[^/]+$</field>
+    <description>File modified in the monitored CyberQalqon lab configuration directory: $(file).</description>
+    <mitre>
+      <id>T1565.001</id>
+    </mitre>
+    <group>syscheck,syscheck_entry_modified,lab_configuration_change,</group>
+  </rule>
+</group>

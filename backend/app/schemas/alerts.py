@@ -36,6 +36,13 @@ class NetworkEndpoint(StrictModel):
     port: int | None = Field(default=None, ge=1, le=65535)
 
 
+class WindowsEventContext(StrictModel):
+    event_id: str = Field(min_length=1, max_length=64)
+    channel: str = Field(min_length=1, max_length=512)
+    provider: str | None = Field(default=None, max_length=512)
+    computer: str | None = Field(default=None, max_length=512)
+
+
 class NormalizedAlert(StrictModel):
     alert_id: str = Field(min_length=1, max_length=255)
     timestamp: datetime
@@ -47,6 +54,7 @@ class NormalizedAlert(StrictModel):
     user: str | None = Field(default=None, max_length=512)
     location: str | None = Field(default=None, max_length=1024)
     decoder_name: str | None = Field(default=None, max_length=255)
+    windows: WindowsEventContext | None = None
 
     @field_validator("timestamp")
     @classmethod

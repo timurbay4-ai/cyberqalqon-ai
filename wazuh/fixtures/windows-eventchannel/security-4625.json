@@ -1,0 +1,22 @@
+{
+  "win": {
+    "system": {
+      "providerName": "Microsoft-Windows-Security-Auditing",
+      "eventID": "4625",
+      "level": "0",
+      "channel": "Security",
+      "computer": "WIN-M10-SYNTHETIC",
+      "severityValue": "AUDIT_FAILURE",
+      "message": "Synthetic failed logon fixture"
+    },
+    "eventdata": {
+      "targetUserName": "cq-m10-synthetic",
+      "targetDomainName": "WIN-M10-SYNTHETIC",
+      "logonType": "3",
+      "ipAddress": "192.0.2.44",
+      "ipPort": "49800",
+      "status": "0xc000006d",
+      "subStatus": "0xc000006a"
+    }
+  }
+}

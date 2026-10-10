@@ -26,6 +26,10 @@ def alert_search_document(alert: NormalizedAlert) -> str:
         alert.user,
         alert.location,
         alert.decoder_name,
+        alert.windows.event_id if alert.windows else None,
+        alert.windows.channel if alert.windows else None,
+        alert.windows.provider if alert.windows else None,
+        alert.windows.computer if alert.windows else None,
     ]
     return "\n".join(str(value).casefold() for value in values if value is not None)
 

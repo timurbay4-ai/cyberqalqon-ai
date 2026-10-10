@@ -10,6 +10,25 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[2]
 
 
+class ReleaseMetadataTest(unittest.TestCase):
+    def test_release_metadata_and_ci_image_tags_are_aligned(self) -> None:
+        version = "0.8.1"
+        backend_version = (ROOT / "backend" / "app" / "version.py").read_text(encoding="utf-8")
+        frontend_package = json.loads((ROOT / "frontend" / "package.json").read_text(encoding="utf-8"))
+        compose = (ROOT / "compose.yaml").read_text(encoding="utf-8")
+        production_env = (ROOT / ".env.production.example").read_text(encoding="utf-8")
+        workflow = (ROOT / ".github" / "workflows" / "ci.yml").read_text(encoding="utf-8")
+
+        self.assertIn(f'APPLICATION_VERSION = "{version}"', backend_version)
+        self.assertEqual(frontend_package["version"], version)
+        for image in ("backend", "web"):
+            tag = f"cyberqalqon/{image}:{version}"
+            self.assertIn(tag, compose)
+            self.assertIn(tag, production_env)
+            self.assertIn(tag, workflow)
+            self.assertNotIn(f"cyberqalqon/{image}:0.8.0", workflow)
+
+
 class DeploymentArtifactsTest(unittest.TestCase):
     @classmethod
     def setUpClass(cls) -> None:

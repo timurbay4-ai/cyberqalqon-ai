@@ -1,0 +1,14 @@
+[Unit]
+Description=CyberQalqon bounded local-lab network telemetry
+After=network.target
+Before=wazuh-agent.service
+
+[Service]
+Type=oneshot
+RemainAfterExit=yes
+ExecStartPre=-/usr/sbin/nft delete table inet cyberqalqon_lab
+ExecStart=/usr/sbin/nft -f /etc/nftables.d/cyberqalqon-lab-network.nft
+ExecStop=-/usr/sbin/nft delete table inet cyberqalqon_lab
+
+[Install]
+WantedBy=multi-user.target

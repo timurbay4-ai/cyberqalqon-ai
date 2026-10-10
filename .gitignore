@@ -83,8 +83,12 @@ ehthumbs.db
 .hypothesis/
 junit.xml
 test-results/
+artifacts/lab-validation/
+artifacts/runtime/
 
 # ----- Temporary -----
+tmp/
+output/
 *.tmp
 *.bak
 *.orig

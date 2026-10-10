@@ -1,0 +1,17 @@
+{
+  "win": {
+    "system": {
+      "providerName": "Microsoft-Windows-PowerShell",
+      "eventID": "4104",
+      "level": "5",
+      "channel": "Microsoft-Windows-PowerShell/Operational",
+      "computer": "WIN-M10-SYNTHETIC",
+      "severityValue": "INFORMATION",
+      "message": "Creating Scriptblock text (1 of 1): Get-Process"
+    },
+    "eventdata": {
+      "scriptBlockText": "Get-Process",
+      "scriptBlockId": "00000000-0000-0000-0000-000000000410"
+    }
+  }
+}

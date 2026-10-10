@@ -8,6 +8,7 @@ from fastapi.testclient import TestClient
 
 from app.core.config import Settings
 from app.main import create_app
+from app.db.migrations import MIGRATIONS
 from tests.conftest import bootstrap_and_login
 
 
@@ -98,6 +99,51 @@ def test_create_incident_with_alert_link_and_missing_alert_is_atomic(
         "field": "alert_id",
     }
     assert client.get("/api/v1/incidents").json()["page"]["total"] == 1
+
+
+def test_initial_incident_assignment_notification_is_bounded(
+    client: TestClient,
+    database_path: Path,
+) -> None:
+    with sqlite3.connect(database_path) as connection:
+        analyst_id = connection.execute(
+            "SELECT analyst_id FROM analysts ORDER BY created_at LIMIT 1"
+        ).fetchone()[0]
+        connection.executemany(
+            """
+            INSERT INTO analyst_notifications (
+                notification_id, analyst_id, category, title, preview,
+                target_type, target_id, event_key, created_at, read_at
+            ) VALUES (?, ?, 'HIGH_ALERT', 'Existing alert', 'Existing preview',
+                      'alert', ?, ?, ?, NULL)
+            """,
+            [
+                (
+                    f"NTF-BOUND-{index:04d}",
+                    analyst_id,
+                    f"alert-{index}",
+                    f"existing:{index}",
+                    f"2026-01-01T00:00:{index:04d}+00:00",
+                )
+                for index in range(500)
+            ],
+        )
+
+    incident = _create_incident(client, assigned_to=analyst_id)
+    with sqlite3.connect(database_path) as connection:
+        count = connection.execute(
+            "SELECT COUNT(*) FROM analyst_notifications WHERE analyst_id = ?",
+            (analyst_id,),
+        ).fetchone()[0]
+        created = connection.execute(
+            """
+            SELECT category FROM analyst_notifications
+            WHERE analyst_id = ? AND target_type = 'incident' AND target_id = ?
+            """,
+            (analyst_id, incident["incident_id"]),
+        ).fetchone()
+    assert count == 500
+    assert created == ("INCIDENT_ASSIGNED",)
 
 
 def test_valid_lifecycle_transitions_are_audited(client: TestClient) -> None:
@@ -352,4 +398,4 @@ def test_incident_persists_across_application_restart(database_path: Path) -> No
         ]
 
     with sqlite3.connect(database_path) as connection:
-        assert connection.execute("PRAGMA user_version").fetchone()[0] == 5
+        assert connection.execute("PRAGMA user_version").fetchone()[0] == len(MIGRATIONS)

@@ -16,6 +16,8 @@
 - Typed incident create/list/detail/status/link/note/assignment APIs
 - Argon2id analyst credentials, opaque server-side sessions, CSRF protection, and enforced roles
 - Operator-controlled first-administrator bootstrap with no default credentials
+- Saved event searches, security audit, password change, and session revocation
+- Bounded SIEM Overview, Discover, inventory, rule catalog, and filtered JSON/CSV reports
 - Secure local Ollama analyst with bounded server-selected context, strict output validation,
   provenance/history, concurrency control, and stale detection
 
@@ -85,8 +87,9 @@ schemas contain no `actor` field. `VIEWER` can read; `ANALYST` and `ADMIN` can m
 
 Incident list results use opaque keyset pagination and can be filtered by repeatable `status`,
 repeatable `severity`, and case-insensitive exact `assigned_to`. Alert relationships store alert IDs
-under foreign-key constraints; alert payloads are not duplicated. Correlation is currently explicit
-and analyst-directed.
+under foreign-key constraints; alert payloads are not duplicated. Post-ingest automatic correlation
+is bounded, deterministic, and documented in
+[`../docs/CORRELATION_ENGINE.md`](../docs/CORRELATION_ENGINE.md).
 
 ## SQLite migrations
 
@@ -102,6 +105,13 @@ records them in `schema_migrations` plus SQLite `user_version`.
   stable analyst identifiers on existing note/history tables without rewriting prior audit text.
 - Migration 5 adds append-only validated AI analysis provenance and indexed target history without
   rewriting alerts, incidents, authentication data, or incident audit history.
+- Migration 6 adds lifecycle-safe automatic correlation metadata, unique automatic alert
+  membership, and bounded candidate indexes without rewriting existing alerts or incidents.
+- Migration 7 replaces the candidate index ordering with an agent/time/order layout selected by
+  SQLite for bounded correlation lookups.
+- Migration 8 adds the normalized security-event store, retention state, compound indexes, and FTS5.
+- Migration 9 adds analyst-owned saved searches, bounded security audit, retention telemetry, and
+  v0.2 exact-filter indexes without rewriting alerts, incidents, accounts, or event rows.
 - Unknown future versions, inconsistent migration history, incompatible legacy schemas, or invalid
   stored normalized alerts stop startup. No database is dropped or silently rebuilt.
 
@@ -128,9 +138,14 @@ An initial request returns `201 Created`; an identical replay returns `200 OK` w
 
 | Variable | Purpose | Default |
 |---|---|---|
-| `DATABASE_URL` | File-backed SQLite URL | `sqlite:///./backend/data/cyberqalqon.db` |
+| `DATABASE_URL` | File-backed SQLite URL; migrations currently reach schema v12 | `sqlite:///./backend/data/cyberqalqon.db` |
 | `WAZUH_INGEST_API_KEY` | Shared secret for the ingest endpoint | unset; ingestion disabled |
 | `MAX_INGEST_BYTES` | Maximum raw request size | `1048576` |
+| `CORRELATION_ENABLED` | Run deterministic correlation after a new alert is stored | `true` |
+| `CORRELATION_WINDOW_SECONDS` | Bounded evidence window | `900` |
+| `CORRELATION_MAX_CANDIDATES` | Maximum candidate rows inspected per new alert | `200` |
+| `CORRELATION_MAX_LINKS` | Maximum alert links in one correlation plan | `50` |
+| `CORRELATION_RETRY_ATTEMPTS` | Retry count for SQLite busy failures | `1` |
 | `CORS_ORIGINS` | Comma-separated explicit browser origins | Vite and legacy localhost origins |
 | `ANALYST_SESSION_TTL_SECONDS` | Absolute server-side session lifetime | `28800` (8 hours) |
 | `SESSION_COOKIE_SECURE` | Require HTTPS delivery for the analyst cookie | false in development; true otherwise |
@@ -158,6 +173,9 @@ and invalidates restored sessions. See
 - `GET /api/v1/auth/session` validates the cookie and restores the current analyst plus CSRF token.
 - `POST /api/v1/auth/logout` invalidates the server session.
 - `ADMIN` may list, create, and update analysts under `/api/v1/auth/analysts`.
+- Every analyst may change their password and revoke other sessions; the current session remains
+  valid after password change while every other session is revoked.
+- `ADMIN` may read the bounded security audit under `/api/v1/audit-events`.
 - Every cookie-authenticated mutation requires both an allowed `Origin` and `X-CSRF-Token`.
 - Session identifiers contain 256 bits of randomness; only SHA-256 digests are stored in SQLite.
 - Active sessions are capped at ten per analyst; expired and excess rows are removed on login.

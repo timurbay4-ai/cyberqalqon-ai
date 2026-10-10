@@ -349,6 +349,7 @@ def test_viewer_can_read_but_cannot_mutate_and_admin_can_manage_accounts(
     )
     assert forbidden.status_code == 403
     assert forbidden.json()["detail"]["code"] == "permission_denied"
+    assert unauthenticated_client.get("/api/v1/audit-events").status_code == 403
 
     settings = unauthenticated_client.app.state.settings
     with TestClient(create_app(settings)) as admin_client:
@@ -361,6 +362,64 @@ def test_viewer_can_read_but_cannot_mutate_and_admin_can_manage_accounts(
         assert disabled.status_code == 200
         assert disabled.json()["is_active"] is False
     assert unauthenticated_client.get("/api/v1/auth/session").status_code == 401
+
+
+def test_password_change_preserves_current_session_revokes_others_and_is_audited(
+    unauthenticated_client: TestClient,
+) -> None:
+    _bootstrap(unauthenticated_client)
+    session = _login(unauthenticated_client)
+    repository = unauthenticated_client.app.state.auth_repository
+    principal = repository.authenticate("admin", TEST_PASSWORD)
+    assert principal is not None
+    repository.create_session(principal)
+    repository.create_session(principal)
+
+    before = unauthenticated_client.get("/api/v1/auth/sessions")
+    assert before.status_code == 200
+    assert before.json()["active_sessions"] == 3
+
+    changed = unauthenticated_client.patch(
+        "/api/v1/auth/password",
+        headers=_csrf(session),
+        json={
+            "current_password": TEST_PASSWORD,
+            "new_password": "New-Correct-Horse-Battery-88",
+        },
+    )
+    assert changed.status_code == 204
+    assert unauthenticated_client.get("/api/v1/auth/session").status_code == 200
+    assert unauthenticated_client.get("/api/v1/auth/sessions").json()["active_sessions"] == 1
+
+    unauthenticated_client.post("/api/v1/auth/logout", headers=_csrf(session))
+    assert unauthenticated_client.post(
+        "/api/v1/auth/login",
+        headers={"Origin": TEST_ORIGIN},
+        json={"username": "admin", "password": TEST_PASSWORD},
+    ).status_code == 401
+    assert unauthenticated_client.post(
+        "/api/v1/auth/login",
+        headers={"Origin": TEST_ORIGIN},
+        json={"username": "admin", "password": "New-Correct-Horse-Battery-88"},
+    ).status_code == 200
+    audit = unauthenticated_client.get("/api/v1/audit-events")
+    assert audit.status_code == 200
+    assert "PASSWORD_CHANGED" in {item["action"] for item in audit.json()["items"]}
+
+
+def test_invalid_current_password_is_denied_without_changing_credential(
+    unauthenticated_client: TestClient,
+) -> None:
+    _bootstrap(unauthenticated_client)
+    session = _login(unauthenticated_client)
+    response = unauthenticated_client.patch(
+        "/api/v1/auth/password",
+        headers=_csrf(session),
+        json={"current_password": "wrong", "new_password": "New-Correct-Horse-Battery-88"},
+    )
+    assert response.status_code == 403
+    assert response.json()["detail"]["code"] == "invalid_current_password"
+    assert unauthenticated_client.app.state.auth_repository.authenticate("admin", TEST_PASSWORD) is not None
 
 
 def test_credentialed_cors_is_explicit(unauthenticated_client: TestClient) -> None:

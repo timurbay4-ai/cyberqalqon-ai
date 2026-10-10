@@ -1,0 +1,5 @@
+--- ossec.conf
++++ ossec.conf
+@@ -325 +325 @@
+-    <rule_id>100101</rule_id>
++    <rule_id>100101,100111,100120,100130,100131</rule_id>

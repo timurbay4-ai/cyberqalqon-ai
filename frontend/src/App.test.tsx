@@ -1,4 +1,5 @@
-import { fireEvent, render, screen } from "@testing-library/react";
+import { StrictMode } from "react";
+import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
 
 import { App } from "./App";
@@ -11,10 +12,22 @@ describe("App", () => {
     render(<App api={api} />);
 
     expect(await screen.findByText("Live backend")).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: /Discover/ }));
+    expect(await screen.findByRole("heading", { name: "Security event explorer" })).toBeInTheDocument();
     fireEvent.click(screen.getByRole("button", { name: /Alerts/ }));
     expect(await screen.findByRole("heading", { name: "Security alerts" })).toBeInTheDocument();
     fireEvent.click(screen.getByRole("button", { name: /Incidents/ }));
     expect(await screen.findByRole("heading", { name: "Incidents" })).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: /^Hosts$/ }));
+    expect(await screen.findByRole("heading", { name: "Hosts and log sources" })).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: /Detection Rules/ }));
+    expect(await screen.findByRole("heading", { name: "Rules, coverage and quality" })).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: /Reports/ }));
+    expect(await screen.findByRole("heading", { name: "Security reports" })).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "Export CSV" })).toHaveAttribute("href", expect.stringContaining("/api/v1/reports/security-activity.csv"));
+    fireEvent.click(screen.getByRole("button", { name: /Administration/ }));
+    expect(await screen.findByRole("heading", { name: "Administration" })).toBeInTheDocument();
+    expect(await screen.findByText("Session security")).toBeInTheDocument();
   });
 
   it("shows backend unavailability without substituting demo data", async () => {
@@ -68,5 +81,92 @@ describe("App", () => {
     fireEvent.click(screen.getByRole("button", { name: "Sign out" }));
     expect(await screen.findByRole("heading", { name: "Analyst sign in" })).toBeInTheDocument();
     expect(api.logout).toHaveBeenCalledOnce();
+  }, 10_000);
+
+  it("restores the authenticated shell under React StrictMode", async () => {
+    const api = createMockApi();
+    render(<StrictMode><App api={api} /></StrictMode>);
+
+    expect(await screen.findByText("Analyst One")).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "Security overview" })).toBeInTheDocument();
+    expect(api.getSession).toHaveBeenCalled();
+  });
+
+  it("keeps a valid analyst signed in when dashboard data fails", async () => {
+    const api = createMockApi({
+      getOverview: vi.fn().mockRejectedValue(new ApiError("Temporary dashboard failure", 500, "backend_failure")),
+    });
+    render(<App api={api} />);
+
+    expect(await screen.findByText("Analyst One")).toBeInTheDocument();
+    expect(await screen.findByText("Temporary dashboard failure")).toBeInTheDocument();
+    expect(screen.queryByRole("heading", { name: "Analyst sign in" })).not.toBeInTheDocument();
+  });
+
+  it("shows persisted per-user notifications and navigates to the related alert", async () => {
+    const api = createMockApi({
+      listNotifications: vi.fn().mockResolvedValue({
+        unread_count: 1,
+        limit: 25,
+        items: [{
+          notification_id: "NTF-1",
+          category: "HIGH_ALERT",
+          title: "High-severity alert received",
+          preview: "Rule 5712 · level 10 · test-host",
+          target_type: "alert",
+          target_id: "alert-001",
+          created_at: "2026-10-08T12:00:00Z",
+          read_at: null,
+        }],
+      }),
+      markNotificationRead: vi.fn().mockResolvedValue({
+        notification_id: "NTF-1", category: "HIGH_ALERT", title: "High-severity alert received",
+        preview: "Rule 5712 · level 10 · test-host", target_type: "alert", target_id: "alert-001",
+        created_at: "2026-10-08T12:00:00Z", read_at: "2026-10-08T12:01:00Z",
+      }),
+    });
+    render(<App api={api} />);
+    const trigger = await screen.findByRole("button", { name: "Notifications, 1 unread" });
+    fireEvent.click(trigger);
+    fireEvent.click(await screen.findByRole("button", { name: /High-severity alert received/ }));
+    expect(await screen.findByRole("heading", { name: "Security alerts" })).toBeInTheDocument();
+    expect(api.markNotificationRead).toHaveBeenCalledWith("NTF-1");
+    await waitFor(() => expect(api.getAlertWorkflow).toHaveBeenCalledWith("alert-001", expect.any(AbortSignal)));
+  });
+
+  it("supports shareable page deep links and browser history restoration", async () => {
+    window.history.replaceState({}, "", "/?view=alerts&alert=alert-001");
+    const api = createMockApi();
+    render(<App api={api} />);
+
+    expect(await screen.findByRole("heading", { name: "Security alerts" })).toBeInTheDocument();
+    await waitFor(() => expect(api.getAlertWorkflow).toHaveBeenCalledWith("alert-001", expect.any(AbortSignal)));
+    fireEvent.click(screen.getByRole("button", { name: /^Hosts$/ }));
+    expect(window.location.search).toBe("?view=hosts");
+    window.history.pushState({}, "", "/?view=incidents");
+    fireEvent.popState(window);
+    expect(await screen.findByRole("heading", { name: "Incidents" })).toBeInTheDocument();
+  });
+
+  it("offers discoverable keyboard shortcuts without hijacking text input", async () => {
+    const api = createMockApi();
+    render(<App api={api} />);
+    await screen.findByRole("heading", { name: "Security overview" });
+
+    fireEvent.keyDown(window, { key: "?" });
+    expect(screen.getByRole("dialog", { name: "Shortcuts" })).toBeInTheDocument();
+    fireEvent.keyDown(window, { key: "Escape" });
+    expect(screen.queryByRole("dialog", { name: "Shortcuts" })).not.toBeInTheDocument();
+
+    fireEvent.keyDown(window, { key: "g" });
+    fireEvent.keyDown(window, { key: "a" });
+    expect(await screen.findByRole("heading", { name: "Security alerts" })).toBeInTheDocument();
+    const search = screen.getByLabelText("Search");
+    fireEvent.keyDown(search, { key: "?" });
+    expect(screen.queryByRole("dialog", { name: "Shortcuts" })).not.toBeInTheDocument();
+
+    fireEvent.keyDown(window, { key: "/" });
+    expect(await screen.findByRole("heading", { name: "Security event explorer" })).toBeInTheDocument();
+    await waitFor(() => expect(screen.getByLabelText("Keyword")).toHaveFocus());
   });
 });

@@ -1,0 +1,17 @@
+{
+  "win": {
+    "system": {
+      "providerName": "Microsoft-Windows-Security-Auditing",
+      "eventID": "4720",
+      "level": "0",
+      "channel": "Security",
+      "computer": "WIN-M10-SYNTHETIC",
+      "severityValue": "AUDIT_SUCCESS",
+      "message": "Synthetic local account creation fixture"
+    },
+    "eventdata": {
+      "subjectUserName": "synthetic-operator",
+      "targetUserName": "cq-m10-synthetic"
+    }
+  }
+}

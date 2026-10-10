@@ -9,6 +9,6 @@ from __future__ import annotations
 import os
 
 
-APPLICATION_VERSION = "0.7.0"
+APPLICATION_VERSION = "0.8.1"
 GIT_COMMIT = os.getenv("APP_GIT_COMMIT", "unknown").strip() or "unknown"
 BUILD_TIMESTAMP = os.getenv("APP_BUILD_TIMESTAMP", "unknown").strip() or "unknown"

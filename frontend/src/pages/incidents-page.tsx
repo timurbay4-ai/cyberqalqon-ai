@@ -15,8 +15,9 @@ function errorMessage(reason: unknown): string {
   return reason instanceof Error ? reason.message : "The incident operation failed.";
 }
 
-export function IncidentsPage({ api, canMutate = true }: { api: BackendApi; canMutate?: boolean }) {
+export function IncidentsPage({ api, canMutate = true, initialPageSize = 25, openIncidentId, onOpenAlert = () => undefined, onOpenEvent = () => undefined }: { api: BackendApi; canMutate?: boolean; initialPageSize?: 25 | 50 | 100; openIncidentId?: string | null; onOpenAlert?(alertId: string): void; onOpenEvent?(eventId: string): void }) {
   const [filters, setFilters] = useState<IncidentFilterValues>(EMPTY_INCIDENT_FILTERS);
+  const [pageSize, setPageSize] = useState(initialPageSize);
   const [cursor, setCursor] = useState<string | undefined>();
   const [cursorStack, setCursorStack] = useState<Array<string | undefined>>([]);
   const [data, setData] = useState<IncidentListResponse | null>(null);
@@ -36,13 +37,30 @@ export function IncidentsPage({ api, canMutate = true }: { api: BackendApi; canM
   const selectedIdRef = useRef(selectedId);
   selectedIdRef.current = selectedId;
 
+  useEffect(() => {
+    setSelectedId(openIncidentId ?? null);
+  }, [openIncidentId]);
+  useEffect(() => setPageSize(initialPageSize), [initialPageSize]);
+
+  useEffect(() => {
+    const restore = () => setSelectedId(new URLSearchParams(window.location.search).get("incident"));
+    window.addEventListener("popstate", restore);
+    return () => window.removeEventListener("popstate", restore);
+  }, []);
+
+  useEffect(() => {
+    const close = () => { const url = new URL(window.location.href); url.searchParams.delete("incident"); window.history.replaceState(window.history.state, "", url); setSelectedId(null); };
+    window.addEventListener("cyberqalqon:escape", close);
+    return () => window.removeEventListener("cyberqalqon:escape", close);
+  }, []);
+
   const query = useMemo(() => ({
     statuses: filters.status ? [filters.status] : undefined,
     severities: filters.severity ? [filters.severity] : undefined,
     assignedTo: filters.assignedTo.trim() || undefined,
-    limit: 25,
+    limit: pageSize,
     cursor,
-  }), [cursor, filters]);
+  }), [cursor, filters, pageSize]);
 
   useEffect(() => {
     const controller = new AbortController();
@@ -122,6 +140,14 @@ export function IncidentsPage({ api, canMutate = true }: { api: BackendApi; canM
     if (!selectedId) throw new Error("No incident is selected.");
     return selectedId;
   };
+  const selectIncident = (incidentId: string) => {
+    const url = new URL(window.location.href); url.searchParams.set("view", "incidents"); url.searchParams.set("incident", incidentId);
+    window.history.pushState({}, "", url); setSelectedId(incidentId);
+  };
+  const closeIncident = () => {
+    const url = new URL(window.location.href); url.searchParams.delete("incident");
+    window.history.replaceState({}, "", url); setSelectedId(null);
+  };
 
   return (
     <div className="page-grid">
@@ -132,11 +158,11 @@ export function IncidentsPage({ api, canMutate = true }: { api: BackendApi; canM
         {loading && !data && <StatePanel kind="loading" title="Loading incidents" message="Reading the current incident queue…" />}
         {error && <StatePanel kind="unavailable" title="Incident data unavailable" message={error} actionLabel="Retry" onAction={() => setRevision((value) => value + 1)} />}
         {!loading && !error && data?.items.length === 0 && <StatePanel kind="empty" title="No matching incidents" message="Create an incident or adjust the current filters." />}
-        {!error && data && data.items.length > 0 && <><IncidentsTable incidents={data.items} selectedId={selectedId} onSelect={setSelectedId} /><Pagination visible={data.items.length} total={data.page.total} hasPrevious={cursorStack.length > 0} hasNext={Boolean(data.page.next_cursor)} loading={loading} onPrevious={() => { setCursor(cursorStack[cursorStack.length - 1]); setCursorStack((current) => current.slice(0, -1)); }} onNext={() => { if (data.page.next_cursor) { setCursorStack((current) => [...current, cursor]); setCursor(data.page.next_cursor); } }} /></>}
+        {!error && data && data.items.length > 0 && <><IncidentsTable incidents={data.items} selectedId={selectedId} onSelect={selectIncident} /><Pagination visible={data.items.length} total={data.page.total} hasPrevious={cursorStack.length > 0} hasNext={Boolean(data.page.next_cursor)} loading={loading} pageSize={pageSize} onPageSizeChange={(next) => { setPageSize(next as 25 | 50 | 100); setCursor(undefined); setCursorStack([]); }} onPrevious={() => { setCursor(cursorStack[cursorStack.length - 1]); setCursorStack((current) => current.slice(0, -1)); }} onNext={() => { if (data.page.next_cursor) { setCursorStack((current) => [...current, cursor]); setCursor(data.page.next_cursor); } }} /></>}
       </section>
 
       {selectedId && detailLoading && !detail && <aside className="detail-panel detail-panel--state"><StatePanel kind="loading" title="Loading incident" message="Reading lifecycle and audit history…" /></aside>}
-      {selectedId && detailError && <aside className="detail-panel detail-panel--state"><StatePanel kind="error" title="Incident detail unavailable" message={detailError} actionLabel="Close" onAction={() => setSelectedId(null)} /></aside>}
+      {selectedId && detailError && <aside className="detail-panel detail-panel--state"><StatePanel kind="error" title="Incident detail unavailable" message={detailError} actionLabel="Close" onAction={closeIncident} /></aside>}
       {detail && selectedId === detail.incident_id && (
         <IncidentDetail
           incident={detail}
@@ -145,7 +171,9 @@ export function IncidentsPage({ api, canMutate = true }: { api: BackendApi; canM
           error={mutationError}
           success={mutationSuccess}
           canMutate={canMutate}
-          onClose={() => setSelectedId(null)}
+          onClose={closeIncident}
+          onOpenAlert={onOpenAlert}
+          onOpenEvent={onOpenEvent}
           onStatus={(status: IncidentStatus) => mutate(() => api.updateIncidentStatus(requireId(), { status }), `Status changed to ${status}.`)}
           onLink={(alertId) => mutate(() => api.linkIncidentAlert(requireId(), { alert_id: alertId }), "Alert linked.")}
           onNote={(body) => mutate(async () => { await api.addIncidentNote(requireId(), { body }); return api.getIncident(requireId()); }, "Note added.")}

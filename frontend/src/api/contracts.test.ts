@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 
-import { ContractError, parseAIAnalysis, parseAIAnalysisHistory, parseAIStatus, parseAlertList, parseIncidentDetail, parseNormalizedAlert, parseSession } from "./contracts";
-import { AI_STATUS, ALERT_PAGE, SAMPLE_AI_ANALYSIS, SAMPLE_ALERT, SAMPLE_INCIDENT, SAMPLE_SESSION } from "../test/fixtures";
+import { ContractError, parseAIAnalysis, parseAIAnalysisHistory, parseAIStatus, parseAlertList, parseDetectionRules, parseHosts, parseIncidentDetail, parseLogSources, parseNormalizedAlert, parseSecurityActivityReport, parseSecurityEventList, parseSession } from "./contracts";
+import { AI_STATUS, ALERT_PAGE, SAMPLE_AI_ANALYSIS, SAMPLE_ALERT, SAMPLE_EVENT, SAMPLE_HOSTS, SAMPLE_INCIDENT, SAMPLE_REPORT, SAMPLE_RULES, SAMPLE_SESSION, SAMPLE_SOURCES } from "../test/fixtures";
 
 describe("runtime API contracts", () => {
   it("accepts optional alert fields and empty MITRE arrays", () => {
@@ -21,6 +21,14 @@ describe("runtime API contracts", () => {
     expect(() => parseAlertList({ items: [{ alert_id: "incomplete" }], page: { limit: 25, next_cursor: null, total: 1 } })).toThrow(ContractError);
   });
 
+  it("treats an omitted final-page cursor as null", () => {
+    const parsed = parseSecurityEventList({
+      items: [SAMPLE_EVENT],
+      page: { limit: 50, total: 1, sort: "newest" },
+    });
+    expect(parsed.page.next_cursor).toBeNull();
+  });
+
   it("rejects unexpected severity values", () => {
     expect(() => parseIncidentDetail({ ...SAMPLE_INCIDENT, severity: "URGENT" })).toThrow(/incident.severity/);
   });
@@ -30,12 +38,37 @@ describe("runtime API contracts", () => {
     expect(parsed.status).toBe("NEW");
     expect(parsed.notes[0].body).toContain("onerror");
     expect(parsed.history[0].event_type).toBe("CREATED");
+    expect(parsed.timeline[0].alert_id).toBe("alert-001");
+    expect(parsed.correlation).toBeNull();
+  });
+
+  it("parses typed Windows Event Channel identity", () => {
+    const parsed = parseNormalizedAlert({
+      ...SAMPLE_ALERT,
+      user: "cq-m10-synthetic",
+      windows: {
+        event_id: "4625",
+        channel: "Security",
+        provider: "Microsoft-Windows-Security-Auditing",
+        computer: "WIN-392LNNLLAT3",
+      },
+    });
+    expect(parsed.windows?.event_id).toBe("4625");
+    expect(parsed.windows?.provider).toBe("Microsoft-Windows-Security-Auditing");
   });
 
   it("validates authenticated roles and permissions", () => {
     expect(parseSession(SAMPLE_SESSION).analyst.role).toBe("ANALYST");
     expect(() => parseSession({ ...SAMPLE_SESSION, analyst: { ...SAMPLE_SESSION.analyst, role: "ROOT" } })).toThrow(/session.analyst.role/);
     expect(() => parseSession({ ...SAMPLE_SESSION, analyst: { ...SAMPLE_SESSION.analyst, permissions: ["everything"] } })).toThrow(/session.analyst.permissions/);
+  });
+
+  it("validates inventory, read-only rules, and report contracts", () => {
+    expect(parseHosts(SAMPLE_HOSTS)[0].agent_status).toBe("UNKNOWN");
+    expect(parseLogSources(SAMPLE_SOURCES)[0].source_health).toBe("ACTIVE");
+    expect(parseDetectionRules(SAMPLE_RULES)[0].editable).toBe(false);
+    expect(parseSecurityActivityReport(SAMPLE_REPORT).total_events).toBe(12);
+    expect(() => parseDetectionRules([{ ...SAMPLE_RULES[0], editable: true }])).toThrow(/editable/);
   });
 
   it("validates AI status, provenance, structured output, and history", () => {

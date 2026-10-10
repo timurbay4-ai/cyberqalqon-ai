@@ -11,6 +11,7 @@ from dataclasses import dataclass
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
+from uuid import uuid4
 
 from app.core.config import REPOSITORY_ROOT
 from app.db.migrations import MIGRATIONS, MigrationError, applied_migration_versions, apply_migrations
@@ -37,6 +38,7 @@ class StoredAlert:
 @dataclass(frozen=True, slots=True)
 class AlertFilters:
     rule_levels: tuple[int, ...] = ()
+    rule_id: str | None = None
     agent: str | None = None
     mitre_mapped: bool | None = None
     mitre_id: str | None = None
@@ -178,6 +180,65 @@ class AlertRepository:
                     ingested_at.isoformat(),
                 ),
             )
+            connection.execute(
+                """
+                INSERT INTO alert_workflows (
+                    alert_id, status, assigned_to, version,
+                    created_at, updated_at, last_activity_at
+                ) VALUES (?, 'NEW', NULL, 1, ?, ?, ?)
+                """,
+                (
+                    alert.alert_id,
+                    ingested_at.isoformat(),
+                    ingested_at.isoformat(),
+                    ingested_at.isoformat(),
+                ),
+            )
+            if alert.rule.level >= 10:
+                category = "CRITICAL_ALERT" if alert.rule.level >= 13 else "HIGH_ALERT"
+                title = (
+                    "Critical alert received"
+                    if category == "CRITICAL_ALERT"
+                    else "High-severity alert received"
+                )
+                preview = (
+                    f"Rule {alert.rule.id} · level {alert.rule.level} · {alert.agent.name}"
+                )
+                analysts = connection.execute(
+                    "SELECT analyst_id FROM analysts WHERE is_active = 1"
+                ).fetchall()
+                for analyst in analysts:
+                    analyst_id = str(analyst["analyst_id"])
+                    connection.execute(
+                        """
+                        INSERT OR IGNORE INTO analyst_notifications (
+                            notification_id, analyst_id, category, title, preview,
+                            target_type, target_id, event_key, created_at, read_at
+                        ) VALUES (?, ?, ?, ?, ?, 'alert', ?, ?, ?, NULL)
+                        """,
+                        (
+                            f"NTF-{uuid4().hex.upper()}",
+                            analyst_id,
+                            category,
+                            title,
+                            preview,
+                            alert.alert_id,
+                            f"alert-created:{alert.alert_id}",
+                            ingested_at.isoformat(),
+                        ),
+                    )
+                    connection.execute(
+                        """
+                        DELETE FROM analyst_notifications
+                        WHERE analyst_id = ? AND notification_id IN (
+                            SELECT notification_id FROM analyst_notifications
+                            WHERE analyst_id = ?
+                            ORDER BY created_at DESC, notification_id DESC
+                            LIMIT -1 OFFSET 500
+                        )
+                        """,
+                        (analyst_id, analyst_id),
+                    )
         return StoredAlert(alert=alert, ingested_at=ingested_at, duplicate=False)
 
     def get(self, alert_id: str) -> NormalizedAlert | None:
@@ -208,6 +269,9 @@ class AlertRepository:
             placeholders = ", ".join("?" for _ in filters.rule_levels)
             conditions.append(f"rule_level IN ({placeholders})")
             parameters.extend(filters.rule_levels)
+        if filters.rule_id:
+            conditions.append("rule_id = ? COLLATE NOCASE")
+            parameters.append(filters.rule_id)
         if filters.agent:
             conditions.append("(agent_id = ? COLLATE NOCASE OR agent_name = ? COLLATE NOCASE)")
             parameters.extend((filters.agent, filters.agent))

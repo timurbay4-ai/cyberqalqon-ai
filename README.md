@@ -1,8 +1,8 @@
 ﻿# CyberQalqon AI
 
-**Privacy-first AI-assisted SOC investigation platform designed around open-source security tooling.**
+**Privacy-first SOC investigation platform designed around open-source security tooling.**
 
-> Early MVP — Deterministic SOC workflow with a secure local advisory AI analyst | Built in Uzbekistan
+> v0.8 release candidate — Deterministic SOC workflow; optional local advisory AI remains disabled by default | Built in Uzbekistan
 
 ---
 
@@ -96,10 +96,15 @@ See [`docs/GIT_WORKFLOW.md`](docs/GIT_WORKFLOW.md) for the full branching strate
 | Wazuh alert ingestion         | Authenticated raw JSON ingestion with deterministic normalization |
 | Reliable Wazuh delivery       | Enqueue-first sender, bounded SQLite retry spool, dead letters, CLI, and systemd/Wazuh entrypoints |
 | SQLite persistence            | Raw + normalized retention and idempotent duplicate handling |
+| SIEM event store              | Bounded Wazuh archive ingestion, schema v14, redaction, dedupe, hard-cap retention, indexes, FTS5, and saved searches |
+| SIEM investigation workspace  | Overview, Discover, hunting, linked evidence, hosts/sources, detection engineering, IOC intelligence, reports, and Administration |
+| Detection engineering        | Consolidated Wazuh/M9 inventory, truthful MITRE coverage, local drafts, bounded dry-run, versions, audit, and deterministic quality analytics |
 | Versioned migrations          | Transactional upgrades with legacy-row preservation and drift checks |
 | Alert read APIs               | Typed list/detail responses, filtering, search, and cursor pagination |
 | Incident management API       | Lifecycle, alert links, notes, assignment, audit, and cursor pagination |
-| SOC frontend                  | Live dashboard, alert investigation, and incident workflow |
+| SOC case management API       | Explicit cases, collaboration, SHA-256 evidence manifests, safe playbooks, SLA, analytics, JSON/CSV/PDF reports |
+| Incident correlation engine   | Deterministic scoped rules, atomic auto-linking, explainable metadata, and timeline UI |
+| SOC frontend                  | Live dashboard, alert/incident investigation, durable case workflow, evidence, playbooks, and reporting |
 | Analyst security boundary     | Argon2id accounts, server sessions, CSRF, roles, verified audit actors |
 | Local AI analyst              | Ollama provider, bounded server context, structured validation, provenance, history, and safe UI |
 | Production deployment         | Non-root images, HTTPS reverse proxy, same-origin UI/API, private services, persistent volumes |
@@ -144,7 +149,10 @@ See [`docs/GIT_WORKFLOW.md`](docs/GIT_WORKFLOW.md) for the full branching strate
 - Advisory text only: no tools, commands, remediation, or incident mutation
 
 ### Frontend Dashboard
-- Live operational totals backed by alert and incident APIs
+- Live operational totals backed by event, alert, incident, and source aggregation APIs
+- Discover explorer with time presets, server filters, keyset pagination, and safe JSON evidence
+- Host/source inventory, detection engineering, local IOC intelligence, and bounded report export
+- Dedicated bounded threat hunting with saved queries and alert/incident evidence relationships
 - Alert explorer with server-side filtering, pagination, detail, and MITRE context
 - Incident lifecycle, alert links, notes, assignment, and audit history
 - Backend-validated login/logout and role-aware mutation controls
@@ -190,6 +198,17 @@ curl http://localhost:8000/health
 
 API docs: http://localhost:8000/docs
 
+### Local Windows monitoring lab
+
+The M10 Windows monitoring design, supported enrollment handoff, exact EventChannel filters,
+built-in detection matrix, and safe test evidence are documented in:
+
+- [`docs/M10_WINDOWS_MONITORING_VALIDATION.md`](docs/M10_WINDOWS_MONITORING_VALIDATION.md)
+- [`docs/windows/WINDOWS_AGENT_CONNECTIVITY.md`](docs/windows/WINDOWS_AGENT_CONNECTIVITY.md)
+- [`docs/windows/WINDOWS_EVENT_COLLECTION.md`](docs/windows/WINDOWS_EVENT_COLLECTION.md)
+- [`docs/windows/WINDOWS_DETECTION_COVERAGE.md`](docs/windows/WINDOWS_DETECTION_COVERAGE.md)
+- [`docs/windows/WINDOWS_SAFE_TESTS.md`](docs/windows/WINDOWS_SAFE_TESTS.md)
+
 ### Production
 
 The supported single-node production foundation uses Docker Compose, an
@@ -231,6 +250,14 @@ git checkout dev/cyberqalqon
 ## Contributing
 
 See [CONTRIBUTING.md](CONTRIBUTING.md) for branch workflow, commit conventions, ownership rules, and the secrets policy.
+
+For the v0.8 release-candidate evidence and operator handoff, see:
+
+- [`docs/release/RELEASE_NOTES_V08.md`](docs/release/RELEASE_NOTES_V08.md)
+- [`docs/release/RELEASE_GUIDE_V08.md`](docs/release/RELEASE_GUIDE_V08.md)
+- [`docs/release/BROWSER_UAT_V08.md`](docs/release/BROWSER_UAT_V08.md)
+- [`docs/release/GIT_STAGING_V08.md`](docs/release/GIT_STAGING_V08.md)
+- [`docs/release/SIEM_V08_VALIDATION.md`](docs/release/SIEM_V08_VALIDATION.md)
 
 ---
 

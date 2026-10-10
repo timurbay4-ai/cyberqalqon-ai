@@ -17,6 +17,7 @@ from app.schemas.alerts import (
     NetworkEndpoint,
     NormalizedAlert,
     Rule,
+    WindowsEventContext,
 )
 
 
@@ -129,6 +130,10 @@ def _endpoint(
     explicit_mapping = _mapping(explicit, name, required=False)
     ip = _first(explicit_mapping, "ip") or _first(data, *ip_keys)
     port_value = _first(explicit_mapping, "port") or _first(data, *port_keys)
+    if ip in ("", "-"):
+        ip = None
+    if port_value in ("", "-"):
+        port_value = None
     if ip is None and port_value is None:
         return None
     port = _integer(port_value, f"{name}.port") if port_value is not None else None
@@ -136,6 +141,30 @@ def _endpoint(
         return NetworkEndpoint(ip=ip, port=port)
     except ValidationError as exc:
         raise _normalization_error(exc, prefix=name) from exc
+
+
+def _windows_context(data: Mapping[str, Any]) -> WindowsEventContext | None:
+    system = _mapping(_nested_value(data, "win.system"), "data.win.system", required=False)
+    event_id = _first(system, "eventID", "eventId")
+    channel = _first(system, "channel")
+    if event_id is None and channel is None:
+        return None
+    if event_id is None:
+        raise AlertNormalizationError("is required", field="data.win.system.eventID")
+    if channel is None:
+        raise AlertNormalizationError("is required", field="data.win.system.channel")
+    try:
+        return WindowsEventContext(
+            event_id=_required_text(event_id, "data.win.system.eventID", allow_integer=True),
+            channel=_required_text(channel, "data.win.system.channel"),
+            provider=_optional_text(
+                _first(system, "providerName", "provider"),
+                "data.win.system.providerName",
+            ),
+            computer=_optional_text(system.get("computer"), "data.win.system.computer"),
+        )
+    except ValidationError as exc:
+        raise _normalization_error(exc, prefix="data.win.system") from exc
 
 
 def normalize_wazuh_alert(raw_event: JsonObject) -> NormalizedAlert:
@@ -209,8 +238,14 @@ def normalize_wazuh_alert(raw_event: JsonObject) -> NormalizedAlert:
                 raw_event.get("source"),
                 data_raw,
                 name="source",
-                ip_keys=("srcip", "src_ip", "source_ip"),
-                port_keys=("srcport", "src_port", "source_port"),
+                ip_keys=(
+                    "srcip", "src_ip", "source_ip", "win.eventdata.ipAddress",
+                    "win.eventdata.sourceAddress",
+                ),
+                port_keys=(
+                    "srcport", "src_port", "source_port", "win.eventdata.ipPort",
+                    "win.eventdata.sourcePort",
+                ),
             ),
             destination=_endpoint(
                 raw_event.get("destination"),
@@ -222,6 +257,7 @@ def normalize_wazuh_alert(raw_event: JsonObject) -> NormalizedAlert:
             user=user,
             location=_optional_text(raw_event.get("location"), "location"),
             decoder_name=_optional_text(decoder_raw.get("name"), "decoder.name"),
+            windows=_windows_context(data_raw),
         )
     except ValidationError as exc:
         raise _normalization_error(exc) from exc

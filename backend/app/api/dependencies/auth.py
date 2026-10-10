@@ -71,6 +71,10 @@ def require_incident_writer(request: Request) -> AnalystPrincipal:
     return _require_permission(request, Permission.INCIDENT_WRITE)
 
 
+def require_alert_writer(request: Request) -> AnalystPrincipal:
+    return _require_permission(request, Permission.ALERT_WRITE)
+
+
 def require_analyst_admin(request: Request) -> AnalystPrincipal:
     return _require_permission(request, Permission.ANALYST_MANAGE)
 
@@ -101,6 +105,38 @@ def require_authenticated_mutation(
     x_csrf_token: str | None = Header(default=None),
 ) -> AnalystPrincipal:
     return _require_csrf(request, x_csrf_token).principal
+
+
+def require_soc_mutation(
+    request: Request,
+    x_csrf_token: str | None = Header(default=None),
+) -> AnalystPrincipal:
+    session = _require_csrf(request, x_csrf_token)
+    if Permission.SOC_READ not in session.principal.permissions:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail=_error(
+                "permission_denied",
+                "The authenticated analyst lacks permission for this operation",
+            ),
+        )
+    return session.principal
+
+
+def require_alert_mutation(
+    request: Request,
+    x_csrf_token: str | None = Header(default=None),
+) -> AnalystPrincipal:
+    session = _require_csrf(request, x_csrf_token)
+    if Permission.ALERT_WRITE not in session.principal.permissions:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail=_error(
+                "permission_denied",
+                "The authenticated analyst lacks permission for this operation",
+            ),
+        )
+    return session.principal
 
 
 def require_ai_analysis(

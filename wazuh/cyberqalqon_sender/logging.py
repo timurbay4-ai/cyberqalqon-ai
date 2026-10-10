@@ -42,8 +42,19 @@ def configure_logging(level: str = "INFO") -> logging.Logger:
     logger = logging.getLogger("cyberqalqon_sender")
     logger.setLevel(getattr(logging, level))
     logger.propagate = False
-    if not logger.handlers:
+    owned_handler = next(
+        (
+            handler
+            for handler in logger.handlers
+            if getattr(handler, "_cyberqalqon_stderr_handler", False)
+        ),
+        None,
+    )
+    if owned_handler is not None:
+        owned_handler.stream = sys.stderr
+    elif not logger.handlers:
         handler = logging.StreamHandler(sys.stderr)
+        handler._cyberqalqon_stderr_handler = True  # type: ignore[attr-defined]
         handler.setFormatter(logging.Formatter("%(message)s"))
         logger.addHandler(handler)
     return logger

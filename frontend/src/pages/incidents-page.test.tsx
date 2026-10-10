@@ -12,6 +12,42 @@ async function openIncident() {
 }
 
 describe("IncidentsPage", () => {
+  it("renders explainable automatic correlation and chronological alert evidence", async () => {
+    const correlated: IncidentDetail = {
+      ...SAMPLE_INCIDENT,
+      auto_correlated: true,
+      correlation_rule: "CORR-001",
+      classification: "MULTI_STAGE_RECONNAISSANCE",
+      correlation: {
+        correlation_rule: "CORR-001",
+        classification: "MULTI_STAGE_RECONNAISSANCE",
+        confidence: "EXACT_MATCH",
+        source_identity: "agent:001|source:127.0.0.1",
+        target_identity: "agent:001|destination:127.0.0.1",
+        explanation: "Three deterministic stages matched; this is not confirmation of compromise.",
+        first_seen: "2026-10-06T10:00:00Z",
+        last_seen: "2026-10-06T10:02:00Z",
+        related_alert_count: 3,
+      },
+      timeline: [
+        { ...SAMPLE_INCIDENT.timeline[0], alert_id: "scan", rule_id: "100111", rule_description: "TCP port scan", source_ip: "127.0.0.1", mitre_ids: ["T1046"] },
+        { ...SAMPLE_INCIDENT.timeline[0], alert_id: "enum", rule_id: "100101", rule_description: "Directory enumeration", occurred_at: "2026-10-06T10:01:00Z", source_ip: "127.0.0.1" },
+        { ...SAMPLE_INCIDENT.timeline[0], alert_id: "probe", rule_id: "100120", rule_description: "Sensitive path probe", occurred_at: "2026-10-06T10:02:00Z", source_ip: "127.0.0.1" },
+      ],
+    };
+    const api = createMockApi({
+      listIncidents: vi.fn().mockResolvedValue({ items: [correlated], page: { limit: 25, next_cursor: null, total: 1 } }),
+      getIncident: vi.fn().mockResolvedValue(correlated),
+    });
+    render(<IncidentsPage api={api} />);
+    fireEvent.click(await screen.findByRole("button", { name: correlated.title }));
+    const detail = await screen.findByRole("complementary", { name: "Incident detail" });
+    expect(within(detail).getByRole("region", { name: "Correlation summary" })).toHaveTextContent("CORR-001");
+    expect(within(detail).getByText("MITRE ATT&CK: T1046")).toBeInTheDocument();
+    expect(within(detail).getByRole("button", { name: "Open alert scan" })).toBeInTheDocument();
+    expect(within(detail).getAllByRole("listitem").map((item) => item.textContent).join(" ")).toContain("TCP port scan");
+  });
+
   it("renders incident content as inert text and exposes only valid next statuses", async () => {
     const api = createMockApi();
     const { container } = render(<IncidentsPage api={api} />);

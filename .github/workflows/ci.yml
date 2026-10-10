@@ -175,18 +175,18 @@ jobs:
 
       - name: Inspect images and Nginx configuration
         run: |
-          test "$(docker image inspect cyberqalqon/backend:0.7.0 --format '{{.Config.User}}')" = '10001:10001'
-          test "$(docker image inspect cyberqalqon/web:0.7.0 --format '{{.Config.User}}')" = '101:101'
-          test -z "$(docker image inspect cyberqalqon/backend:0.7.0 --format '{{range .Config.Env}}{{println .}}{{end}}' | grep -F "$CYBERQALQON_SMOKE_INGEST_KEY" || true)"
-          test -z "$(docker image inspect cyberqalqon/backend:0.7.0 --format '{{range .Config.Env}}{{println .}}{{end}}' | grep -E 'WAZUH_INGEST_API_KEY=' || true)"
-          test -z "$(docker history --no-trunc cyberqalqon/backend:0.7.0 | grep -F "$CYBERQALQON_SMOKE_INGEST_KEY" || true)"
-          docker run --rm --entrypoint sh cyberqalqon/backend:0.7.0 -c \
+          test "$(docker image inspect cyberqalqon/backend:0.8.1 --format '{{.Config.User}}')" = '10001:10001'
+          test "$(docker image inspect cyberqalqon/web:0.8.1 --format '{{.Config.User}}')" = '101:101'
+          test -z "$(docker image inspect cyberqalqon/backend:0.8.1 --format '{{range .Config.Env}}{{println .}}{{end}}' | grep -F "$CYBERQALQON_SMOKE_INGEST_KEY" || true)"
+          test -z "$(docker image inspect cyberqalqon/backend:0.8.1 --format '{{range .Config.Env}}{{println .}}{{end}}' | grep -E 'WAZUH_INGEST_API_KEY=' || true)"
+          test -z "$(docker history --no-trunc cyberqalqon/backend:0.8.1 | grep -F "$CYBERQALQON_SMOKE_INGEST_KEY" || true)"
+          docker run --rm --entrypoint sh cyberqalqon/backend:0.8.1 -c \
             'test -z "$(find /opt/cyberqalqon -type f \( -name ".env" -o -name "*.db" -o -name "*.sqlite*" -o -name "*.key" -o -name "*.pem" \) -print -quit)"'
-          docker run --rm --entrypoint sh cyberqalqon/web:0.7.0 -c \
+          docker run --rm --entrypoint sh cyberqalqon/web:0.8.1 -c \
             'test -z "$(find /usr/share/nginx/html -type f \( -name ".env" -o -name "*.db" -o -name "*.sqlite*" -o -name "*.key" -o -name "*.pem" \) -print -quit)"'
           docker run --rm --entrypoint nginx \
             -v "$PWD/.qa/secrets:/etc/nginx/tls:ro" \
-            cyberqalqon/web:0.7.0 -t
+            cyberqalqon/web:0.8.1 -t
 
       - name: Run isolated HTTPS Compose smoke test
         env:

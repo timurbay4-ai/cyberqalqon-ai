@@ -1,11 +1,16 @@
 from __future__ import annotations
 
+import asyncio
 import copy
 import sqlite3
 from pathlib import Path
 
+import pytest
+from fastapi import HTTPException
 from fastapi.testclient import TestClient
+from starlette.requests import ClientDisconnect
 
+from app.api.routes.alerts import _read_json_object
 from app.core.config import Settings
 from app.main import create_app
 from app.services.wazuh_normalizer import normalize_wazuh_alert
@@ -34,6 +39,21 @@ def test_ingest_rejects_invalid_json(client: TestClient, auth_headers: dict[str,
 
     assert response.status_code == 400
     assert response.json()["detail"]["code"] == "invalid_json"
+
+
+def test_request_body_disconnect_is_a_bounded_client_error() -> None:
+    class DisconnectedRequest:
+        headers = {"content-type": "application/json"}
+
+        async def stream(self):
+            yield b'{"partial":'
+            raise ClientDisconnect()
+
+    with pytest.raises(HTTPException) as raised:
+        asyncio.run(_read_json_object(DisconnectedRequest(), 1024))  # type: ignore[arg-type]
+
+    assert raised.value.status_code == 400
+    assert raised.value.detail["code"] == "client_disconnected"
 
 
 def test_ingest_rejects_non_object_json(client: TestClient, auth_headers: dict[str, str]) -> None:

@@ -1,0 +1,21 @@
+<!-- Local lab TCP reconnaissance: low-level seed plus distinct-port correlation. -->
+<group name="local,network,reconnaissance,">
+  <rule id="100110" level="1">
+    <if_sid>4100</if_sid>
+    <action type="pcre2">^CQ-NETSCAN$</action>
+    <description>Authorized lab TCP SYN telemetry from $(srcip) to $(dstip):$(dstport).</description>
+    <group>network_connection,lab_telemetry,</group>
+  </rule>
+
+  <rule id="100111" level="10" frequency="6" timeframe="30" ignore="60">
+    <if_matched_sid>100110</if_matched_sid>
+    <same_srcip />
+    <same_dstip />
+    <different_dstport />
+    <description>Possible TCP port scan against the authorized lab target from $(srcip); latest destination port $(dstport).</description>
+    <mitre>
+      <id>T1046</id>
+    </mitre>
+    <group>network,reconnaissance,port_scan,attack,</group>
+  </rule>
+</group>

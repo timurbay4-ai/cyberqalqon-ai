@@ -18,6 +18,7 @@ from app.schemas.auth import (
     AnalystPrincipal,
     AnalystPublic,
     AnalystRole,
+    AnalystSessionStatus,
     AnalystUpdate,
 )
 from app.security.passwords import hash_password, perform_dummy_verification, verify_password
@@ -36,6 +37,10 @@ class AnalystNotFoundError(LookupError):
 
 
 class SelfAdministrationError(RuntimeError):
+    pass
+
+
+class InvalidCurrentPasswordError(RuntimeError):
     pass
 
 
@@ -304,3 +309,63 @@ class AuthRepository:
             connection.execute(
                 "DELETE FROM analyst_sessions WHERE token_digest = ?", (_token_digest(token),)
             )
+
+    def session_status(self, analyst_id: str, current_token: str) -> AnalystSessionStatus:
+        now = _utc_now()
+        digest = _token_digest(current_token)
+        with self._connect() as connection:
+            connection.execute("DELETE FROM analyst_sessions WHERE expires_at <= ?", (now.isoformat(),))
+            current = connection.execute(
+                "SELECT expires_at FROM analyst_sessions WHERE token_digest = ? AND analyst_id = ?",
+                (digest, analyst_id),
+            ).fetchone()
+            count = int(
+                connection.execute(
+                    "SELECT COUNT(*) FROM analyst_sessions WHERE analyst_id = ?",
+                    (analyst_id,),
+                ).fetchone()[0]
+            )
+        if current is None:
+            raise AnalystNotFoundError("current session")
+        return AnalystSessionStatus(
+            active_sessions=count,
+            current_expires_at=datetime.fromisoformat(current[0]),
+        )
+
+    def revoke_other_sessions(self, analyst_id: str, current_token: str) -> int:
+        digest = _token_digest(current_token)
+        with self._connect() as connection:
+            connection.execute("BEGIN IMMEDIATE")
+            result = connection.execute(
+                "DELETE FROM analyst_sessions WHERE analyst_id = ? AND token_digest != ?",
+                (analyst_id, digest),
+            )
+        return max(0, result.rowcount)
+
+    def change_password(
+        self,
+        analyst_id: str,
+        current_password: str,
+        new_password: str,
+        current_token: str,
+    ) -> int:
+        digest = _token_digest(current_token)
+        now = _utc_now()
+        with self._connect() as connection:
+            connection.execute("BEGIN IMMEDIATE")
+            row = connection.execute(
+                "SELECT password_hash FROM analysts WHERE analyst_id = ? AND is_active = 1",
+                (analyst_id,),
+            ).fetchone()
+            if row is None or not verify_password(row[0], current_password):
+                raise InvalidCurrentPasswordError("Current password is invalid")
+            connection.execute(
+                "UPDATE analysts SET password_hash = ?, failed_login_count = 0, "
+                "locked_until = NULL, updated_at = ? WHERE analyst_id = ?",
+                (hash_password(new_password), now.isoformat(), analyst_id),
+            )
+            revoked = connection.execute(
+                "DELETE FROM analyst_sessions WHERE analyst_id = ? AND token_digest != ?",
+                (analyst_id, digest),
+            ).rowcount
+        return max(0, revoked)

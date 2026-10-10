@@ -10,7 +10,7 @@ export function IncidentsTable({ incidents, selectedId, onSelect }: { incidents:
         <tbody>{incidents.map((incident) => (
           <tr className={selectedId === incident.incident_id ? "is-selected" : undefined} key={incident.incident_id}>
             <td>{formatTimestamp(incident.updated_at)}</td>
-            <td><button className="row-link" type="button" onClick={() => onSelect(incident.incident_id)}>{incident.title}</button><span className="cell-subtle">{incident.incident_id}</span></td>
+            <td><button className="row-link" type="button" onClick={() => onSelect(incident.incident_id)}>{incident.title}</button><span className="cell-subtle">{incident.incident_id}</span>{incident.auto_correlated && <span className="correlation-badge">Auto · {incident.correlation_rule}</span>}</td>
             <td><IncidentSeverityBadge severity={incident.severity} /></td>
             <td><IncidentStatusBadge status={incident.status} /></td>
             <td>{incident.assigned_to ?? "Unassigned"}</td>

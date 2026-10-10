@@ -13,7 +13,9 @@ from typing import Any
 from uuid import uuid4
 
 from app.schemas.incidents import (
+    CorrelationConfidence,
     IncidentCreate,
+    IncidentCorrelation,
     IncidentDetail,
     IncidentEventType,
     IncidentHistoryEvent,
@@ -21,7 +23,9 @@ from app.schemas.incidents import (
     IncidentSeverity,
     IncidentStatus,
     IncidentSummary,
+    IncidentTimelineAlert,
 )
+from app.schemas.alerts import NormalizedAlert
 from app.schemas.auth import AnalystPrincipal
 from app.services.wazuh_normalizer import canonical_json
 
@@ -137,6 +141,9 @@ def _summary_from_row(row: sqlite3.Row) -> IncidentSummary:
         created_at=datetime.fromisoformat(row["created_at"]),
         updated_at=datetime.fromisoformat(row["updated_at"]),
         alert_count=int(row["alert_count"]),
+        auto_correlated=row["correlation_rule"] is not None,
+        correlation_rule=row["correlation_rule"],
+        classification=row["classification"],
     )
 
 
@@ -251,6 +258,45 @@ class IncidentRepository:
                     occurred_at=now,
                     details={"from": None, "to": request.assigned_to},
                 )
+                assignee = connection.execute(
+                    """
+                    SELECT analyst_id FROM analysts
+                    WHERE is_active = 1 AND (
+                        analyst_id = ? OR username = ? COLLATE NOCASE
+                    )
+                    """,
+                    (request.assigned_to, request.assigned_to),
+                ).fetchone()
+                if assignee is not None:
+                    analyst_id = str(assignee["analyst_id"])
+                    connection.execute(
+                        """
+                        INSERT OR IGNORE INTO analyst_notifications (
+                            notification_id, analyst_id, category, title, preview,
+                            target_type, target_id, event_key, created_at, read_at
+                        ) VALUES (?, ?, 'INCIDENT_ASSIGNED', ?, ?, 'incident', ?, ?, ?, NULL)
+                        """,
+                        (
+                            f"NTF-{uuid4().hex.upper()}", analyst_id,
+                            "Incident assigned to you",
+                            f"Incident {incident_id} requires analyst review",
+                            incident_id,
+                            f"incident-assigned:{incident_id}:created:{analyst_id}",
+                            now.isoformat(),
+                        ),
+                    )
+                    connection.execute(
+                        """
+                        DELETE FROM analyst_notifications
+                        WHERE notification_id IN (
+                            SELECT notification_id FROM analyst_notifications
+                            WHERE analyst_id = ?
+                            ORDER BY created_at DESC, notification_id DESC
+                            LIMIT -1 OFFSET 500
+                        )
+                        """,
+                        (analyst_id,),
+                    )
             for alert_id in request.alert_ids:
                 connection.execute(
                     "INSERT INTO incident_alerts (incident_id, alert_id, linked_at) "
@@ -276,8 +322,12 @@ class IncidentRepository:
                 """
                 SELECT i.*,
                        (SELECT COUNT(*) FROM incident_alerts ia
-                        WHERE ia.incident_id = i.incident_id) AS alert_count
+                        WHERE ia.incident_id = i.incident_id) AS alert_count,
+                       ic.correlation_rule, ic.classification, ic.confidence,
+                       ic.source_identity, ic.target_identity, ic.explanation,
+                       ic.first_seen, ic.last_seen, ic.related_alert_count
                 FROM incidents i
+                LEFT JOIN incident_correlations ic ON ic.incident_id = i.incident_id
                 WHERE i.incident_id = ?
                 """,
                 (incident_id,),
@@ -310,6 +360,16 @@ class IncidentRepository:
                 """,
                 (incident_id,),
             ).fetchall()
+            timeline_rows = connection.execute(
+                """
+                SELECT a.normalized_json
+                FROM incident_alerts ia
+                JOIN alerts a ON a.alert_id = ia.alert_id
+                WHERE ia.incident_id = ?
+                ORDER BY a.occurred_at, a.alert_id
+                """,
+                (incident_id,),
+            ).fetchall()
 
         summary = _summary_from_row(row)
         return IncidentDetail(
@@ -335,6 +395,41 @@ class IncidentRepository:
                     details=json.loads(history_row["details_json"]),
                 )
                 for history_row in history_rows
+            ],
+            correlation=(
+                IncidentCorrelation(
+                    correlation_rule=row["correlation_rule"],
+                    classification=row["classification"],
+                    confidence=CorrelationConfidence(row["confidence"]),
+                    source_identity=row["source_identity"],
+                    target_identity=row["target_identity"],
+                    explanation=row["explanation"],
+                    first_seen=datetime.fromisoformat(row["first_seen"]),
+                    last_seen=datetime.fromisoformat(row["last_seen"]),
+                    related_alert_count=int(row["related_alert_count"]),
+                )
+                if row["correlation_rule"] is not None
+                else None
+            ),
+            timeline=[
+                IncidentTimelineAlert(
+                    alert_id=alert.alert_id,
+                    occurred_at=alert.timestamp,
+                    rule_id=alert.rule.id,
+                    rule_level=alert.rule.level,
+                    rule_description=alert.rule.description,
+                    agent_id=alert.agent.id,
+                    agent_name=alert.agent.name,
+                    source_ip=str(alert.source.ip) if alert.source and alert.source.ip else None,
+                    destination_ip=(
+                        str(alert.destination.ip)
+                        if alert.destination and alert.destination.ip
+                        else None
+                    ),
+                    mitre_ids=alert.mitre.ids,
+                )
+                for timeline_row in timeline_rows
+                for alert in [NormalizedAlert.model_validate_json(timeline_row["normalized_json"])]
             ],
         )
 
@@ -384,8 +479,10 @@ class IncidentRepository:
                 """
                 SELECT i.*,
                        (SELECT COUNT(*) FROM incident_alerts ia
-                        WHERE ia.incident_id = i.incident_id) AS alert_count
+                        WHERE ia.incident_id = i.incident_id) AS alert_count,
+                       ic.correlation_rule, ic.classification
                 FROM incidents i
+                LEFT JOIN incident_correlations ic ON ic.incident_id = i.incident_id
                 """
                 + page_where
                 + " ORDER BY i.created_at DESC, i.incident_id DESC LIMIT ?",
@@ -545,6 +642,47 @@ class IncidentRepository:
                 occurred_at=now,
                 details={"from": previous, "to": assigned_to},
             )
+            if assigned_to:
+                assignee = connection.execute(
+                    """
+                    SELECT analyst_id FROM analysts
+                    WHERE is_active = 1 AND (
+                        analyst_id = ? OR username = ? COLLATE NOCASE
+                    )
+                    """,
+                    (assigned_to, assigned_to),
+                ).fetchone()
+                if assignee is not None:
+                    analyst_id = str(assignee["analyst_id"])
+                    connection.execute(
+                        """
+                        INSERT OR IGNORE INTO analyst_notifications (
+                            notification_id, analyst_id, category, title, preview,
+                            target_type, target_id, event_key, created_at, read_at
+                        ) VALUES (?, ?, 'INCIDENT_ASSIGNED', ?, ?, 'incident', ?, ?, ?, NULL)
+                        """,
+                        (
+                            f"NTF-{uuid4().hex.upper()}",
+                            analyst_id,
+                            "Incident assigned to you",
+                            f"Incident {incident_id} requires analyst review",
+                            incident_id,
+                            f"incident-assigned:{incident_id}:{now.isoformat()}:{analyst_id}",
+                            now.isoformat(),
+                        ),
+                    )
+                    connection.execute(
+                        """
+                        DELETE FROM analyst_notifications
+                        WHERE analyst_id = ? AND notification_id IN (
+                            SELECT notification_id FROM analyst_notifications
+                            WHERE analyst_id = ?
+                            ORDER BY created_at DESC, notification_id DESC
+                            LIMIT -1 OFFSET 500
+                        )
+                        """,
+                        (analyst_id, analyst_id),
+                    )
         detail = self.get(incident_id)
         if detail is None:
             raise IncidentNotFoundError(incident_id)

@@ -14,6 +14,7 @@ def _ingest(
     alert_id: str,
     timestamp: str,
     level: int = 10,
+    rule_id: str | None = None,
     agent_id: str = "001",
     agent_name: str = "demo-linux-host",
     description: str = "Multiple authentication failures",
@@ -23,6 +24,8 @@ def _ingest(
     payload["id"] = alert_id
     payload["timestamp"] = timestamp
     payload["rule"]["level"] = level
+    if rule_id is not None:
+        payload["rule"]["id"] = rule_id
     payload["rule"]["description"] = description
     payload["agent"]["id"] = agent_id
     payload["agent"]["name"] = agent_name
@@ -122,6 +125,7 @@ def test_alert_filters_cover_level_agent_mitre_time_and_search(
         alert_id="critical-alpha",
         timestamp="2026-10-03T10:00:00+00:00",
         level=14,
+        rule_id="100201",
         agent_id="alpha-id",
         agent_name="ALPHA-HOST",
         description="Encoded PowerShell execution",
@@ -134,6 +138,7 @@ def test_alert_filters_cover_level_agent_mitre_time_and_search(
         alert_id="medium-beta",
         timestamp="2026-10-02T10:00:00+00:00",
         level=8,
+        rule_id="100202",
         agent_id="beta-id",
         agent_name="BETA-HOST",
         description="Configuration changed",
@@ -146,6 +151,7 @@ def test_alert_filters_cover_level_agent_mitre_time_and_search(
         alert_id="low-alpha",
         timestamp="2026-10-01T10:00:00+00:00",
         level=5,
+        rule_id="100203",
         agent_id="alpha-id",
         agent_name="ALPHA-HOST",
         description="Network connection denied",
@@ -156,6 +162,7 @@ def test_alert_filters_cover_level_agent_mitre_time_and_search(
         "/api/v1/alerts",
         params=[("rule_level", "14"), ("rule_level", "5")],
     ).json()
+    rule = client.get("/api/v1/alerts", params={"rule_id": "100202"}).json()
     agent = client.get("/api/v1/alerts", params={"agent": "alpha-host"}).json()
     unmapped = client.get("/api/v1/alerts", params={"mitre_mapped": "false"}).json()
     mitre_id = client.get("/api/v1/alerts", params={"mitre_id": "t1059.001"}).json()
@@ -169,6 +176,7 @@ def test_alert_filters_cover_level_agent_mitre_time_and_search(
     search = client.get("/api/v1/alerts", params={"search": "powershell"}).json()
 
     assert [item["alert_id"] for item in levels["items"]] == ["critical-alpha", "low-alpha"]
+    assert [item["alert_id"] for item in rule["items"]] == ["medium-beta"]
     assert [item["alert_id"] for item in agent["items"]] == ["critical-alpha", "low-alpha"]
     assert [item["alert_id"] for item in unmapped["items"]] == ["medium-beta"]
     assert [item["alert_id"] for item in mitre_id["items"]] == ["critical-alpha"]
@@ -210,6 +218,7 @@ def test_search_treats_sql_wildcards_as_literal_text(
 def test_invalid_read_parameters_return_structured_errors(client: TestClient) -> None:
     invalid_level = client.get("/api/v1/alerts", params={"rule_level": 17})
     invalid_mitre = client.get("/api/v1/alerts", params={"mitre_id": "not-mitre"})
+    invalid_rule = client.get("/api/v1/alerts", params={"rule_id": "   "})
     invalid_time = client.get(
         "/api/v1/alerts",
         params={
@@ -223,6 +232,8 @@ def test_invalid_read_parameters_return_structured_errors(client: TestClient) ->
     assert invalid_level.json()["detail"]["code"] == "invalid_request"
     assert invalid_mitre.status_code == 422
     assert invalid_mitre.json()["detail"]["field"] == "mitre_id"
+    assert invalid_rule.status_code == 422
+    assert invalid_rule.json()["detail"]["field"] == "rule_id"
     assert invalid_time.status_code == 422
     assert invalid_time.json()["detail"]["field"] == "start_time"
     assert invalid_cursor.status_code == 422

@@ -16,6 +16,7 @@ REPOSITORY_ROOT = Path(__file__).resolve().parents[3]
 DEFAULT_DATABASE_URL = "sqlite:///./backend/data/cyberqalqon.db"
 DEFAULT_CORS_ORIGINS = (
     "http://localhost:5173",
+    "http://127.0.0.1:5173",
     "http://localhost:3000",
 )
 
@@ -54,6 +55,17 @@ def _parse_positive_int(value: str | None, *, default: int, name: str) -> int:
         raise ValueError(f"{name} must be an integer") from exc
     if parsed <= 0:
         raise ValueError(f"{name} must be greater than zero")
+    return parsed
+
+
+def _parse_nonnegative_int(value: str | None, *, default: int, name: str) -> int:
+    raw = str(default) if value is None or not value.strip() else value.strip()
+    try:
+        parsed = int(raw)
+    except ValueError as exc:
+        raise ValueError(f"{name} must be an integer") from exc
+    if parsed < 0:
+        raise ValueError(f"{name} must be zero or greater")
     return parsed
 
 
@@ -147,11 +159,24 @@ class Settings:
     database_url: str = DEFAULT_DATABASE_URL
     cors_origins: tuple[str, ...] = DEFAULT_CORS_ORIGINS
     wazuh_ingest_api_key: str | None = None
+    wazuh_api_url: str = "https://127.0.0.1:55000"
+    wazuh_api_username: str | None = None
+    wazuh_api_password: str | None = None
+    wazuh_api_ca_bundle: str | None = None
+    wazuh_api_timeout_seconds: float = 3.0
     max_ingest_bytes: int = 1_048_576
+    max_event_ingest_bytes: int = 262_144
+    security_event_retention_days: int = 30
+    security_event_max_records: int = 100_000
     analyst_session_ttl_seconds: int = 28_800
     session_cookie_secure: bool = False
     login_max_failures: int = 5
     login_lockout_seconds: int = 900
+    correlation_enabled: bool = True
+    correlation_window_seconds: int = 900
+    correlation_max_candidates: int = 200
+    correlation_max_links: int = 50
+    correlation_retry_attempts: int = 1
     ai_enabled: bool = False
     ollama_base_url: str = "http://127.0.0.1:11434"
     ollama_model: str = ""
@@ -179,6 +204,12 @@ class Settings:
             ("analyst_session_ttl_seconds", self.analyst_session_ttl_seconds),
             ("login_max_failures", self.login_max_failures),
             ("login_lockout_seconds", self.login_lockout_seconds),
+            ("correlation_window_seconds", self.correlation_window_seconds),
+            ("correlation_max_candidates", self.correlation_max_candidates),
+            ("correlation_max_links", self.correlation_max_links),
+            ("max_event_ingest_bytes", self.max_event_ingest_bytes),
+            ("security_event_retention_days", self.security_event_retention_days),
+            ("security_event_max_records", self.security_event_max_records),
             ("ai_max_context_bytes", self.ai_max_context_bytes),
             ("ai_max_alerts_per_request", self.ai_max_alerts_per_request),
             ("ai_max_notes_per_request", self.ai_max_notes_per_request),
@@ -191,6 +222,7 @@ class Settings:
             if value <= 0:
                 raise ValueError(f"{name} must be greater than zero")
         for name, value in (
+            ("wazuh_api_timeout_seconds", self.wazuh_api_timeout_seconds),
             ("ollama_connect_timeout_seconds", self.ollama_connect_timeout_seconds),
             ("ollama_request_timeout_seconds", self.ollama_request_timeout_seconds),
             ("ai_health_cache_seconds", self.ai_health_cache_seconds),
@@ -199,6 +231,35 @@ class Settings:
                 raise ValueError(f"{name} must be greater than zero")
         if self.ai_user_cooldown_seconds < 0:
             raise ValueError("ai_user_cooldown_seconds must be zero or greater")
+        if self.correlation_retry_attempts < 0 or self.correlation_retry_attempts > 3:
+            raise ValueError("correlation_retry_attempts must be between zero and three")
+        if self.correlation_window_seconds > 86_400:
+            raise ValueError("correlation_window_seconds must not exceed 86400")
+        if not 3 <= self.correlation_max_candidates <= 5_000:
+            raise ValueError("correlation_max_candidates must be between three and 5000")
+        if not 3 <= self.correlation_max_links <= 100:
+            raise ValueError("correlation_max_links must be between three and 100")
+        if self.correlation_max_links > self.correlation_max_candidates:
+            raise ValueError("correlation_max_links must not exceed correlation_max_candidates")
+        if self.max_event_ingest_bytes > 1_048_576:
+            raise ValueError("max_event_ingest_bytes must not exceed 1048576")
+        if self.security_event_retention_days > 3650:
+            raise ValueError("security_event_retention_days must not exceed 3650")
+        if not 100 <= self.security_event_max_records <= 10_000_000:
+            raise ValueError("security_event_max_records must be between 100 and 10000000")
+        if bool(self.wazuh_api_username) != bool(self.wazuh_api_password):
+            raise ValueError("WAZUH_API_USERNAME and WAZUH_API_PASSWORD must be configured together")
+        parsed_wazuh_api = urlsplit(self.wazuh_api_url)
+        if (
+            parsed_wazuh_api.scheme != "https"
+            or parsed_wazuh_api.hostname not in {"127.0.0.1", "::1", "localhost"}
+            or parsed_wazuh_api.username
+            or parsed_wazuh_api.password
+            or parsed_wazuh_api.query
+            or parsed_wazuh_api.fragment
+            or parsed_wazuh_api.path not in {"", "/"}
+        ):
+            raise ValueError("WAZUH_API_URL must be an HTTPS loopback origin without credentials or a path")
 
     @property
     def ai_configuration_error(self) -> str | None:
@@ -219,6 +280,8 @@ class Settings:
         load_dotenv(REPOSITORY_ROOT / ".env", override=False)
         app_env = os.getenv("APP_ENV", "development").strip().lower()
         api_key = _secret_from_env("WAZUH_INGEST_API_KEY") or None
+        wazuh_api_username = _secret_from_env("WAZUH_API_USERNAME") or None
+        wazuh_api_password = _secret_from_env("WAZUH_API_PASSWORD") or None
         session_cookie_secure = _parse_bool(
             os.getenv("SESSION_COOKIE_SECURE"),
             default=app_env not in {"development", "test"},
@@ -231,10 +294,32 @@ class Settings:
             database_url=os.getenv("DATABASE_URL", DEFAULT_DATABASE_URL).strip(),
             cors_origins=_parse_origins(os.getenv("CORS_ORIGINS")),
             wazuh_ingest_api_key=api_key,
+            wazuh_api_url=os.getenv("WAZUH_API_URL", "https://127.0.0.1:55000").strip().rstrip("/"),
+            wazuh_api_username=wazuh_api_username,
+            wazuh_api_password=wazuh_api_password,
+            wazuh_api_ca_bundle=os.getenv("WAZUH_API_CA_BUNDLE", "").strip() or None,
+            wazuh_api_timeout_seconds=_parse_positive_float(
+                os.getenv("WAZUH_API_TIMEOUT_SECONDS"), default=3.0, name="WAZUH_API_TIMEOUT_SECONDS"
+            ),
             max_ingest_bytes=_parse_positive_int(
                 os.getenv("MAX_INGEST_BYTES"),
                 default=1_048_576,
                 name="MAX_INGEST_BYTES",
+            ),
+            max_event_ingest_bytes=_parse_positive_int(
+                os.getenv("MAX_EVENT_INGEST_BYTES"),
+                default=262_144,
+                name="MAX_EVENT_INGEST_BYTES",
+            ),
+            security_event_retention_days=_parse_positive_int(
+                os.getenv("SECURITY_EVENT_RETENTION_DAYS"),
+                default=30,
+                name="SECURITY_EVENT_RETENTION_DAYS",
+            ),
+            security_event_max_records=_parse_positive_int(
+                os.getenv("SECURITY_EVENT_MAX_RECORDS"),
+                default=100_000,
+                name="SECURITY_EVENT_MAX_RECORDS",
             ),
             analyst_session_ttl_seconds=_parse_positive_int(
                 os.getenv("ANALYST_SESSION_TTL_SECONDS"),
@@ -251,6 +336,19 @@ class Settings:
                 os.getenv("LOGIN_LOCKOUT_SECONDS"),
                 default=900,
                 name="LOGIN_LOCKOUT_SECONDS",
+            ),
+            correlation_enabled=_parse_bool(os.getenv("CORRELATION_ENABLED"), default=True),
+            correlation_window_seconds=_parse_positive_int(
+                os.getenv("CORRELATION_WINDOW_SECONDS"), default=900, name="CORRELATION_WINDOW_SECONDS"
+            ),
+            correlation_max_candidates=_parse_positive_int(
+                os.getenv("CORRELATION_MAX_CANDIDATES"), default=200, name="CORRELATION_MAX_CANDIDATES"
+            ),
+            correlation_max_links=_parse_positive_int(
+                os.getenv("CORRELATION_MAX_LINKS"), default=50, name="CORRELATION_MAX_LINKS"
+            ),
+            correlation_retry_attempts=_parse_nonnegative_int(
+                os.getenv("CORRELATION_RETRY_ATTEMPTS"), default=1, name="CORRELATION_RETRY_ATTEMPTS"
             ),
             ai_enabled=_parse_bool(os.getenv("AI_ENABLED")),
             ollama_base_url=os.getenv("OLLAMA_BASE_URL", "http://127.0.0.1:11434").strip(),

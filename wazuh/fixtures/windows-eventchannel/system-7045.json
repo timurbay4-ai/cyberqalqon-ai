@@ -1,0 +1,20 @@
+{
+  "win": {
+    "system": {
+      "providerName": "Service Control Manager",
+      "eventID": "7045",
+      "level": "4",
+      "channel": "System",
+      "computer": "WIN-M10-SYNTHETIC",
+      "severityValue": "INFORMATION",
+      "message": "Synthetic service installation fixture"
+    },
+    "eventdata": {
+      "serviceName": "CyberQalqonSyntheticFixture",
+      "imagePath": "C:\\Windows\\System32\\cmd.exe /c exit 0",
+      "serviceType": "user mode service",
+      "startType": "demand start",
+      "accountName": "LocalSystem"
+    }
+  }
+}

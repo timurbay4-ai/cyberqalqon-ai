@@ -141,6 +141,18 @@
     "decoder_name": {
       "type": "string",
       "description": "Wazuh decoder name. Optional."
+    },
+    "windows": {
+      "type": "object",
+      "description": "Typed Windows Event Channel identity supplied by Wazuh. Optional.",
+      "required": ["event_id", "channel"],
+      "additionalProperties": false,
+      "properties": {
+        "event_id": {"type": "string", "minLength": 1, "maxLength": 64},
+        "channel": {"type": "string", "minLength": 1, "maxLength": 512},
+        "provider": {"type": "string", "maxLength": 512},
+        "computer": {"type": "string", "maxLength": 512}
+      }
     }
   }
 }

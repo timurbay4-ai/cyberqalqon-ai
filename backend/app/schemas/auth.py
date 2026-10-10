@@ -25,6 +25,7 @@ class AnalystRole(str, Enum):
 
 class Permission(str, Enum):
     SOC_READ = "soc:read"
+    ALERT_WRITE = "alert:write"
     INCIDENT_WRITE = "incident:write"
     ANALYST_MANAGE = "analyst:manage"
 
@@ -32,10 +33,15 @@ class Permission(str, Enum):
 ROLE_PERMISSIONS: dict[AnalystRole, tuple[Permission, ...]] = {
     AnalystRole.ADMIN: (
         Permission.SOC_READ,
+        Permission.ALERT_WRITE,
         Permission.INCIDENT_WRITE,
         Permission.ANALYST_MANAGE,
     ),
-    AnalystRole.ANALYST: (Permission.SOC_READ, Permission.INCIDENT_WRITE),
+    AnalystRole.ANALYST: (
+        Permission.SOC_READ,
+        Permission.ALERT_WRITE,
+        Permission.INCIDENT_WRITE,
+    ),
     AnalystRole.VIEWER: (Permission.SOC_READ,),
 }
 
@@ -101,3 +107,19 @@ class AnalystPrincipal(StrictModel):
 class SessionResponse(StrictModel):
     analyst: AnalystPrincipal
     csrf_token: str
+
+
+class PasswordChange(CredentialModel):
+    current_password: str = Field(min_length=1, max_length=1024)
+    new_password: Password
+
+    @model_validator(mode="after")
+    def passwords_must_differ(self) -> "PasswordChange":
+        if self.current_password == self.new_password:
+            raise ValueError("new_password must differ from current_password")
+        return self
+
+
+class AnalystSessionStatus(StrictModel):
+    active_sessions: int = Field(ge=1, le=10)
+    current_expires_at: datetime

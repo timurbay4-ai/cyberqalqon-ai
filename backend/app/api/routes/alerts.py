@@ -4,10 +4,12 @@ from __future__ import annotations
 
 import hmac
 import json
+import logging
 from datetime import datetime, timezone
 from typing import Annotated, Any
 
 from fastapi import APIRouter, Depends, Header, HTTPException, Path, Query, Request, Response, status
+from starlette.requests import ClientDisconnect
 from pydantic import Field
 
 from app.api.dependencies.auth import require_soc_reader
@@ -26,9 +28,11 @@ from app.services.wazuh_normalizer import (
     raw_event_fingerprint,
     raw_event_size,
 )
+from app.services.event_normalizer import normalize_wazuh_event
 
 
 router = APIRouter(prefix="/api/v1/alerts", tags=["Alerts"])
+LOGGER = logging.getLogger(__name__)
 RuleLevel = Annotated[int, Field(ge=0, le=16)]
 
 
@@ -71,11 +75,17 @@ async def _read_json_object(request: Request, maximum: int) -> dict[str, Any]:
 
     chunks: list[bytes] = []
     received = 0
-    async for chunk in request.stream():
-        received += len(chunk)
-        if received > maximum:
-            raise _payload_too_large(received, maximum)
-        chunks.append(chunk)
+    try:
+        async for chunk in request.stream():
+            received += len(chunk)
+            if received > maximum:
+                raise _payload_too_large(received, maximum)
+            chunks.append(chunk)
+    except ClientDisconnect as exc:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=_error("client_disconnected", "The request body was not received completely"),
+        ) from exc
 
     try:
         payload = json.loads(b"".join(chunks))
@@ -168,6 +178,35 @@ async def ingest_alert(
 
     if stored.duplicate:
         response.status_code = status.HTTP_200_OK
+    else:
+        try:
+            request.app.state.correlation_engine.correlate(stored.alert.alert_id)
+        except Exception:
+            alert_digest = hmac.new(
+                b"cyberqalqon-correlation-log-v1",
+                stored.alert.alert_id.encode("utf-8"),
+                "sha256",
+            ).hexdigest()[:16]
+            LOGGER.exception(
+                "incident correlation failed after alert persistence (alert_digest=%s)",
+                alert_digest,
+            )
+    try:
+        security_event = normalize_wazuh_event(payload, ingestion_source="wazuh_alert")
+        request.app.state.event_repository.ingest(
+            security_event,
+            related_alert_id=stored.alert.alert_id,
+        )
+    except Exception:
+        alert_digest = hmac.new(
+            b"cyberqalqon-event-store-log-v1",
+            stored.alert.alert_id.encode("utf-8"),
+            "sha256",
+        ).hexdigest()[:16]
+        LOGGER.exception(
+            "security-event projection failed after alert persistence (alert_digest=%s)",
+            alert_digest,
+        )
     return AlertIngestResponse(
         status="duplicate" if stored.duplicate else "created",
         duplicate=stored.duplicate,
@@ -197,6 +236,7 @@ async def list_alerts(
     request: Request,
     _: Annotated[AnalystPrincipal, Depends(require_soc_reader)],
     rule_level: Annotated[list[RuleLevel] | None, Query()] = None,
+    rule_id: Annotated[str | None, Query(min_length=1, max_length=128)] = None,
     agent: Annotated[str | None, Query(min_length=1, max_length=255)] = None,
     mitre_mapped: Annotated[bool | None, Query()] = None,
     mitre_id: Annotated[str | None, Query(min_length=5, max_length=9)] = None,
@@ -224,8 +264,14 @@ async def list_alerts(
             status_code=422,
             detail=_error("invalid_request", "Invalid MITRE ATT&CK technique ID", field="mitre_id"),
         )
+    normalized_rule_id = rule_id.strip() if rule_id else None
     normalized_agent = agent.strip() if agent else None
     normalized_search = search.strip() if search else None
+    if rule_id is not None and not normalized_rule_id:
+        raise HTTPException(
+            status_code=422,
+            detail=_error("invalid_request", "rule_id must not be blank", field="rule_id"),
+        )
     if agent is not None and not normalized_agent:
         raise HTTPException(
             status_code=422,
@@ -242,6 +288,7 @@ async def list_alerts(
         result = repository.list(
             AlertFilters(
                 rule_levels=tuple(sorted(set(rule_level or []))),
+                rule_id=normalized_rule_id,
                 agent=normalized_agent,
                 mitre_mapped=mitre_mapped,
                 mitre_id=normalized_mitre_id,

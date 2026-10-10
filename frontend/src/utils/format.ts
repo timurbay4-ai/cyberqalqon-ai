@@ -7,11 +7,25 @@ const dateFormatter = new Intl.DateTimeFormat("en-GB", {
   hour: "2-digit",
   minute: "2-digit",
   second: "2-digit",
+  timeZoneName: "short",
 });
 
 export function formatTimestamp(value: string): string {
   const date = new Date(value);
   return Number.isNaN(date.getTime()) ? value : dateFormatter.format(date);
+}
+
+export function formatRelativeTimestamp(value: string, now = Date.now()): string {
+  const timestamp = new Date(value).getTime();
+  if (Number.isNaN(timestamp)) return value;
+  const seconds = Math.round((timestamp - now) / 1000);
+  const absoluteSeconds = Math.abs(seconds);
+  if (absoluteSeconds < 45) return seconds > 5 ? "in a few seconds" : seconds < -5 ? "a few seconds ago" : "just now";
+  const units: Array<[Intl.RelativeTimeFormatUnit, number]> = [
+    ["year", 31_536_000], ["month", 2_592_000], ["day", 86_400], ["hour", 3_600], ["minute", 60],
+  ];
+  const [unit, divisor] = units.find(([, size]) => absoluteSeconds >= size) ?? ["minute", 60];
+  return new Intl.RelativeTimeFormat("en", { numeric: "auto" }).format(Math.round(seconds / divisor), unit);
 }
 
 export function formatEndpoint(endpoint?: NetworkEndpoint | null): string {
@@ -27,5 +41,5 @@ export function toApiTimestamp(localValue: string): string | undefined {
 }
 
 export function humanize(value: string): string {
-  return value.toLowerCase().replaceAll("_", " ").replace(/^./, (character) => character.toUpperCase());
+  return value.replace(/([a-z])([A-Z])/g, "$1_$2").toLowerCase().replaceAll("_", " ").replace(/^./, (character) => character.toUpperCase());
 }

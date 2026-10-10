@@ -1,0 +1,7 @@
+--- ossec.conf
++++ ossec.conf
+@@ -95,3 +95,4 @@
+     <!-- Directories to check  (perform all possible verifications) -->
+     <directories>/etc,/usr/bin,/usr/sbin</directories>
+     <directories>/bin,/sbin,/boot</directories>
++    <directories check_all="yes" realtime="yes">/etc/cyberqalqon-lab</directories>

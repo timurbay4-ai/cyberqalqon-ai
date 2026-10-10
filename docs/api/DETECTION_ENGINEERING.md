@@ -1,0 +1,33 @@
+# Detection engineering API
+
+All endpoints require an authenticated analyst with `soc:read`. Draft mutations additionally
+require `alert:write`, the session CSRF header, and the configured trusted origin. Optimistic
+mutations use `expected_version`; stale writes return `409`.
+
+| Method | Endpoint | Purpose |
+|---|---|---|
+| GET | `/api/v1/detection-engineering/rules` | Consolidated Wazuh, observed, and M9 correlation inventory |
+| GET | `/api/v1/detection-engineering/rules/{rule_id}` | Rule detail |
+| GET | `/api/v1/detection-engineering/coverage` | Explicit MITRE mappings and distinct enabled/triggered/tested counts |
+| GET | `/api/v1/detection-engineering/analytics?days=30` | Bounded trends, top entities, dispositions, IOC and false-positive summaries |
+| GET/POST | `/api/v1/detection-engineering/drafts` | List or create local declarative drafts |
+| GET/PUT | `/api/v1/detection-engineering/drafts/{draft_id}` | Read or version a draft |
+| POST | `/api/v1/detection-engineering/drafts/{draft_id}/validate` | Validate the allowlisted schema |
+| POST | `/api/v1/detection-engineering/drafts/{draft_id}/dry-run` | Evaluate at most 1,000 historical events over at most 31 days |
+| POST | `/api/v1/detection-engineering/drafts/{draft_id}/confirm-manual-deployment` | Record explicit readiness for separate operator review |
+| GET | `/api/v1/detection-engineering/drafts/{draft_id}/versions` | Immutable version snapshots |
+| POST | `/api/v1/detection-engineering/drafts/{draft_id}/rollback` | Copy an earlier snapshot into a new `DRAFT` version |
+
+Draft conditions are an AND-list of one to eight allowlisted normalized event fields. Operators
+are `EQUALS`, `CONTAINS`, and `STARTS_WITH`; values are always bound parameters. SQL, Python,
+regular expressions, shell expressions, and arbitrary field names are not accepted.
+
+Lifecycle is `DRAFT → VALIDATED → TESTED → READY_FOR_MANUAL_DEPLOYMENT`. Updating or rolling back
+creates a new `DRAFT` version. Dry-run records only test metadata and audit evidence; it never
+creates alerts, incidents, or notifications. The confirmation endpoint returns
+`live_wazuh_modified=false` and `deployment_mode=MANUAL_REVIEW_ONLY`. CyberQalqon does not write,
+reload, or restart live Wazuh configuration.
+
+External Wazuh rule versions and enabled state remain unavailable when no authoritative Wazuh API
+is configured. The API reports `UNKNOWN`/`UNAVAILABLE` rather than deriving those facts from a
+stored alert. An observed alert proves only that a rule triggered at least once.

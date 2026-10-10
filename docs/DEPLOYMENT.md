@@ -86,18 +86,18 @@ base URL and calls the same HTTPS origin.
 ```bash
 docker compose --env-file .env.production config --quiet
 docker compose --env-file .env.production build backend web
-docker image inspect cyberqalqon/backend:0.7.0 --format '{{.Config.User}}'
-docker image inspect cyberqalqon/web:0.7.0 --format '{{.Config.User}}'
+docker image inspect cyberqalqon/backend:0.8.1 --format '{{.Config.User}}'
+docker image inspect cyberqalqon/web:0.8.1 --format '{{.Config.User}}'
 ```
 
 Expected image users are `10001:10001` and `101:101`. Review image history and
 environment metadata before promotion:
 
 ```bash
-docker history --no-trunc cyberqalqon/backend:0.7.0
-docker history --no-trunc cyberqalqon/web:0.7.0
-docker image inspect cyberqalqon/backend:0.7.0
-docker image inspect cyberqalqon/web:0.7.0
+docker history --no-trunc cyberqalqon/backend:0.8.1
+docker history --no-trunc cyberqalqon/web:0.8.1
+docker image inspect cyberqalqon/backend:0.8.1
+docker image inspect cyberqalqon/web:0.8.1
 ```
 
 No `.env`, database, backup, API key, analyst password, session token, private
@@ -118,6 +118,30 @@ pending migrations before becoming ready. Unknown future migrations, schema
 drift, or an unusable volume fail startup. The frontend can start independently;
 temporary backend unavailability is shown honestly. Ollama is never a backend
 startup dependency.
+
+For SIEM v0.2, create and verify an online SQLite backup before startup applies schema version 9.
+Test the backup copy with the new build first, compare critical table counts, and require
+`PRAGMA quick_check = ok`. Version 9 is additive: it creates saved-search/security-audit storage,
+adds retention telemetry columns, and replaces exact-filter indexes. Rollback is restore-based;
+do not edit `schema_migrations` or `PRAGMA user_version` manually.
+
+For SIEM v0.4, repeat the same verified-backup rehearsal before applying schema version 10.
+Version 10 adds alert workflow, note, history, and per-analyst notification tables and backfills
+exactly one `NEW` workflow row per existing alert. It does not invent history, notes, assignments,
+or notifications. Rollback remains restore-based and requires the matching pre-v0.4 application
+build; never decrement migration metadata in place.
+
+For SIEM v0.4.1, rehearse schema version 11 against a verified pre-v0.4.1 backup before live
+startup. Version 11 adds incident checklist, evidence-pin, investigation-activity, and per-analyst
+preference tables. The only backfill is one default preference row per existing analyst; no
+checklist, evidence, timeline, or audit action is fabricated. Rollback remains restore-based.
+
+For SIEM v0.5, rehearse schema version 12 against a verified pre-v0.5 backup before live startup.
+Version 12 additively creates local detection-draft/version, per-analyst saved-hunt, and local IOC
+tables plus bounded indexes. It performs no data backfill and never changes live Wazuh rule files.
+Confirm `PRAGMA quick_check=ok` and unchanged alert, event, incident, and analyst counts. Rollback
+is restore-based with the matching pre-v0.5 application build; never decrement migration metadata
+or selectively drop the new tables in place.
 
 Create the first administrator explicitly. The password is read from the
 terminal or stdin and never belongs in Compose:
@@ -205,10 +229,13 @@ must not delay health, ingestion, alert/incident use, or authentication.
 
 ## Development versus production
 
-Development remains unchanged: run Uvicorn with reload on localhost, Vite on
-port 5173, and use `.env`/`frontend/.env.local`. Vite defaults to
-`http://localhost:8000` only in development. Production uses the built assets,
-same-origin requests, secure cookies, and exact HTTPS CORS/origin policy.
+For development, run Uvicorn on loopback and Vite on port 5173, then use
+`.env`/`frontend/.env.local`. The browser uses same-origin API URLs while Vite
+proxies them to `CYBERQALQON_DEV_PROXY_TARGET` (default
+`http://127.0.0.1:8000`). This prevents `localhost`/`127.0.0.1` host drift from
+dropping the host-only `SameSite=Strict` analyst cookie. Production uses the
+built assets, same-origin requests, secure cookies, and exact HTTPS
+CORS/origin policy.
 
 Do not use the self-signed bypass in `scripts/compose_smoke.py` outside an
 isolated QA run. Production acceptance must use normal certificate validation.

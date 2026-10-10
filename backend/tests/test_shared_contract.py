@@ -40,6 +40,17 @@ def test_shared_contract_accepts_level_16_without_mitre_mapping(sample_alert: di
     _validator().validate(normalized)
 
 
+def test_shared_contract_accepts_typed_windows_event_context() -> None:
+    fixture = json.loads(
+        (REPOSITORY_ROOT / "wazuh" / "samples" / "windows-security-failure.json").read_text(
+            encoding="utf-8"
+        )
+    )
+    normalized = normalize_wazuh_alert(fixture).model_dump(mode="json", exclude_none=True)
+    _validator().validate(normalized)
+    assert normalized["windows"]["event_id"] == "4625"
+
+
 def test_shared_ai_schema_matches_backend_structured_result_contract() -> None:
     schema_path = REPOSITORY_ROOT / "shared" / "schemas" / "ai_analysis.schema.json"
     schema = json.loads(schema_path.read_text(encoding="utf-8"))

@@ -18,6 +18,7 @@ from app.db.auth import (
     AnalystNotFoundError,
     AuthRepository,
     DuplicateUsernameError,
+    InvalidCurrentPasswordError,
     SelfAdministrationError,
 )
 from app.schemas.alerts import ErrorResponse
@@ -25,8 +26,10 @@ from app.schemas.auth import (
     AnalystCreate,
     AnalystPrincipal,
     AnalystPublic,
+    AnalystSessionStatus,
     AnalystUpdate,
     LoginRequest,
+    PasswordChange,
     SessionResponse,
 )
 
@@ -82,6 +85,14 @@ async def login(
     repository = _repository(request)
     principal = repository.authenticate(payload.username, payload.password)
     if principal is None:
+        request.app.state.audit_repository.append(
+            action="AUTH_LOGIN",
+            actor_id=None,
+            actor_display=f"login:{payload.username}",
+            target_type="analyst_session",
+            outcome="DENIED",
+            details={"reason": "invalid_credentials"},
+        )
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail=_error("invalid_credentials", "Invalid username or password"),
@@ -91,6 +102,12 @@ async def login(
     if existing:
         repository.invalidate_session(existing)
     session = repository.create_session(principal)
+    request.app.state.audit_repository.append(
+        action="AUTH_LOGIN",
+        actor_id=principal.analyst_id,
+        actor_display=principal.audit_display,
+        target_type="analyst_session",
+    )
     _set_session_cookie(response, request, session.token)
     return SessionResponse(analyst=principal, csrf_token=session.csrf_token)
 
@@ -118,11 +135,17 @@ async def current_session(
 async def logout(
     request: Request,
     response: Response,
-    _: Annotated[AnalystPrincipal, Depends(require_authenticated_mutation)],
+    principal: Annotated[AnalystPrincipal, Depends(require_authenticated_mutation)],
 ) -> Response:
     token = request.cookies.get(session_cookie_name(request))
     if token:
         _repository(request).invalidate_session(token)
+    request.app.state.audit_repository.append(
+        action="AUTH_LOGOUT",
+        actor_id=principal.analyst_id,
+        actor_display=principal.audit_display,
+        target_type="analyst_session",
+    )
     _clear_session_cookie(response, request)
     response.status_code = status.HTTP_204_NO_CONTENT
     return response
@@ -149,15 +172,24 @@ async def list_analysts(
 async def create_analyst(
     request: Request,
     payload: AnalystCreate,
-    _: Annotated[AnalystPrincipal, Depends(require_admin_mutation)],
+    principal: Annotated[AnalystPrincipal, Depends(require_admin_mutation)],
 ) -> AnalystPublic:
     try:
-        return _repository(request).create_analyst(payload)
+        created = _repository(request).create_analyst(payload)
     except DuplicateUsernameError as exc:
         raise HTTPException(
             status_code=status.HTTP_409_CONFLICT,
             detail=_error("username_exists", "An analyst with this username already exists", field="username"),
         ) from exc
+    request.app.state.audit_repository.append(
+        action="ANALYST_CREATED",
+        actor_id=principal.analyst_id,
+        actor_display=principal.audit_display,
+        target_type="analyst",
+        target_id=created.analyst_id,
+        details={"username": created.username, "role": created.role.value},
+    )
+    return created
 
 
 @router.patch(
@@ -172,7 +204,7 @@ async def update_analyst(
     principal: Annotated[AnalystPrincipal, Depends(require_admin_mutation)],
 ) -> AnalystPublic:
     try:
-        return _repository(request).update_analyst(analyst_id, payload, principal.analyst_id)
+        updated = _repository(request).update_analyst(analyst_id, payload, principal.analyst_id)
     except AnalystNotFoundError as exc:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
@@ -183,3 +215,98 @@ async def update_analyst(
             status_code=status.HTTP_409_CONFLICT,
             detail=_error("self_administration_forbidden", str(exc)),
         ) from exc
+    request.app.state.audit_repository.append(
+        action="ANALYST_UPDATED",
+        actor_id=principal.analyst_id,
+        actor_display=principal.audit_display,
+        target_type="analyst",
+        target_id=updated.analyst_id,
+        details={"role": updated.role.value, "is_active": updated.is_active},
+    )
+    return updated
+
+
+@router.get(
+    "/sessions",
+    response_model=AnalystSessionStatus,
+    responses={401: {"model": ErrorResponse}},
+)
+async def session_status(
+    request: Request,
+    principal: Annotated[AnalystPrincipal, Depends(require_authenticated)],
+) -> AnalystSessionStatus:
+    token = request.cookies.get(session_cookie_name(request))
+    if not token:
+        raise HTTPException(401, detail=_error("authentication_required", "A valid analyst session is required"))
+    return _repository(request).session_status(principal.analyst_id, token)
+
+
+@router.post(
+    "/sessions/revoke-others",
+    status_code=status.HTTP_204_NO_CONTENT,
+    response_class=Response,
+    response_model=None,
+)
+async def revoke_other_sessions(
+    request: Request,
+    principal: Annotated[AnalystPrincipal, Depends(require_authenticated_mutation)],
+) -> Response:
+    token = request.cookies.get(session_cookie_name(request))
+    if not token:
+        raise HTTPException(401, detail=_error("authentication_required", "A valid analyst session is required"))
+    revoked = _repository(request).revoke_other_sessions(principal.analyst_id, token)
+    request.app.state.audit_repository.append(
+        action="OTHER_SESSIONS_REVOKED",
+        actor_id=principal.analyst_id,
+        actor_display=principal.audit_display,
+        target_type="analyst_session",
+        details={"revoked_count": revoked},
+    )
+    return Response(status_code=status.HTTP_204_NO_CONTENT)
+
+
+@router.patch(
+    "/password",
+    status_code=status.HTTP_204_NO_CONTENT,
+    response_class=Response,
+    response_model=None,
+    responses={401: {"model": ErrorResponse}, 403: {"model": ErrorResponse}},
+)
+async def change_password(
+    request: Request,
+    payload: PasswordChange,
+    principal: Annotated[AnalystPrincipal, Depends(require_authenticated_mutation)],
+) -> Response:
+    token = request.cookies.get(session_cookie_name(request))
+    if not token:
+        raise HTTPException(401, detail=_error("authentication_required", "A valid analyst session is required"))
+    try:
+        revoked = _repository(request).change_password(
+            principal.analyst_id,
+            payload.current_password,
+            payload.new_password,
+            token,
+        )
+    except InvalidCurrentPasswordError as exc:
+        request.app.state.audit_repository.append(
+            action="PASSWORD_CHANGED",
+            actor_id=principal.analyst_id,
+            actor_display=principal.audit_display,
+            target_type="analyst",
+            target_id=principal.analyst_id,
+            outcome="DENIED",
+            details={"reason": "invalid_current_password"},
+        )
+        raise HTTPException(
+            403,
+            detail=_error("invalid_current_password", str(exc), field="current_password"),
+        ) from exc
+    request.app.state.audit_repository.append(
+        action="PASSWORD_CHANGED",
+        actor_id=principal.analyst_id,
+        actor_display=principal.audit_display,
+        target_type="analyst",
+        target_id=principal.analyst_id,
+        details={"revoked_sessions": revoked},
+    )
+    return Response(status_code=status.HTTP_204_NO_CONTENT)

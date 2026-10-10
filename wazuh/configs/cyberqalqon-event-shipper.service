@@ -1,0 +1,23 @@
+[Unit]
+Description=CyberQalqon bounded Wazuh security-event shipper
+After=network-online.target wazuh-manager.service cyberqalqon-sender.service
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=wazuh
+Group=wazuh
+UMask=0077
+EnvironmentFile=/etc/cyberqalqon/sender.env
+ExecStart=/opt/cyberqalqon-sender/.venv/bin/cyberqalqon-sender event-worker
+Restart=on-failure
+RestartSec=5s
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectHome=true
+ProtectSystem=strict
+ReadOnlyPaths=/var/ossec/logs/archives
+ReadWritePaths=/var/lib/cyberqalqon-sender
+
+[Install]
+WantedBy=multi-user.target

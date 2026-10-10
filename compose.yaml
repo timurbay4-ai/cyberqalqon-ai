@@ -2,7 +2,7 @@ name: cyberqalqon
 
 services:
   backend:
-    image: ${BACKEND_IMAGE:-cyberqalqon/backend:0.7.0}
+    image: ${BACKEND_IMAGE:-cyberqalqon/backend:0.8.1}
     build:
       context: ./backend
       dockerfile: Dockerfile
@@ -68,7 +68,7 @@ services:
         max-file: ${CONTAINER_LOG_MAX_FILES:-5}
 
   web:
-    image: ${WEB_IMAGE:-cyberqalqon/web:0.7.0}
+    image: ${WEB_IMAGE:-cyberqalqon/web:0.8.1}
     build:
       context: ./frontend
       dockerfile: Dockerfile

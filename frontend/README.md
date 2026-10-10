@@ -9,6 +9,8 @@ contracts.
 - Dashboard totals derived from real filtered API counts
 - Alert list, detail, severity/agent/MITRE/time/search filters, and cursor pagination
 - Incident list, detail, creation, lifecycle transitions, alert linking, notes, assignment, and audit
+- Discover with category/outcome filters, keyset pagination, saved searches, and linked evidence
+- Hosts, read-only detection rules, filtered reports, and account/session Administration
 - Runtime response validation before backend JSON enters the component tree
 - Responsive desktop and narrow-width analyst layouts
 - Backend-validated login/logout/session restoration and role-aware incident controls
@@ -33,10 +35,12 @@ npm run dev
 
 Open `http://localhost:5173`.
 
-`VITE_API_BASE_URL` is the only frontend environment setting and defaults to
-`http://localhost:8000` only in Vite development. A production build defaults to
-the current browser origin, so `/health` and `/api/v1/*` traverse the same TLS
-reverse proxy as the static UI. It is a public browser destination, not a secret. Never put
+The frontend defaults to the current browser origin in development and production.
+Vite proxies `/health`, `/readiness`, and `/api/v1/*` to
+`CYBERQALQON_DEV_PROXY_TARGET` (`http://127.0.0.1:8000` by default). This keeps the
+host-only `SameSite=Strict` analyst cookie on one site even if the UI is opened as
+either `localhost` or `127.0.0.1`. `VITE_API_BASE_URL` remains an optional public
+browser destination for deliberately cross-origin deployments, not a secret. Never put
 `WAZUH_INGEST_API_KEY`, credentials, tokens, or private configuration in a `VITE_*` variable.
 
 The backend default origin list explicitly includes `http://localhost:5173`. If Vite is deliberately
@@ -48,12 +52,11 @@ CORS_ORIGINS=http://127.0.0.1:5173
 
 Do not enable wildcard origins.
 
-If a browser environment cannot call a second localhost port directly, the
-development server can proxy without changing application code:
+To override the local proxy target without changing application code:
 
 ```dotenv
-VITE_API_BASE_URL=/
-CYBERQALQON_DEV_PROXY_TARGET=http://localhost:8000
+VITE_API_BASE_URL=
+CYBERQALQON_DEV_PROXY_TARGET=http://127.0.0.1:8000
 ```
 
 The proxy setting is consumed only by Vite configuration and is not a browser
@@ -100,7 +103,8 @@ is in [docs/BACKEND_CONTRACT.md](docs/BACKEND_CONTRACT.md).
 
 ## Current limitations
 
-- Analyst account administration currently has an API/CLI boundary but no dedicated admin UI.
-- Incident correlation remains explicit and analyst-directed.
+- Deployed Wazuh rules remain read-only; local declarative drafts support validation and bounded
+  historical testing but require a separate manual operator deployment. Reports remain JSON/CSV.
+- Agent connectivity is not inferred from event freshness without a supported Wazuh API session.
 - There is no automatic refresh or real-time event stream.
 - No fake AI result is substituted when Ollama is disabled, unavailable, slow, or invalid.

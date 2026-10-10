@@ -35,6 +35,11 @@ class IncidentEventType(str, Enum):
     ASSIGNMENT_CHANGED = "ASSIGNMENT_CHANGED"
 
 
+class CorrelationConfidence(str, Enum):
+    EXACT_MATCH = "EXACT_MATCH"
+    STRONG_MATCH = "STRONG_MATCH"
+
+
 AlertIdentifier = Annotated[str, Field(min_length=1, max_length=255)]
 
 
@@ -79,6 +84,9 @@ class IncidentSummary(StrictModel):
     created_at: datetime
     updated_at: datetime
     alert_count: int = Field(ge=0)
+    auto_correlated: bool = False
+    correlation_rule: str | None = None
+    classification: str | None = None
 
 
 class IncidentNote(StrictModel):
@@ -98,10 +106,37 @@ class IncidentHistoryEvent(StrictModel):
     details: dict[str, Any]
 
 
+class IncidentCorrelation(StrictModel):
+    correlation_rule: str
+    classification: str
+    confidence: CorrelationConfidence
+    source_identity: str
+    target_identity: str
+    explanation: str
+    first_seen: datetime
+    last_seen: datetime
+    related_alert_count: int = Field(ge=2)
+
+
+class IncidentTimelineAlert(StrictModel):
+    alert_id: str
+    occurred_at: datetime
+    rule_id: str
+    rule_level: int = Field(ge=0, le=16)
+    rule_description: str
+    agent_id: str
+    agent_name: str
+    source_ip: str | None = None
+    destination_ip: str | None = None
+    mitre_ids: list[str] = Field(default_factory=list)
+
+
 class IncidentDetail(IncidentSummary):
     alert_ids: list[str]
     notes: list[IncidentNote]
     history: list[IncidentHistoryEvent]
+    correlation: IncidentCorrelation | None = None
+    timeline: list[IncidentTimelineAlert] = Field(default_factory=list)
 
 
 class IncidentPage(StrictModel):

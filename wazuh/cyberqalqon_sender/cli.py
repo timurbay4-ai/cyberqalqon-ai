@@ -16,6 +16,7 @@ from typing import Any, Sequence
 from . import __version__
 from .config import ConfigurationError, SenderConfig
 from .logging import configure_logging, log_event, safe_text
+from .event_shipper import run_event_worker
 from .models import DeliveryClassification, ProcessOutcome
 from .payloads import PayloadError, read_payload_file
 from .runtime import build_spool, sender_runtime
@@ -81,6 +82,10 @@ def _parser() -> argparse.ArgumentParser:
     drain.add_argument("--limit", type=int)
 
     subcommands.add_parser("worker", help="run the restartable retry worker")
+    subcommands.add_parser(
+        "event-worker",
+        help="ship an allowlisted incremental stream from Wazuh archives.json",
+    )
 
     dead = subcommands.add_parser("dead-letter", help="inspect or replay terminal failures")
     dead_subcommands = dead.add_subparsers(dest="dead_command", required=True)
@@ -196,6 +201,8 @@ def main(argv: Sequence[str] | None = None) -> int:
             return _handle_drain(config, args.limit, logger=logger)
         if args.command == "worker":
             return _handle_worker(config, logger=logger)
+        if args.command == "event-worker":
+            return run_event_worker(config, logger=logger)
         if args.command == "dead-letter":
             return _handle_dead_letter(config, args, logger=logger)
         return 2
