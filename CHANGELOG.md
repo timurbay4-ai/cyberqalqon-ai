@@ -14,6 +14,8 @@ does not by itself mean that production acceptance has been granted.
   cursor, keeping Discover results usable on the final page.
 - Aligned GitHub Actions image inspection with the 0.8.1 backend/web tags and
   added a regression check for release metadata drift.
+- Made the production-deployment job install its pinned test runner and execute
+  the pytest-style deployment suite instead of only importing it with unittest.
 
 ### Verified
 
