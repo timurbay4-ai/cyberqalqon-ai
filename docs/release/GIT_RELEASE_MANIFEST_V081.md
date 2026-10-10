@@ -4,7 +4,8 @@
 - Branch: `main`
 - Baseline HEAD: `b07fdd50dc3df71976bf9467f8ecb98e68045926`
 - Proposed candidate tag: `v0.8.1-rc1`
-- Execution state: **manifest only; nothing staged, committed, tagged, or pushed**
+- Implementation snapshot: `ac3720db6234d2e5881f47cc64f94172cdc70a6b`
+- Execution state: **reviewed, committed, and normally pushed; no tag created**
 
 ## Snapshot boundary
 
@@ -129,8 +130,16 @@ paired with a separately protected filesystem backup. A rollback deployment
 must point at a copied/restored database and an explicit prior application
 revision. It must never overwrite the current worktree or live SQLite file.
 
-## Approval boundary
+## Execution record and future approval boundary
 
-This manifest grants no permission to run `git add`, create a commit or tag, or
-push. Reviewer approval must name the intended group or exact file list. Re-run
-all automated gates and the staged secret scan after the index is assembled.
+The user explicitly authorized staging, committing, and normally pushing this
+release snapshot. Exactly 225 reviewed paths were staged: 71 modified and 154
+added. `git diff --cached --check`, the exact-index secret/path scan, and all
+required regressions passed. Commit
+`ac3720db6234d2e5881f47cc64f94172cdc70a6b` was pushed to `origin/main` without
+force, rebase, reset, clean, or history rewrite.
+
+No tag was created. `v0.8.0` would not describe the 0.8.1 metadata in this
+snapshot, while `v0.8.1` still requires the external production acceptance
+gates. Any future staging, commit, tag, history change, or push requires the
+scope and checks appropriate to that new change.

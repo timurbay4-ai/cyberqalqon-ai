@@ -14,26 +14,27 @@ Automated regression, database recovery, security boundaries, real authenticated
 Microsoft Edge UAT, telemetry health, and the repeatable SOC workflow all pass.
 Four real browser defects were found, corrected, and covered by regression tests.
 
-The release is not marked FINAL. The working tree remains intentionally
-unstaged, uncommitted, and untagged; the live backend process still advertises
-0.8.0 until a controlled restart; production HTTPS/Compose and capacity gates
-are external to this local run. Wazuh API inventory and Windows-agent enrollment
-remain explicitly unavailable rather than being represented as healthy.
+The release is not marked FINAL. The reviewed source snapshot is committed and
+pushed, but the live backend process still advertises 0.8.0 until a controlled
+restart; production HTTPS/Compose and capacity gates are external to this local
+run. Wazuh API inventory and Windows-agent enrollment remain explicitly
+unavailable rather than being represented as healthy.
 
-No reset, clean, rebase, commit, tag, push, live-database overwrite, authentication
-bypass, active scan, response action, or LLM installation was performed.
-`AI_ENABLED=false` remained in force.
+No reset, clean, rebase, history rewrite, force-push, tag, live-database
+overwrite, authentication bypass, active scan, response action, or LLM
+installation was performed. The reviewed snapshot was committed and normally
+pushed under explicit authorization. `AI_ENABLED=false` remained in force.
 
 ## Gate classification
 
 | Gate | Result | Evidence and boundary |
 | --- | --- | --- |
-| G1 — Automated regression | **PASS** | Backend 191/191; frontend 99/99; Wazuh/deployment 126/126; HTTP E2E 2/2; TypeScript, production build, compile, dependency checks, npm audit, and diff whitespace checks pass |
+| G1 — Automated regression | **PASS** | Backend 191/191; frontend 99/99; Wazuh/deployment 127/127; HTTP E2E 2/2; TypeScript, production build, compile, dependency checks, npm audit, and diff whitespace checks pass |
 | G2 — SQLite integrity and recovery | **PASS** | Live `quick_check=ok`, schema 14 and no foreign-key violations; supported backup checksum verified; disposable restore invalidated sessions and restarted successfully; live DB never replaced |
 | G3 — Authentication and authorization | **PASS** | ADMIN/ANALYST/VIEWER boundaries, direct VIEWER mutation 403, CSRF 403, session expiry, logout/Back, audit actors, and report redaction verified |
 | G4 — Real authenticated browser UAT | **PASS** | Microsoft Edge 155 on the actual Windows host: 20/20 core steps and 48/48 route/viewport checks pass |
 | G5 — Operational telemetry health | **PASS** | Passive validator 9/9; Manager and agent active; relay HTTP 200; sender queue/dead-letter 0/0; shipper lag 0; unavailable authorities labelled truthfully |
-| G6 — Secret-safe Git release manifest | **PARTIAL** | Candidate inventory, ignore checks, secret scan, exclusions, grouping, tag, review, and rollback plan are complete; no reviewed index, commit, or tag exists because approval was not granted |
+| G6 — Secret-safe Git release snapshot | **PASS** | 225 paths reviewed and staged explicitly; staged secret/path and whitespace gates passed; implementation snapshot `ac3720db6234d2e5881f47cc64f94172cdc70a6b` was normally pushed to `origin/main`; no tag was created |
 | G7 — Repeatable SOC demonstration | **PASS** | Existing rule-100101/100111 evidence, T1046, correlation, hunt, operations, case/evidence/playbook/report/audit flow are documented; live mutation is not required |
 
 ## What was executed
@@ -58,7 +59,8 @@ bypass, active scan, response action, or LLM installation was performed.
 - Frontend: **99/99 PASS** across 16 files; TypeScript PASS.
 - Production build: **PASS**, 64 modules; main JS 318.01 kB / 91.98 kB gzip;
   CSS 42.69 kB / 9.18 kB gzip; lazy route chunks emitted.
-- Wazuh sender/shipper and deployment: **126/126 PASS**.
+- Wazuh sender/shipper and deployment: **127/127 PASS**, including release
+  metadata/CI image-tag alignment.
 - HTTP E2E: **2/2 PASS** with the deterministic test provider; no LLM started.
 - `npm audit`: zero reported vulnerabilities; `pip check` and Python compile PASS.
 - Candidate secret scan found no private-key header, JWT, provider key, or
@@ -101,7 +103,7 @@ The final passive snapshot passed 9/9 checks. Backend and frontend returned HTTP
 relay path returned HTTP 200; agent `cyberqalqon-test-web` was active; sender
 queue, pending, in-flight, terminal-blocked, and dead-letter counts were zero;
 the archive cursor equalled archive size with lag zero; and SQLite reported
-`quick_check=ok`, schema 14, 40 alerts, and 5,517 events. The event count is
+`quick_check=ok`, schema 14, 40 alerts, and 5,571 events. The event count is
 expected to advance while ingestion runs.
 
 Wazuh API inventory is `UNAVAILABLE` because approved read-only credentials/CA
@@ -110,20 +112,28 @@ Manager. These are visible limitations, not silent health claims.
 
 ## Git snapshot state
 
-The baseline remains `main` at
-`b07fdd50dc3df71976bf9467f8ecb98e68045926`. Before the final three documents,
-there were 70 tracked modified files, 151 untracked non-ignored files, and zero
-staged files. The completed five-document v0.8.1 set raises the untracked count
-to 154, subject to the final read-only recount.
+The pre-sync baseline was `main` at
+`b07fdd50dc3df71976bf9467f8ecb98e68045926`, with 70 tracked changes, 154
+untracked non-ignored files, and no staged files. Release audit added one tracked
+deployment regression file, producing an exact 225-file candidate. The final
+index contained 71 modified and 154 added files, 33,583 insertions, and 1,159
+deletions.
 
-`GIT_RELEASE_MANIFEST_V081.md` classifies source, tests, migrations, templates,
-scripts, and documentation; excludes runtime/security material; proposes four
-reviewable commit groups; and defines `v0.8.1-rc1` as the candidate tag. No Git
-mutation was executed.
+The index had no prohibited runtime path, private-key header, JWT, provider key,
+database, backup, log, or credential file. Three credential-like literals were
+reviewed as deterministic test fixtures. Commit
+`ac3720db6234d2e5881f47cc64f94172cdc70a6b` was created with message
+`feat(siem): integrate SOC platform capabilities through v0.8.1` and normally
+pushed to `origin/main` without rewriting history.
+
+No `v0.8.0` tag was created: the snapshot's backend, frontend, image, deployment,
+and CI metadata is 0.8.1, so that tag would mislabel the commit. No alternative
+tag was created because final production acceptance remains conditional.
 
 ## Prepared but not executed
 
-- Assembly of the reviewed Git index, commit creation, candidate tagging, and push.
+- Candidate or final release tagging; `v0.8.0` was intentionally withheld because
+  it does not match the 0.8.1 snapshot.
 - Controlled restart of the normal live backend/frontend to activate and verify
   the 0.8.1 source metadata; the running OpenAPI process still reports 0.8.0.
 - Production HTTPS reverse-proxy browser UAT, production Compose rollout,
@@ -134,15 +144,15 @@ mutation was executed.
 
 ## Remaining blockers and recommendation
 
-The mandatory local application and demo gates pass. Final release status is
-withheld because G6 has no reviewed/staged snapshot, the live process has not
-been restarted onto the 0.8.1 candidate, and production deployment/capacity
-acceptance remains external.
+The mandatory local application, browser, telemetry, and Git snapshot gates
+pass. Final release status is withheld because the live process has not been
+restarted onto the 0.8.1 candidate and production deployment/capacity acceptance
+remains external.
 
-**Recommendation: CONDITIONAL GO for a controlled local v0.8.1-rc1 demo and
-reviewed release-snapshot preparation. Do not mark FINAL or publish `v0.8.1`
-until the exact staged manifest is approved, scanned, re-tested, committed,
-tagged, and the target deployment is restarted and smoke-tested.**
+**Recommendation: CONDITIONAL GO for the committed v0.8.1 release candidate and
+controlled local demo. Do not mark FINAL or publish a final release tag until
+the target deployment is restarted, smoke-tested, and its production acceptance
+gates are complete.**
 
 ## Evidence index
 
