@@ -1589,6 +1589,401 @@ def _migration_014_case_management(connection: sqlite3.Connection) -> None:
     )
 
 
+def _migration_015_agent_management(connection: sqlite3.Connection) -> None:
+    """Add namespaced agent inventory, health history, and event provenance."""
+
+    connection.executescript(
+        """
+        CREATE TABLE operational_component_state_v15 (
+            component_key TEXT PRIMARY KEY,
+            component_kind TEXT NOT NULL CHECK (
+                component_kind IN (
+                    'manager', 'wazuh_api', 'sender', 'event_shipper',
+                    'windows_agent', 'database', 'telemetry_source'
+                )
+            ),
+            state TEXT NOT NULL CHECK (
+                state IN ('HEALTHY', 'DEGRADED', 'UNAVAILABLE', 'UNKNOWN')
+            ),
+            authority TEXT NOT NULL CHECK (
+                authority IN (
+                    'WAZUH_API', 'OS_SERVICE_MANAGER', 'DURABLE_SENDER_STATE',
+                    'DURABLE_SHIPPER_STATE', 'APPLICATION_DATABASE'
+                )
+            ),
+            summary TEXT NOT NULL CHECK (length(summary) BETWEEN 1 AND 320),
+            metrics_json TEXT NOT NULL CHECK (length(metrics_json) BETWEEN 2 AND 16384),
+            last_error TEXT,
+            observed_at TEXT NOT NULL,
+            first_observed_at TEXT NOT NULL,
+            updated_at TEXT NOT NULL,
+            version INTEGER NOT NULL DEFAULT 1 CHECK (version >= 1)
+        );
+        INSERT INTO operational_component_state_v15
+        SELECT * FROM operational_component_state;
+
+        CREATE TABLE operational_events_v15 (
+            event_id TEXT PRIMARY KEY,
+            component_key TEXT NOT NULL,
+            event_type TEXT NOT NULL CHECK (
+                event_type IN ('ISSUE', 'RECOVERY', 'STATUS_CHANGE')
+            ),
+            severity TEXT NOT NULL CHECK (
+                severity IN ('INFO', 'LOW', 'MEDIUM', 'HIGH', 'CRITICAL')
+            ),
+            previous_state TEXT CHECK (
+                previous_state IS NULL OR
+                previous_state IN ('HEALTHY', 'DEGRADED', 'UNAVAILABLE', 'UNKNOWN')
+            ),
+            current_state TEXT NOT NULL CHECK (
+                current_state IN ('HEALTHY', 'DEGRADED', 'UNAVAILABLE', 'UNKNOWN')
+            ),
+            authority TEXT NOT NULL CHECK (
+                authority IN (
+                    'WAZUH_API', 'OS_SERVICE_MANAGER', 'DURABLE_SENDER_STATE',
+                    'DURABLE_SHIPPER_STATE', 'APPLICATION_DATABASE'
+                )
+            ),
+            summary TEXT NOT NULL CHECK (length(summary) BETWEEN 1 AND 320),
+            details_json TEXT NOT NULL CHECK (length(details_json) BETWEEN 2 AND 8192),
+            deduplication_key TEXT NOT NULL UNIQUE CHECK (
+                length(deduplication_key) BETWEEN 1 AND 256
+            ),
+            occurred_at TEXT NOT NULL,
+            FOREIGN KEY (component_key) REFERENCES operational_component_state_v15(component_key)
+                ON DELETE CASCADE
+        );
+        INSERT INTO operational_events_v15 SELECT * FROM operational_events;
+        DROP TABLE operational_events;
+        DROP TABLE operational_component_state;
+        ALTER TABLE operational_component_state_v15 RENAME TO operational_component_state;
+        ALTER TABLE operational_events_v15 RENAME TO operational_events;
+        CREATE INDEX idx_operational_events_order
+            ON operational_events(occurred_at DESC, event_id DESC);
+        CREATE INDEX idx_operational_events_component
+            ON operational_events(component_key, occurred_at DESC);
+        """
+    )
+
+    connection.executescript(
+        """
+        CREATE TABLE IF NOT EXISTS wazuh_integration_cache (
+            singleton INTEGER PRIMARY KEY CHECK (singleton = 1),
+            state TEXT NOT NULL CHECK (state IN ('AVAILABLE', 'UNAVAILABLE')),
+            reason TEXT NOT NULL CHECK (length(reason) BETWEEN 1 AND 320),
+            manager_identity TEXT,
+            manager_version TEXT,
+            manager_health TEXT CHECK (
+                manager_health IS NULL OR manager_health IN ('HEALTHY', 'DEGRADED', 'UNKNOWN')
+            ),
+            agent_count INTEGER CHECK (agent_count IS NULL OR agent_count >= 0),
+            rejected_agent_count INTEGER NOT NULL DEFAULT 0 CHECK (rejected_agent_count >= 0),
+            observed_at TEXT NOT NULL,
+            expires_at TEXT NOT NULL
+        );
+
+        CREATE TABLE IF NOT EXISTS agent_inventory (
+            agent_key TEXT PRIMARY KEY CHECK (length(agent_key) BETWEEN 16 AND 96),
+            provider TEXT NOT NULL CHECK (provider = 'WAZUH'),
+            manager_identity TEXT NOT NULL CHECK (length(manager_identity) BETWEEN 1 AND 255),
+            agent_id TEXT NOT NULL CHECK (length(agent_id) BETWEEN 1 AND 128),
+            name TEXT NOT NULL CHECK (length(name) BETWEEN 1 AND 255),
+            os_name TEXT,
+            os_platform TEXT,
+            os_version TEXT,
+            agent_version TEXT,
+            ip_address TEXT,
+            groups_json TEXT NOT NULL DEFAULT '[]' CHECK (length(groups_json) BETWEEN 2 AND 8192),
+            connection_status TEXT NOT NULL CHECK (
+                connection_status IN ('ONLINE', 'DISCONNECTED', 'NEVER_CONNECTED', 'UNKNOWN')
+            ),
+            enrollment_status TEXT NOT NULL CHECK (
+                enrollment_status IN ('ENROLLED', 'NEVER_ENROLLED', 'UNKNOWN')
+            ),
+            status_authority TEXT NOT NULL CHECK (status_authority = 'WAZUH_API'),
+            last_keepalive TEXT,
+            disconnected_at TEXT,
+            enrolled_at TEXT,
+            first_observed_at TEXT NOT NULL,
+            observed_at TEXT NOT NULL,
+            expires_at TEXT NOT NULL,
+            UNIQUE (provider, manager_identity, agent_id)
+        );
+
+        CREATE TABLE IF NOT EXISTS agent_health_history (
+            history_id TEXT PRIMARY KEY,
+            agent_key TEXT NOT NULL,
+            connection_status TEXT NOT NULL CHECK (
+                connection_status IN ('ONLINE', 'DISCONNECTED', 'NEVER_CONNECTED', 'UNKNOWN')
+            ),
+            previous_status TEXT CHECK (
+                previous_status IS NULL OR previous_status IN (
+                    'ONLINE', 'DISCONNECTED', 'NEVER_CONNECTED', 'UNKNOWN'
+                )
+            ),
+            authority TEXT NOT NULL CHECK (authority = 'WAZUH_API'),
+            observed_at TEXT NOT NULL,
+            details_json TEXT NOT NULL CHECK (length(details_json) BETWEEN 2 AND 8192),
+            deduplication_key TEXT NOT NULL UNIQUE,
+            FOREIGN KEY (agent_key) REFERENCES agent_inventory(agent_key) ON DELETE CASCADE
+        );
+
+        CREATE INDEX IF NOT EXISTS idx_agent_inventory_manager_id
+            ON agent_inventory(manager_identity, agent_id);
+        CREATE INDEX IF NOT EXISTS idx_agent_inventory_status_seen
+            ON agent_inventory(connection_status, last_keepalive DESC, agent_key);
+        CREATE INDEX IF NOT EXISTS idx_agent_inventory_os
+            ON agent_inventory(os_platform COLLATE NOCASE, agent_key);
+        CREATE INDEX IF NOT EXISTS idx_agent_inventory_version
+            ON agent_inventory(agent_version COLLATE NOCASE, agent_key);
+        CREATE INDEX IF NOT EXISTS idx_agent_health_agent_order
+            ON agent_health_history(agent_key, observed_at DESC, history_id DESC);
+        """
+    )
+
+    event_columns = {
+        str(row[1]) for row in connection.execute("PRAGMA table_info(security_events)").fetchall()
+    }
+    additions = {
+        "manager_identity": "TEXT",
+        "event_provider": "TEXT",
+        "event_channel": "TEXT",
+        "process_name": "TEXT",
+        "process_id": "TEXT",
+        "parent_process_name": "TEXT",
+        "parent_process_id": "TEXT",
+        "normalization_schema": "TEXT NOT NULL DEFAULT 'wazuh-event-v1'",
+    }
+    for column, definition in additions.items():
+        if column not in event_columns:
+            connection.execute(f"ALTER TABLE security_events ADD COLUMN {column} {definition}")
+    connection.execute(
+        "CREATE INDEX IF NOT EXISTS idx_security_events_manager_agent "
+        "ON security_events(manager_identity, agent_id, occurred_at DESC, event_id DESC)"
+    )
+    connection.execute(
+        "CREATE INDEX IF NOT EXISTS idx_security_events_windows_provider "
+        "ON security_events(event_provider COLLATE NOCASE, event_channel COLLATE NOCASE, "
+        "occurred_at DESC, event_id DESC)"
+    )
+
+
+def _migration_016_endpoint_telemetry_context(connection: sqlite3.Connection) -> None:
+    """Add M10 endpoint context without rewriting or deleting historical evidence."""
+
+    additions = {
+        "operating_system": "TEXT",
+        "process_path": "TEXT",
+        "command_line": "TEXT",
+        "parent_process_path": "TEXT",
+        "mitre_ids_json": "TEXT NOT NULL DEFAULT '[]' CHECK (json_valid(mitre_ids_json))",
+        "mitre_tactics_json": "TEXT NOT NULL DEFAULT '[]' CHECK (json_valid(mitre_tactics_json))",
+        "mitre_techniques_json": "TEXT NOT NULL DEFAULT '[]' CHECK (json_valid(mitre_techniques_json))",
+    }
+    existing = _table_columns(connection, "security_events")
+    for column, definition in additions.items():
+        if column not in existing:
+            connection.execute(f"ALTER TABLE security_events ADD COLUMN {column} {definition}")
+
+    _require_columns(connection, "security_events", set(additions))
+    connection.execute(
+        "CREATE INDEX IF NOT EXISTS idx_security_events_os_time "
+        "ON security_events(operating_system COLLATE NOCASE, occurred_at DESC, event_id DESC)"
+    )
+    connection.execute(
+        "CREATE INDEX IF NOT EXISTS idx_security_events_action_time "
+        "ON security_events(event_action COLLATE NOCASE, occurred_at DESC, event_id DESC)"
+    )
+
+
+def _migration_017_investigation_pivot_indexes(connection: sqlite3.Connection) -> None:
+    """Add only the exact-match process indexes used by bounded M12 pivots."""
+
+    _require_columns(connection, "security_events", {"process_name", "process_id"})
+    connection.execute(
+        "CREATE INDEX IF NOT EXISTS idx_security_events_process_name_time "
+        "ON security_events(process_name COLLATE NOCASE, occurred_at DESC, event_id DESC)"
+    )
+    connection.execute(
+        "CREATE INDEX IF NOT EXISTS idx_security_events_process_id_time "
+        "ON security_events(process_id, occurred_at DESC, event_id DESC)"
+    )
+
+
+def _migration_018_detection_readiness(connection: sqlite3.Connection) -> None:
+    """Add isolated M14 readiness state without enabling live detections."""
+
+    script = """
+        CREATE TABLE IF NOT EXISTS advanced_detection_rule_state (
+            rule_id TEXT PRIMARY KEY CHECK (rule_id GLOB 'DET-00[1-9]'),
+            configuration_state TEXT NOT NULL CHECK (
+                configuration_state IN (
+                    'DRAFT', 'VALIDATED', 'TESTED', 'SHADOW_READY', 'CANARY_READY',
+                    'ACTIVE', 'PAUSED', 'ROLLED_BACK', 'DISABLED_BY_POLICY'
+                )
+            ),
+            validation_state TEXT NOT NULL CHECK (
+                validation_state IN ('NOT_VALIDATED', 'VALID', 'INVALID')
+            ),
+            deployment_eligibility TEXT NOT NULL CHECK (
+                deployment_eligibility IN ('BLOCKED', 'SHADOW_ONLY', 'CANARY_REVIEW_REQUIRED')
+            ),
+            runtime_activation_state TEXT NOT NULL DEFAULT 'DISABLED_BY_POLICY'
+                CHECK (runtime_activation_state = 'DISABLED_BY_POLICY'),
+            telemetry_status TEXT NOT NULL CHECK (
+                telemetry_status IN ('READY', 'PARTIAL', 'UNKNOWN', 'UNAVAILABLE', 'FAILED')
+            ),
+            active_configuration_version INTEGER NOT NULL CHECK (active_configuration_version >= 1),
+            state_version INTEGER NOT NULL DEFAULT 1 CHECK (state_version >= 1),
+            updated_at TEXT NOT NULL,
+            updated_by TEXT NOT NULL
+        ) STRICT;
+
+        CREATE TABLE IF NOT EXISTS advanced_detection_config_versions (
+            config_id TEXT PRIMARY KEY,
+            rule_id TEXT NOT NULL CHECK (rule_id GLOB 'DET-00[1-9]'),
+            version INTEGER NOT NULL CHECK (version >= 1),
+            lifecycle_state TEXT NOT NULL CHECK (
+                lifecycle_state IN (
+                    'DRAFT', 'VALIDATED', 'TESTED', 'SHADOW_READY', 'CANARY_READY',
+                    'ACTIVE', 'PAUSED', 'ROLLED_BACK', 'DISABLED_BY_POLICY'
+                )
+            ),
+            configuration_json TEXT NOT NULL CHECK (json_valid(configuration_json)),
+            validation_json TEXT NOT NULL CHECK (json_valid(validation_json)),
+            author_id TEXT,
+            author_display TEXT NOT NULL,
+            change_reason TEXT NOT NULL,
+            created_at TEXT NOT NULL,
+            UNIQUE (rule_id, version)
+        ) STRICT;
+
+        CREATE TABLE IF NOT EXISTS advanced_detection_lifecycle_history (
+            history_id TEXT PRIMARY KEY,
+            rule_id TEXT NOT NULL CHECK (rule_id GLOB 'DET-00[1-9]'),
+            from_state TEXT,
+            to_state TEXT NOT NULL,
+            configuration_version INTEGER NOT NULL CHECK (configuration_version >= 1),
+            actor_id TEXT,
+            actor_display TEXT NOT NULL,
+            reason TEXT NOT NULL,
+            occurred_at TEXT NOT NULL
+        ) STRICT;
+
+        CREATE TABLE IF NOT EXISTS advanced_detection_correlation_state (
+            rule_id TEXT NOT NULL CHECK (rule_id GLOB 'DET-00[1-9]'),
+            configuration_version INTEGER NOT NULL CHECK (configuration_version >= 1),
+            correlation_key_hash TEXT NOT NULL CHECK (length(correlation_key_hash) = 64),
+            state_version INTEGER NOT NULL CHECK (state_version >= 1),
+            watermark_at TEXT NOT NULL,
+            expires_at TEXT NOT NULL,
+            normalized_state_json TEXT NOT NULL CHECK (json_valid(normalized_state_json)),
+            updated_at TEXT NOT NULL,
+            PRIMARY KEY (rule_id, configuration_version, correlation_key_hash)
+        ) STRICT;
+
+        CREATE TABLE IF NOT EXISTS advanced_detection_processed_events (
+            rule_id TEXT NOT NULL CHECK (rule_id GLOB 'DET-00[1-9]'),
+            configuration_version INTEGER NOT NULL CHECK (configuration_version >= 1),
+            event_id_hash TEXT NOT NULL CHECK (length(event_id_hash) = 64),
+            event_time TEXT NOT NULL,
+            expires_at TEXT NOT NULL,
+            PRIMARY KEY (rule_id, configuration_version, event_id_hash)
+        ) STRICT;
+
+        CREATE TABLE IF NOT EXISTS advanced_detection_shadow_runs (
+            run_id TEXT PRIMARY KEY,
+            rule_id TEXT NOT NULL CHECK (rule_id GLOB 'DET-00[1-9]'),
+            configuration_version INTEGER NOT NULL CHECK (configuration_version >= 1),
+            status TEXT NOT NULL CHECK (status IN ('RUNNING', 'COMPLETED', 'FAILED')),
+            started_at TEXT NOT NULL,
+            completed_at TEXT,
+            start_time TEXT NOT NULL,
+            end_time TEXT NOT NULL,
+            operator_id TEXT NOT NULL,
+            operator_display TEXT NOT NULL,
+            source_availability TEXT NOT NULL CHECK (
+                source_availability IN ('READY', 'PARTIAL', 'UNKNOWN', 'UNAVAILABLE', 'FAILED')
+            ),
+            evaluated_event_count INTEGER NOT NULL DEFAULT 0 CHECK (evaluated_event_count >= 0),
+            match_count INTEGER NOT NULL DEFAULT 0 CHECK (match_count >= 0),
+            duplicate_count INTEGER NOT NULL DEFAULT 0 CHECK (duplicate_count >= 0),
+            missing_field_count INTEGER NOT NULL DEFAULT 0 CHECK (missing_field_count >= 0),
+            execution_ms REAL NOT NULL DEFAULT 0 CHECK (execution_ms >= 0),
+            resource_json TEXT NOT NULL DEFAULT '{}' CHECK (json_valid(resource_json)),
+            truncated INTEGER NOT NULL DEFAULT 0 CHECK (truncated IN (0, 1)),
+            outcome TEXT NOT NULL,
+            error_code TEXT,
+            side_effects INTEGER NOT NULL DEFAULT 0 CHECK (side_effects = 0)
+        ) STRICT;
+
+        CREATE TABLE IF NOT EXISTS advanced_detection_shadow_findings (
+            shadow_finding_id TEXT PRIMARY KEY,
+            run_id TEXT NOT NULL,
+            rule_id TEXT NOT NULL CHECK (rule_id GLOB 'DET-00[1-9]'),
+            deduplication_key TEXT NOT NULL CHECK (length(deduplication_key) = 64),
+            first_event_at TEXT NOT NULL,
+            last_event_at TEXT NOT NULL,
+            finding_json TEXT NOT NULL CHECK (json_valid(finding_json)),
+            created_at TEXT NOT NULL,
+            UNIQUE (run_id, deduplication_key),
+            FOREIGN KEY (run_id) REFERENCES advanced_detection_shadow_runs(run_id)
+                ON DELETE CASCADE
+        ) STRICT;
+
+        CREATE TABLE IF NOT EXISTS advanced_detection_diagnostics (
+            rule_id TEXT PRIMARY KEY CHECK (rule_id GLOB 'DET-00[1-9]'),
+            evaluation_count INTEGER NOT NULL DEFAULT 0 CHECK (evaluation_count >= 0),
+            total_duration_ms REAL NOT NULL DEFAULT 0 CHECK (total_duration_ms >= 0),
+            rule_match_count INTEGER NOT NULL DEFAULT 0 CHECK (rule_match_count >= 0),
+            finding_count INTEGER NOT NULL DEFAULT 0 CHECK (finding_count >= 0),
+            duplicate_event_count INTEGER NOT NULL DEFAULT 0 CHECK (duplicate_event_count >= 0),
+            skipped_event_count INTEGER NOT NULL DEFAULT 0 CHECK (skipped_event_count >= 0),
+            missing_field_count INTEGER NOT NULL DEFAULT 0 CHECK (missing_field_count >= 0),
+            evaluation_timeout_count INTEGER NOT NULL DEFAULT 0 CHECK (evaluation_timeout_count >= 0),
+            state_recovery_count INTEGER NOT NULL DEFAULT 0 CHECK (state_recovery_count >= 0),
+            configuration_validation_failure_count INTEGER NOT NULL DEFAULT 0
+                CHECK (configuration_validation_failure_count >= 0),
+            truncation_count INTEGER NOT NULL DEFAULT 0 CHECK (truncation_count >= 0),
+            last_successful_evaluation TEXT,
+            last_failed_evaluation TEXT,
+            last_event_range_start TEXT,
+            last_event_range_end TEXT,
+            source_freshness TEXT,
+            updated_at TEXT NOT NULL
+        ) STRICT;
+
+        CREATE INDEX IF NOT EXISTS idx_advanced_config_rule_version
+            ON advanced_detection_config_versions(rule_id, version DESC);
+        CREATE INDEX IF NOT EXISTS idx_advanced_lifecycle_rule_time
+            ON advanced_detection_lifecycle_history(rule_id, occurred_at DESC);
+        CREATE INDEX IF NOT EXISTS idx_advanced_state_expiry
+            ON advanced_detection_correlation_state(expires_at);
+        CREATE INDEX IF NOT EXISTS idx_advanced_processed_expiry
+            ON advanced_detection_processed_events(expires_at);
+        CREATE INDEX IF NOT EXISTS idx_advanced_shadow_rule_time
+            ON advanced_detection_shadow_runs(rule_id, started_at DESC);
+        CREATE INDEX IF NOT EXISTS idx_advanced_shadow_findings_run
+            ON advanced_detection_shadow_findings(run_id, first_event_at, shadow_finding_id);
+        """
+    # Keep migration 18 inside apply_migrations()' existing BEGIN IMMEDIATE.
+    # sqlite3.executescript() commits a pending transaction before executing,
+    # which would violate the all-or-nothing live approval gate for this schema.
+    for statement in script.split(";"):
+        if statement.strip():
+            connection.execute(statement)
+
+    _require_columns(
+        connection,
+        "advanced_detection_rule_state",
+        {
+            "rule_id", "configuration_state", "validation_state",
+            "deployment_eligibility", "runtime_activation_state",
+            "telemetry_status", "active_configuration_version", "state_version",
+        },
+    )
+
+
 MIGRATIONS = (
     Migration(1, "initial_alerts", _migration_001_initial_alerts),
     Migration(2, "alert_read_indexes", _migration_002_alert_read_indexes),
@@ -1604,6 +1999,10 @@ MIGRATIONS = (
     Migration(12, "detection_engineering_and_hunting", _migration_012_detection_engineering),
     Migration(13, "operational_reliability", _migration_013_operational_reliability),
     Migration(14, "soc_case_management", _migration_014_case_management),
+    Migration(15, "agent_management_and_event_provenance", _migration_015_agent_management),
+    Migration(16, "endpoint_telemetry_context", _migration_016_endpoint_telemetry_context),
+    Migration(17, "investigation_pivot_indexes", _migration_017_investigation_pivot_indexes),
+    Migration(18, "advanced_detection_readiness", _migration_018_detection_readiness),
 )
 
 
@@ -1635,12 +2034,17 @@ def _validate_migration_history(connection: sqlite3.Connection) -> tuple[int, ..
     return applied
 
 
-def apply_migrations(connection: sqlite3.Connection) -> tuple[int, ...]:
-    """Apply every pending migration transactionally without dropping user data."""
+def apply_migrations(
+    connection: sqlite3.Connection, *, target_version: int | None = None,
+) -> tuple[int, ...]:
+    """Apply pending migrations through an explicit target transactionally."""
 
     versions = tuple(migration.version for migration in MIGRATIONS)
     if versions != tuple(range(1, len(MIGRATIONS) + 1)):
         raise MigrationError("Application migrations must be contiguous and start at version 1")
+    target = len(MIGRATIONS) if target_version is None else target_version
+    if target < 1 or target > len(MIGRATIONS):
+        raise MigrationError("Migration target is outside the application migration range")
 
     connection.execute(
         """
@@ -1664,7 +2068,7 @@ def apply_migrations(connection: sqlite3.Connection) -> tuple[int, ...]:
             f"SQLite user_version ({user_version}) disagrees with migration history ({current})"
         )
 
-    for migration in MIGRATIONS:
+    for migration in MIGRATIONS[:target]:
         if migration.version in applied:
             continue
         try:

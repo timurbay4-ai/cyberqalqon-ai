@@ -17,17 +17,34 @@ describe("DiscoverPage", () => {
 
     expect(await screen.findByText(SAMPLE_EVENT.message)).toBeInTheDocument();
     fireEvent.change(screen.getByLabelText("Source IP"), { target: { value: "127.0.0.1" } });
+    fireEvent.change(screen.getByLabelText("Operating system"), { target: { value: "linux" } });
+    fireEvent.change(screen.getByLabelText("Event provider"), { target: { value: "sshd" } });
+    fireEvent.change(screen.getByLabelText("Event channel"), { target: { value: "auth" } });
+    fireEvent.change(screen.getByLabelText("Process name"), { target: { value: "nginx" } });
+    fireEvent.change(screen.getByLabelText("Action"), { target: { value: "http_request" } });
     fireEvent.change(screen.getByLabelText("Wazuh rule ID"), { target: { value: "100120" } });
     fireEvent.click(screen.getByRole("button", { name: "Search events" }));
     expect(api.listEvents).toHaveBeenLastCalledWith(
-      expect.objectContaining({ sourceIp: "127.0.0.1", ruleId: "100120", limit: 25 }),
+      expect.objectContaining({
+        sourceIp: "127.0.0.1",
+        operatingSystem: "linux",
+        eventProvider: "sshd",
+        eventChannel: "auth",
+        processName: "nginx",
+        eventAction: "http_request",
+        ruleId: "100120",
+        limit: 25,
+      }),
       expect.any(AbortSignal),
     );
 
     fireEvent.click(screen.getByRole("button", { name: /08 Oct 2026/ }));
     const detail = await screen.findByRole("complementary", { name: "Security event detail" });
-    expect(within(detail).getByText("EVT-0123456789ABCDEF01234567")).toBeInTheDocument();
+    expect(within(detail).getAllByText("EVT-0123456789ABCDEF01234567")).toHaveLength(2);
     expect(within(detail).getByText(/<img src=x onerror=attack/)).toBeInTheDocument();
+    expect(within(detail).getAllByText("/usr/sbin/nginx")).toHaveLength(2);
+    expect(within(detail).getByText("nginx: worker process")).toBeInTheDocument();
+    expect(within(detail).getByText("T1190")).toBeInTheDocument();
     expect(container.querySelector("script")).toBeNull();
     fireEvent.click(within(detail).getByRole("button", { name: /Open alert/ }));
     fireEvent.click(within(detail).getByRole("button", { name: /Open incident/ }));
@@ -94,6 +111,33 @@ describe("DiscoverPage", () => {
     await screen.findByText(SAMPLE_EVENT.message);
     fireEvent.change(screen.getByLabelText("Rows per page"), { target: { value: "100" } });
     await waitFor(() => expect(api.listEvents).toHaveBeenLastCalledWith(expect.objectContaining({ limit: 100 }), expect.any(AbortSignal)));
+  });
+
+  it("restores pagination and filter state after leaving and returning to Discover", async () => {
+    window.history.replaceState({}, "", "/?view=discover");
+    const api = createMockApi({
+      listEvents: vi.fn().mockResolvedValue({
+        items: [SAMPLE_EVENT],
+        page: { limit: 25, next_cursor: "cursor-page-2", total: 40, sort: "newest" },
+      }),
+    });
+    const rendered = render(<DiscoverPage api={api} onOpenAlert={() => undefined} onOpenIncident={() => undefined} />);
+    await screen.findByText(SAMPLE_EVENT.message);
+    fireEvent.change(screen.getByLabelText("Wazuh rule ID"), { target: { value: "100120" } });
+    fireEvent.click(screen.getByRole("button", { name: "Search events" }));
+    fireEvent.click(await screen.findByRole("button", { name: "Next" }));
+    await waitFor(() => expect(api.listEvents).toHaveBeenLastCalledWith(
+      expect.objectContaining({ cursor: "cursor-page-2", ruleId: "100120" }),
+      expect.any(AbortSignal),
+    ));
+    expect((window.history.state as { cyberqalqonDiscoverCursor?: string }).cyberqalqonDiscoverCursor).toBe("cursor-page-2");
+
+    rendered.unmount();
+    render(<DiscoverPage api={api} onOpenAlert={() => undefined} onOpenIncident={() => undefined} />);
+    await waitFor(() => expect(api.listEvents).toHaveBeenLastCalledWith(
+      expect.objectContaining({ cursor: "cursor-page-2", ruleId: "100120" }),
+      expect.any(AbortSignal),
+    ));
   });
 
   it("renders persisted column order and protects essential identification columns", async () => {

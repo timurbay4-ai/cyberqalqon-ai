@@ -5,18 +5,21 @@ import { BrandMark } from "../components/brand-mark";
 import type { AnalystPrincipal } from "../types/auth";
 import type { BackendApi } from "../types/api";
 import { NotificationCenter } from "../components/notification-center";
+import type { WorkbenchTarget } from "../types/investigation-workbench";
 
-export type PageId = "dashboard" | "operations" | "discover" | "hunting" | "alerts" | "incidents" | "cases" | "hosts" | "rules" | "intelligence" | "reports" | "administration";
+export type PageId = "dashboard" | "operations" | "discover" | "investigate" | "hunting" | "alerts" | "incidents" | "cases" | "hosts" | "rules" | "intelligence" | "reports" | "administration";
+export interface NavigationDetail { alert?: string; incident?: string; case?: string; event?: string; ruleId?: string; workbench?: WorkbenchTarget }
 
 const navigation: Array<{ id: PageId; label: string; icon: string }> = [
   { id: "dashboard", label: "Overview", icon: "⌁" },
   { id: "operations", label: "Operations", icon: "◉" },
   { id: "discover", label: "Discover", icon: "⌕" },
+  { id: "investigate", label: "Investigation", icon: "⊙" },
   { id: "hunting", label: "Threat Hunting", icon: "◎" },
   { id: "alerts", label: "Alerts", icon: "◇" },
   { id: "incidents", label: "Incidents", icon: "▱" },
   { id: "cases", label: "Cases", icon: "▤" },
-  { id: "hosts", label: "Hosts", icon: "▦" },
+  { id: "hosts", label: "Agents", icon: "▦" },
   { id: "rules", label: "Detection Rules", icon: "⌘" },
   { id: "intelligence", label: "Threat Intelligence", icon: "◈" },
   { id: "reports", label: "Reports", icon: "⇩" },
@@ -31,7 +34,7 @@ interface AppShellProps {
   logoutError: string | null;
   api: BackendApi;
   children: ReactNode;
-  onNavigate(page: PageId, detail?: { alert?: string; incident?: string; case?: string; event?: string; ruleId?: string }): void;
+  onNavigate(page: PageId, detail?: NavigationDetail): void;
   onRetryConnection(): void;
   onLogout(): void;
 }

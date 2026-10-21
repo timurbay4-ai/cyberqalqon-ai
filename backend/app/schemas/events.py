@@ -7,7 +7,7 @@ from typing import Any, Literal
 
 from pydantic import ConfigDict, Field, IPvAnyAddress, field_validator, model_validator
 
-from app.schemas.alerts import StrictModel
+from app.schemas.alerts import MitreContext, StrictModel
 
 
 EventSourceType = Literal[
@@ -32,6 +32,18 @@ class SecurityEventSummary(StrictModel):
     hostname: str | None = Field(default=None, max_length=255)
     agent_id: str | None = Field(default=None, max_length=128)
     agent_name: str | None = Field(default=None, max_length=255)
+    operating_system: str | None = Field(default=None, max_length=255)
+    manager_identity: str | None = Field(default=None, max_length=255)
+    event_provider: str | None = Field(default=None, max_length=255)
+    event_channel: str | None = Field(default=None, max_length=255)
+    process_name: str | None = Field(default=None, max_length=1024)
+    process_path: str | None = Field(default=None, max_length=2048)
+    command_line: str | None = Field(default=None, max_length=8192)
+    process_id: str | None = Field(default=None, max_length=128)
+    parent_process_name: str | None = Field(default=None, max_length=1024)
+    parent_process_path: str | None = Field(default=None, max_length=2048)
+    parent_process_id: str | None = Field(default=None, max_length=128)
+    normalization_schema: str = Field(min_length=1, max_length=64)
     source_ip: IPvAnyAddress | None = None
     destination_ip: IPvAnyAddress | None = None
     source_port: int | None = Field(default=None, ge=1, le=65535)
@@ -42,6 +54,7 @@ class SecurityEventSummary(StrictModel):
     outcome: str | None = Field(default=None, max_length=128)
     rule_id: str | None = Field(default=None, max_length=128)
     severity: int | None = Field(default=None, ge=0, le=16)
+    mitre: MitreContext = Field(default_factory=MitreContext)
     message: str = Field(min_length=1, max_length=4096)
     ingestion_source: str = Field(min_length=1, max_length=128)
     related_alert_id: str | None = Field(default=None, max_length=255)
@@ -58,6 +71,8 @@ class SecurityEventDetail(SecurityEventSummary):
     structured_payload: dict[str, Any] = Field(default_factory=dict)
     raw_payload: dict[str, Any] = Field(default_factory=dict)
     related_incident_ids: list[str] = Field(default_factory=list)
+    related_case_ids: list[str] = Field(default_factory=list)
+    raw_evidence_ref: str = Field(min_length=1, max_length=64)
 
 
 class SecurityEventPage(StrictModel):
@@ -76,6 +91,118 @@ class SecurityEventIngestResponse(StrictModel):
     status: Literal["created", "duplicate"]
     duplicate: bool
     event: SecurityEventSummary
+
+
+BatchEventOutcome = Literal[
+    "INSERTED",
+    "DUPLICATE",
+    "PERMANENTLY_INVALID",
+    "RETRYABLE_FAILURE",
+    "NOT_PROCESSED",
+]
+
+
+class SecurityEventBatchRequest(StrictModel):
+    """Bounded machine-ingestion envelope for the M18 atomic batch protocol."""
+
+    protocol_version: Literal["m18-batch-v1"] = "m18-batch-v1"
+    batch_id: str = Field(
+        min_length=1,
+        max_length=128,
+        pattern=r"^[A-Za-z0-9][A-Za-z0-9._:-]*$",
+    )
+    events: list[dict[str, Any]] = Field(min_length=1, max_length=100)
+
+
+class SecurityEventBatchItemResult(StrictModel):
+    index: int = Field(ge=0, le=99)
+    event_id: str = Field(min_length=1, max_length=64)
+    deduplication_id: str = Field(pattern=r"^[0-9a-f]{64}$")
+    outcome: Literal["INSERTED", "DUPLICATE"]
+
+
+class SecurityEventBatchTiming(StrictModel):
+    request_reception_ms: float = Field(ge=0)
+    authentication_ms: float = Field(ge=0)
+    request_parse_ms: float = Field(ge=0)
+    schema_validation_ms: float = Field(ge=0)
+    normalization_ms: float = Field(ge=0)
+    database_ms: float = Field(ge=0)
+    transaction_ms: float = Field(ge=0)
+    connection_ms: float = Field(ge=0)
+    lock_wait_ms: float = Field(ge=0)
+    deduplication_ms: float = Field(ge=0)
+    alert_lookup_ms: float = Field(ge=0)
+    insertion_ms: float = Field(ge=0)
+    retention_ms: float = Field(ge=0)
+    retention_state_ms: float = Field(ge=0)
+    retention_age_delete_ms: float = Field(ge=0)
+    retention_count_ms: float = Field(ge=0)
+    retention_candidate_ms: float = Field(ge=0)
+    protected_check_ms: float = Field(ge=0)
+    retention_delete_ms: float = Field(ge=0)
+    protected_count_ms: float = Field(ge=0)
+    retention_metadata_ms: float = Field(ge=0)
+    retention_audit_ms: float = Field(ge=0)
+    commit_ms: float = Field(ge=0)
+    sql_statement_count: int = Field(ge=0)
+    retention_rows_considered: int = Field(ge=0)
+    retention_rows_deleted: int = Field(ge=0)
+    protected_row_skips: int = Field(ge=0)
+    full_age_sweep: bool
+    total_ms: float = Field(ge=0)
+
+
+class SecurityEventBatchIngestResponse(StrictModel):
+    protocol_version: Literal["m18-batch-v1"] = "m18-batch-v1"
+    batch_id: str = Field(min_length=1, max_length=128)
+    status: Literal["COMMITTED"] = "COMMITTED"
+    atomic: Literal[True] = True
+    inserted: int = Field(ge=0, le=100)
+    duplicates: int = Field(ge=0, le=100)
+    results: list[SecurityEventBatchItemResult] = Field(min_length=1, max_length=100)
+    timing_ms: SecurityEventBatchTiming
+
+
+class SecurityEventBatchErrorItem(StrictModel):
+    index: int = Field(ge=0, le=99)
+    outcome: Literal["PERMANENTLY_INVALID", "RETRYABLE_FAILURE", "NOT_PROCESSED"]
+    code: str | None = Field(default=None, min_length=1, max_length=128)
+    field: str | None = Field(default=None, min_length=1, max_length=256)
+
+
+class SecurityEventBatchErrorDetail(StrictModel):
+    code: str = Field(min_length=1, max_length=128)
+    message: str = Field(min_length=1, max_length=512)
+    batch_id: str | None = Field(default=None, min_length=1, max_length=128)
+    atomic: Literal[True] = True
+    results: list[SecurityEventBatchErrorItem] = Field(default_factory=list, max_length=100)
+
+
+class SecurityEventBatchErrorResponse(StrictModel):
+    detail: SecurityEventBatchErrorDetail
+
+
+class TelemetryCoverageEntry(StrictModel):
+    source_type: EventSourceType
+    event_category: str | None = None
+    operating_system: str | None = None
+    event_provider: str | None = None
+    event_channel: str | None = None
+    event_count: int = Field(ge=1)
+    first_event_at: datetime
+    last_event_at: datetime
+    last_ingested_at: datetime
+    state: Literal["OBSERVED"] = "OBSERVED"
+    evidence: Literal["STORED_EVENTS"] = "STORED_EVENTS"
+
+
+class TelemetryCoverageReport(StrictModel):
+    start_time: datetime
+    end_time: datetime
+    generated_at: datetime
+    total_events: int = Field(ge=0)
+    entries: list[TelemetryCoverageEntry]
 
 
 class TimeSeriesPoint(StrictModel):
@@ -109,10 +236,15 @@ class PipelineActivity(StrictModel):
 
 
 class RetentionStatus(StrictModel):
-    state: Literal["WITHIN_LIMIT", "AT_LIMIT"]
+    state: Literal["WITHIN_LIMIT", "AT_LIMIT", "OVER_LIMIT_PROTECTED"]
     retention_days: int = Field(ge=1)
     max_records: int = Field(ge=100)
     retained_records: int = Field(ge=0)
+    protected_records: int = Field(default=0, ge=0)
+    over_limit_records: int = Field(default=0, ge=0)
+    usage_percent: float = Field(default=0, ge=0)
+    oldest_event_at: datetime | None = None
+    newest_event_at: datetime | None = None
     last_run_at: datetime | None = None
     last_deleted_count: int = Field(ge=0)
 
@@ -152,9 +284,14 @@ class SavedEventSearchQuery(StrictModel):
     destination_ip: IPvAnyAddress | None = None
     hostname: str | None = Field(default=None, min_length=1, max_length=255)
     username: str | None = Field(default=None, min_length=1, max_length=512)
+    operating_system: str | None = Field(default=None, min_length=1, max_length=255)
+    event_provider: str | None = Field(default=None, min_length=1, max_length=255)
+    event_channel: str | None = Field(default=None, min_length=1, max_length=255)
+    process_name: str | None = Field(default=None, min_length=1, max_length=1024)
     event_id: str | None = Field(default=None, min_length=1, max_length=255)
     rule_id: str | None = Field(default=None, min_length=1, max_length=128)
     event_category: str | None = Field(default=None, min_length=1, max_length=255)
+    event_action: str | None = Field(default=None, min_length=1, max_length=255)
     outcome: str | None = Field(default=None, min_length=1, max_length=128)
     severity_min: int | None = Field(default=None, ge=0, le=16)
     severity_max: int | None = Field(default=None, ge=0, le=16)
@@ -224,6 +361,18 @@ class NormalizedSecurityEvent(StrictModel):
     hostname: str | None = None
     agent_id: str | None = None
     agent_name: str | None = None
+    operating_system: str | None = None
+    manager_identity: str | None = None
+    event_provider: str | None = None
+    event_channel: str | None = None
+    process_name: str | None = None
+    process_path: str | None = None
+    command_line: str | None = None
+    process_id: str | None = None
+    parent_process_name: str | None = None
+    parent_process_path: str | None = None
+    parent_process_id: str | None = None
+    normalization_schema: str = "wazuh-event-v3"
     source_ip: IPvAnyAddress | None = None
     destination_ip: IPvAnyAddress | None = None
     source_port: int | None = Field(default=None, ge=1, le=65535)
@@ -234,6 +383,7 @@ class NormalizedSecurityEvent(StrictModel):
     outcome: str | None = None
     rule_id: str | None = None
     severity: int | None = Field(default=None, ge=0, le=16)
+    mitre: MitreContext = Field(default_factory=MitreContext)
     message: str = Field(min_length=1, max_length=4096)
     ingestion_source: str
     structured_payload: dict[str, Any]

@@ -68,10 +68,10 @@ if ($PSCmdlet.ShouldProcess($configPath, 'Back up and apply bounded Windows Even
     } | ForEach-Object { [void]$document.ossec_config.RemoveChild($_) }
 
     $definitions = @(
-        @('Security', 'Event/System[(EventID=4624 or EventID=4625 or EventID=4720 or EventID=4726 or EventID=4732 or EventID=1102)]'),
+        @('Security', 'Event/System[(EventID=4624 or EventID=4625 or EventID=4634 or EventID=4648 or EventID=4672 or EventID=4688 or EventID=4720 or EventID=4726 or EventID=4732 or EventID=1102)]'),
         @('System', "Event/System[Provider[@Name='Service Control Manager'] and EventID=7045]"),
-        @('Microsoft-Windows-PowerShell/Operational', 'Event/System[EventID=4104]'),
-        @('Microsoft-Windows-Windows Defender/Operational', 'Event/System[(EventID=1116 or EventID=1117)]')
+        @('Microsoft-Windows-PowerShell/Operational', 'Event/System[(EventID=4103 or EventID=4104)]'),
+        @('Microsoft-Windows-Windows Defender/Operational', 'Event/System[(EventID=1116 or EventID=1117 or EventID=1118 or EventID=1119 or EventID=5000 or EventID=5001 or EventID=5004 or EventID=5007)]')
     )
     foreach ($definition in $definitions) {
         $localfile = $document.CreateElement('localfile')

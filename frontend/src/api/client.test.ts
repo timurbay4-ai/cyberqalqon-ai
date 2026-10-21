@@ -4,9 +4,12 @@ import { HttpBackendApi, resolveApiBaseUrl } from "./client";
 import {
     ALERT_PAGE,
     SAMPLE_AI_ANALYSIS,
+    SAMPLE_ADVANCED_RULES,
     SAMPLE_HUNT_PAGE,
     SAMPLE_RULE_DRAFT,
     SAMPLE_SESSION,
+    SAMPLE_SHADOW_DETAIL,
+    SAMPLE_WORKBENCH,
 } from "../test/fixtures";
 
 describe("HttpBackendApi", () => {
@@ -438,5 +441,87 @@ describe("HttpBackendApi", () => {
             relative_minutes: 43200,
             max_events: 1000,
         });
+    });
+
+    it("uses the authenticated bounded M11 dry-run contract", async () => {
+        const result = {
+            rule: SAMPLE_ADVANCED_RULES[0],
+            availability: SAMPLE_ADVANCED_RULES[0].availability,
+            start_time: "2026-09-09T00:00:00Z",
+            end_time: "2026-10-09T00:00:00Z",
+            evaluated_event_count: 1000,
+            finding_count: 0,
+            findings: [],
+            execution_ms: 2.5,
+            execution_budget_ms: 1000,
+            result_truncated: false,
+            deterministic_ordering: true,
+            side_effects: false,
+        };
+        const fetcher = vi
+            .fn()
+            .mockResolvedValueOnce(new Response(JSON.stringify(SAMPLE_SESSION), { status: 200 }))
+            .mockResolvedValueOnce(new Response(JSON.stringify(result), { status: 200 }));
+        const client = new HttpBackendApi("http://backend.test", fetcher);
+        await client.login({ username: "analyst-1", password: "not-persisted" });
+        const parsed = await client.dryRunAdvancedDetectionRule("DET-001", {
+            relative_minutes: 43200,
+            max_events: 1000,
+            max_findings: 100,
+        });
+        expect(parsed.deterministic_ordering).toBe(true);
+        const [url, init] = fetcher.mock.calls[1] as [string, RequestInit];
+        expect(new URL(url).pathname).toBe("/api/v1/detection-engineering/advanced-rules/DET-001/dry-run");
+        expect(new Headers(init.headers).get("X-CSRF-Token")).toBe("csrf-test-token");
+        expect(JSON.parse(String(init.body))).toEqual({
+            relative_minutes: 43200,
+            max_events: 1000,
+            max_findings: 100,
+        });
+    });
+
+    it("keeps M14 shadow execution in a CSRF-protected POST with explicit limits", async () => {
+        const fetcher = vi
+            .fn()
+            .mockResolvedValueOnce(new Response(JSON.stringify(SAMPLE_SESSION), { status: 200 }))
+            .mockResolvedValueOnce(new Response(JSON.stringify(SAMPLE_SHADOW_DETAIL), { status: 200 }));
+        const client = new HttpBackendApi("http://backend.test", fetcher);
+        await client.login({ username: "analyst-1", password: "not-persisted" });
+        const result = await client.runShadowEvaluation("DET-001");
+        expect(result.run.side_effects).toBe(false);
+        const [url, init] = fetcher.mock.calls[1] as [string, RequestInit];
+        expect(new URL(url).pathname).toBe(
+            "/api/v1/detection-readiness/rules/DET-001/shadow-runs",
+        );
+        expect(new Headers(init.headers).get("X-CSRF-Token")).toBe("csrf-test-token");
+        expect(JSON.parse(String(init.body))).toEqual({
+            relative_minutes: 1440,
+            max_events: 1000,
+            max_findings: 100,
+            max_execution_ms: 2000,
+        });
+    });
+
+    it("keeps sensitive investigation pivots in a CSRF-protected POST body", async () => {
+        const fetcher = vi
+            .fn()
+            .mockResolvedValueOnce(new Response(JSON.stringify(SAMPLE_SESSION), { status: 200 }))
+            .mockResolvedValueOnce(new Response(JSON.stringify(SAMPLE_WORKBENCH), { status: 200 }));
+        const client = new HttpBackendApi("http://backend.test", fetcher);
+        await client.login({ username: "analyst-1", password: "not-persisted" });
+        await client.getInvestigationWorkbench({
+            target_type: "ENTITY",
+            entity_type: "USERNAME",
+            entity_value: "sensitive-user@example.test",
+            relative_minutes: 1440,
+            related_limit: 25,
+            timeline_limit: 100,
+        });
+        const [url, init] = fetcher.mock.calls[1] as [string, RequestInit];
+        expect(new URL(url).pathname).toBe("/api/v1/investigations/workbench");
+        expect(url).not.toContain("sensitive-user");
+        expect(init.method).toBe("POST");
+        expect(new Headers(init.headers).get("X-CSRF-Token")).toBe("csrf-test-token");
+        expect(JSON.parse(String(init.body)).entity_value).toBe("sensitive-user@example.test");
     });
 });

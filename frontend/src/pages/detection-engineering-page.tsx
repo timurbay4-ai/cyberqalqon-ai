@@ -12,8 +12,12 @@ import { StatePanel } from "../components/state-panel";
 import { TimeValue } from "../components/time-value";
 import type { BackendApi } from "../types/api";
 import type {
+    AdvancedAvailabilityStatus,
+    AdvancedDetectionRule,
+    AdvancedRuleDryRunResult,
     DetectionAnalytics,
     DetectionCoverage,
+    DetectionQualityReport,
     RuleConditionField,
     RuleConditionOperator,
     RuleDraft,
@@ -22,9 +26,27 @@ import type {
     RuleDryRunResult,
 } from "../types/detection-engineering";
 import type { DetectionRuleSummary } from "../types/siem";
+import type {
+    CanarySafetyStatus,
+    DetectionConfigurationVersion,
+    DetectionDiagnostics,
+    DetectionRuleLifecycle,
+    DetectionTuningComparison,
+    ShadowRun,
+    TelemetryPrerequisiteEvidence,
+} from "../types/detection-readiness";
 import { humanize } from "../utils/format";
 
-type Tab = "inventory" | "coverage" | "analytics" | "drafts";
+type Tab = "inventory" | "advanced" | "coverage" | "analytics" | "drafts";
+type AdvancedView =
+    | "overview"
+    | "configuration"
+    | "test"
+    | "shadow"
+    | "tuning"
+    | "quality"
+    | "readiness"
+    | "diagnostics";
 const EMPTY_DRAFT: RuleDraftCreate = {
     name: "",
     description: "",
@@ -49,19 +71,42 @@ export function DetectionEngineeringPage({
     canMutate,
     onOpenAlerts,
     onOpenEvent,
+    onInvestigateFinding = () => undefined,
+    initialRuleId,
 }: {
     api: BackendApi;
     canMutate: boolean;
     onOpenAlerts(ruleId: string): void;
     onOpenEvent(eventId: string): void;
+    onInvestigateFinding?(ruleId: string, findingKey: string, startTime: string, endTime: string): void;
+    initialRuleId?: string | null;
 }) {
     const [tab, setTab] = useState<Tab>("inventory");
     const [rules, setRules] = useState<DetectionRuleSummary[] | null>(null);
+    const [advancedRules, setAdvancedRules] = useState<AdvancedDetectionRule[]>([]);
     const [coverage, setCoverage] = useState<DetectionCoverage | null>(null);
     const [analytics, setAnalytics] = useState<DetectionAnalytics | null>(null);
     const [drafts, setDrafts] = useState<RuleDraft[]>([]);
     const [selectedRule, setSelectedRule] =
         useState<DetectionRuleSummary | null>(null);
+    const [selectedAdvancedRule, setSelectedAdvancedRule] =
+        useState<AdvancedDetectionRule | null>(null);
+    const [advancedDryRun, setAdvancedDryRun] =
+        useState<AdvancedRuleDryRunResult | null>(null);
+    const [advancedView, setAdvancedView] = useState<AdvancedView>("overview");
+    const [lifecycle, setLifecycle] = useState<DetectionRuleLifecycle | null>(null);
+    const [configurations, setConfigurations] = useState<DetectionConfigurationVersion[]>([]);
+    const [telemetryReadiness, setTelemetryReadiness] =
+        useState<TelemetryPrerequisiteEvidence | null>(null);
+    const [detectionDiagnostics, setDetectionDiagnostics] =
+        useState<DetectionDiagnostics | null>(null);
+    const [detectionQuality, setDetectionQuality] =
+        useState<DetectionQualityReport | null>(null);
+    const [shadowRuns, setShadowRuns] = useState<ShadowRun[]>([]);
+    const [tuningComparison, setTuningComparison] =
+        useState<DetectionTuningComparison | null>(null);
+    const [canarySafety, setCanarySafety] = useState<CanarySafetyStatus | null>(null);
+    const [revision, setRevision] = useState(0);
     const [selectedDraft, setSelectedDraft] = useState<RuleDraft | null>(null);
     const [versions, setVersions] = useState<RuleDraftVersion[]>([]);
     const [dryRun, setDryRun] = useState<RuleDryRunResult | null>(null);
@@ -70,25 +115,81 @@ export function DetectionEngineeringPage({
     const [deploymentConfirmed, setDeploymentConfirmed] = useState(false);
     const [deploymentReason, setDeploymentReason] = useState("");
     const [search, setSearch] = useState("");
+
+    useEffect(() => {
+        if (!initialRuleId || advancedRules.length === 0) return;
+        const match = advancedRules.find((rule) => rule.rule_id === initialRuleId);
+        if (match) { setTab("advanced"); setSelectedAdvancedRule(match); }
+    }, [advancedRules, initialRuleId]);
+    useEffect(() => {
+        if (!selectedAdvancedRule) {
+            setLifecycle(null);
+            setConfigurations([]);
+            setTelemetryReadiness(null);
+            setDetectionDiagnostics(null);
+            setDetectionQuality(null);
+            setShadowRuns([]);
+            setTuningComparison(null);
+            setCanarySafety(null);
+            return;
+        }
+        const controller = new AbortController();
+        const ruleId = selectedAdvancedRule.rule_id;
+        void Promise.all([
+            api.getDetectionLifecycle(ruleId, controller.signal),
+            api.listDetectionConfigurations(ruleId, controller.signal),
+            api.getDetectionTelemetry(ruleId, controller.signal),
+            api.getDetectionDiagnostics(ruleId, controller.signal),
+            api.listShadowRuns(ruleId, controller.signal),
+            api.getCanarySafety(ruleId, controller.signal),
+        ]).then(([nextLifecycle, nextConfigurations, nextTelemetry, nextDiagnostics, nextRuns, nextCanary]) => {
+            setLifecycle(nextLifecycle);
+            setConfigurations(nextConfigurations);
+            setTelemetryReadiness(nextTelemetry);
+            setDetectionDiagnostics(nextDiagnostics);
+            setShadowRuns(nextRuns);
+            setCanarySafety(nextCanary);
+        }).catch((reason: unknown) => {
+            if (!(reason instanceof DOMException && reason.name === "AbortError"))
+                setError(failure(reason));
+        });
+        return () => controller.abort();
+    }, [api, selectedAdvancedRule, revision]);
+    useEffect(() => {
+        if (!selectedAdvancedRule) return;
+        const controller = new AbortController();
+        setDetectionQuality(null);
+        void api.getDetectionQuality(selectedAdvancedRule.rule_id, controller.signal)
+            .then(setDetectionQuality)
+            .catch((reason: unknown) => {
+                if (!(reason instanceof DOMException && reason.name === "AbortError"))
+                    setDetectionQuality(null);
+            });
+        return () => controller.abort();
+    }, [api, selectedAdvancedRule]);
+    const [advancedSearch, setAdvancedSearch] = useState("");
+    const [advancedStatus, setAdvancedStatus] = useState<AdvancedAvailabilityStatus | "ALL">("ALL");
+    const [advancedSource, setAdvancedSource] = useState("ALL");
     const [rulePage, setRulePage] = useState(0);
     const [loading, setLoading] = useState(true);
     const [busy, setBusy] = useState(false);
     const [error, setError] = useState<string | null>(null);
     const [message, setMessage] = useState<string | null>(null);
-    const [revision, setRevision] = useState(0);
 
     const load = useCallback(async () => {
         setLoading(true);
         setError(null);
         try {
-            const [nextRules, nextCoverage, nextAnalytics, nextDrafts] =
+            const [nextRules, nextAdvancedRules, nextCoverage, nextAnalytics, nextDrafts] =
                 await Promise.all([
                     api.listRules(),
+                    api.listAdvancedDetectionRules(30),
                     api.getDetectionCoverage(),
                     api.getDetectionAnalytics(30),
                     api.listRuleDrafts(),
                 ]);
             setRules(nextRules);
+            setAdvancedRules(nextAdvancedRules);
             setCoverage(nextCoverage);
             setAnalytics(nextAnalytics);
             setDrafts(nextDrafts);
@@ -128,6 +229,83 @@ export function DetectionEngineeringPage({
         [rules, search],
     );
     const visibleRules = filteredRules.slice(rulePage * 25, rulePage * 25 + 25);
+    const advancedSources = useMemo(
+        () => Array.from(new Set(advancedRules.flatMap((rule) => rule.prerequisites.source_types))).sort(),
+        [advancedRules],
+    );
+    const filteredAdvancedRules = useMemo(
+        () => advancedRules.filter((rule) => {
+            const query = advancedSearch.trim().toLowerCase();
+            const matchesSearch = !query ||
+                `${rule.rule_id} ${rule.name} ${rule.description} ${rule.mitre_ids.join(" ")} ${rule.prerequisites.event_codes.join(" ")}`
+                    .toLowerCase().includes(query);
+            const matchesStatus = advancedStatus === "ALL" || rule.availability?.status === advancedStatus;
+            const matchesSource = advancedSource === "ALL" || rule.prerequisites.source_types.includes(advancedSource);
+            return matchesSearch && matchesStatus && matchesSource;
+        }),
+        [advancedRules, advancedSearch, advancedStatus, advancedSource],
+    );
+
+    const runAdvancedDryRun = async (rule: AdvancedDetectionRule) => {
+        setBusy(true);
+        setError(null);
+        setMessage(null);
+        setSelectedAdvancedRule(rule);
+        setAdvancedDryRun(null);
+        try {
+            const result = await api.dryRunAdvancedDetectionRule(rule.rule_id, {
+                relative_minutes: 43200,
+                max_events: 1000,
+                max_findings: 100,
+                max_execution_ms: 1000,
+            });
+            setAdvancedDryRun(result);
+            setSelectedAdvancedRule(result.rule);
+            setMessage("Deterministic 30-day dry-run completed without alerts, incidents, cases, or notifications.");
+        } catch (reason) {
+            setError(failure(reason));
+        } finally {
+            setBusy(false);
+        }
+    };
+
+    const runShadow = async () => {
+        if (!selectedAdvancedRule) return;
+        setBusy(true);
+        setError(null);
+        setMessage(null);
+        try {
+            const result = await api.runShadowEvaluation(selectedAdvancedRule.rule_id);
+            setShadowRuns((current) => [result.run, ...current.filter((item) => item.run_id !== result.run.run_id)]);
+            setMessage(
+                `Shadow run completed with ${result.run.match_count} finding(s); no production alerts, incidents, or cases were created.`,
+            );
+            setRevision((value) => value + 1);
+        } catch (reason) {
+            setError(failure(reason));
+        } finally {
+            setBusy(false);
+        }
+    };
+
+    const compareTuning = async () => {
+        if (!selectedAdvancedRule || configurations.length === 0) return;
+        setBusy(true);
+        setError(null);
+        setMessage(null);
+        try {
+            const result = await api.compareDetectionTuning(
+                selectedAdvancedRule.rule_id,
+                configurations[0],
+            );
+            setTuningComparison(result);
+            setMessage("Historical sensitivity comparison completed without production side effects.");
+        } catch (reason) {
+            setError(failure(reason));
+        } finally {
+            setBusy(false);
+        }
+    };
 
     const selectDraft = async (draft: RuleDraft) => {
         setSelectedDraft(draft);
@@ -334,6 +512,7 @@ export function DetectionEngineeringPage({
                     {(
                         [
                             "inventory",
+                            "advanced",
                             "coverage",
                             "analytics",
                             "drafts",
@@ -523,6 +702,411 @@ export function DetectionEngineeringPage({
                                 </button>
                             </div>
                         </footer>
+                    </>
+                )}
+
+                {!loading && tab === "advanced" && (
+                    <>
+                        <section className="panel">
+                            <div className="section-heading">
+                                <div>
+                                    <h2>M11 advanced detection pack</h2>
+                                    <p>
+                                        Nine versioned, disabled-by-policy rules
+                                        with explicit prerequisites and a shared
+                                        deterministic evaluator.
+                                    </p>
+                                </div>
+                                <span className="health-pill health-pill--unknown">
+                                    Live activation disabled
+                                </span>
+                            </div>
+                            <div className="filter-grid">
+                                <label className="field">
+                                    <span>Search rule, event ID, or MITRE ID</span>
+                                    <input
+                                        type="search"
+                                        value={advancedSearch}
+                                        onChange={(event) => setAdvancedSearch(event.target.value)}
+                                    />
+                                </label>
+                                <label className="field">
+                                    <span>Telemetry status</span>
+                                    <select
+                                        value={advancedStatus}
+                                        onChange={(event) => setAdvancedStatus(event.target.value as AdvancedAvailabilityStatus | "ALL")}
+                                    >
+                                        <option value="ALL">All statuses</option>
+                                        <option value="RECENTLY_OBSERVED">Recently observed</option>
+                                        <option value="OBSERVED_STALE">Observed stale</option>
+                                        <option value="PREREQUISITE_MISSING">Prerequisite missing</option>
+                                        <option value="NO_DATA">No data</option>
+                                        <option value="UNKNOWN">Unknown</option>
+                                    </select>
+                                </label>
+                                <label className="field">
+                                    <span>Source type</span>
+                                    <select value={advancedSource} onChange={(event) => setAdvancedSource(event.target.value)}>
+                                        <option value="ALL">All sources</option>
+                                        {advancedSources.map((source) => <option value={source} key={source}>{source}</option>)}
+                                    </select>
+                                </label>
+                            </div>
+                        </section>
+                        {filteredAdvancedRules.length === 0 ? (
+                            <StatePanel kind="empty" title="No matching advanced detections" message="Change the search or telemetry filters." />
+                        ) : (
+                            <div className="table-frame">
+                                <table className="data-table">
+                                    <thead>
+                                        <tr>
+                                            <th>Rule</th>
+                                            <th>Detection</th>
+                                            <th>Severity</th>
+                                            <th>Prerequisites</th>
+                                            <th>Telemetry</th>
+                                            <th>MITRE</th>
+                                            <th>Action</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        {filteredAdvancedRules.map((rule) => (
+                                            <tr key={rule.rule_id}>
+                                                <td className="mono">{rule.rule_id}</td>
+                                                <td>
+                                                    <button
+                                                        className="row-link"
+                                                        type="button"
+                                                        onClick={() => {
+                                                            setSelectedAdvancedRule(rule);
+                                                            setAdvancedDryRun(null);
+                                                        }}
+                                                    >
+                                                        {rule.name}
+                                                    </button>
+                                                    <span className="cell-subtle">v{rule.version} · disabled</span>
+                                                </td>
+                                                <td><SeverityBadge level={rule.severity} /></td>
+                                                <td>
+                                                    {rule.prerequisites.event_codes.join(", ") || rule.prerequisites.event_categories.join(", ")}
+                                                    <span className="cell-subtle">
+                                                        {rule.prerequisites.required_fields.length} required fields
+                                                    </span>
+                                                </td>
+                                                <td>
+                                                    {humanize(rule.availability?.status ?? "UNKNOWN")}
+                                                    <span className="cell-subtle">
+                                                        {rule.availability?.observed_event_count ?? 0} eligible events
+                                                    </span>
+                                                </td>
+                                                <td>
+                                                    {rule.mitre_ids.length
+                                                        ? rule.mitre_ids.map((id) => (
+                                                              <a href={mitreUrl(id)} target="_blank" rel="noreferrer" key={id}>{id}</a>
+                                                          ))
+                                                        : "No broad mapping"}
+                                                </td>
+                                                <td>
+                                                    <button
+                                                        className="button button--secondary"
+                                                        type="button"
+                                                        disabled={!canMutate || busy}
+                                                        onClick={() => void runAdvancedDryRun(rule)}
+                                                    >
+                                                        Dry-run 30 days
+                                                    </button>
+                                                </td>
+                                            </tr>
+                                        ))}
+                                    </tbody>
+                                </table>
+                            </div>
+                        )}
+                        <p className="trust-note">
+                            Parser support, stored-data observation, recent
+                            observation, and live collector configuration are
+                            separate facts. Configuration remains unknown until
+                            an authoritative collector API proves it.
+                        </p>
+                        {selectedAdvancedRule && (
+                            <section className="panel advanced-rule-detail">
+                                <div className="section-heading">
+                                    <div>
+                                        <span className="eyebrow">{selectedAdvancedRule.rule_id} · v{selectedAdvancedRule.version}</span>
+                                        <h2>{selectedAdvancedRule.name}</h2>
+                                        <p>{selectedAdvancedRule.description}</p>
+                                    </div>
+                                    <button className="icon-button" type="button" aria-label="Close advanced rule detail" onClick={() => {
+                                        setSelectedAdvancedRule(null);
+                                        setAdvancedDryRun(null);
+                                    }}>×</button>
+                                </div>
+                                <dl className="metadata-grid">
+                                    <div><dt>Activation</dt><dd>{humanize(selectedAdvancedRule.activation_state)}</dd></div>
+                                    <div><dt>Telemetry</dt><dd>{humanize(selectedAdvancedRule.availability?.status ?? "UNKNOWN")}</dd></div>
+                                    <div><dt>Threshold</dt><dd>{selectedAdvancedRule.threshold} event(s)</dd></div>
+                                    <div><dt>Window</dt><dd>{selectedAdvancedRule.window_seconds} seconds</dd></div>
+                                    <div><dt>Grouping</dt><dd>{selectedAdvancedRule.grouping_fields.join(", ")}</dd></div>
+                                    <div><dt>Configuration</dt><dd>{selectedAdvancedRule.prerequisites.configuration_status}</dd></div>
+                                    <div><dt>Validation</dt><dd>{humanize(selectedAdvancedRule.validation_status)}</dd></div>
+                                </dl>
+                                <p className="trust-note">{selectedAdvancedRule.availability?.explanation}</p>
+                                <div className="split-panels">
+                                    <div>
+                                        <h3>Conditions and prerequisites</h3>
+                                        <ul>{selectedAdvancedRule.conditions.map((item) => <li key={item}>{item}</li>)}</ul>
+                                        <p><strong>Required fields:</strong> {selectedAdvancedRule.prerequisites.required_fields.join(", ")}</p>
+                                        {selectedAdvancedRule.availability?.missing_required_fields.length ? (
+                                            <p className="stale-warning">Missing in observed telemetry: {selectedAdvancedRule.availability.missing_required_fields.join(", ")}</p>
+                                        ) : null}
+                                    </div>
+                                    <div>
+                                        <h3>False-positive controls</h3>
+                                        <ul>{selectedAdvancedRule.false_positive_notes.map((item) => <li key={item}>{item}</li>)}</ul>
+                                        <h3>Analyst guidance</h3>
+                                        <ul>{selectedAdvancedRule.analyst_guidance.map((item) => <li key={item}>{item}</li>)}</ul>
+                                    </div>
+                                </div>
+                                <h3>Deduplication</h3>
+                                <p>{selectedAdvancedRule.deduplication}</p>
+                                {selectedAdvancedRule.mitre_mappings.length > 0 && (
+                                    <>
+                                        <h3>MITRE ATT&amp;CK rationale</h3>
+                                        <ul>
+                                            {selectedAdvancedRule.mitre_mappings.map((mapping) => (
+                                                <li key={mapping.technique_id}>
+                                                    <a href={mitreUrl(mapping.technique_id)} target="_blank" rel="noreferrer">
+                                                        {mapping.technique_id} · {mapping.technique_name}
+                                                    </a>{" "}
+                                                    ({mapping.tactic}) — {mapping.relationship}
+                                                </li>
+                                            ))}
+                                        </ul>
+                                    </>
+                                )}
+                                <h3>Validation contract</h3>
+                                <ul>{selectedAdvancedRule.validation_notes.map((item) => <li key={item}>{item}</li>)}</ul>
+                                <p className="trust-note">
+                                    Packaged rules are read-only and disabled.
+                                    Use the Drafts editor for analyst-authored
+                                    candidates; neither path changes live Wazuh.
+                                </p>
+                                <div className="tab-list" role="tablist" aria-label="Advanced detection readiness views">
+                                    {(["overview", "configuration", "test", "shadow", "tuning", "quality", "readiness", "diagnostics"] as AdvancedView[]).map((view) => (
+                                        <button
+                                            type="button"
+                                            role="tab"
+                                            aria-selected={advancedView === view}
+                                            className={advancedView === view ? "is-active" : undefined}
+                                            onClick={() => setAdvancedView(view)}
+                                            key={view}
+                                        >
+                                            {humanize(view)}
+                                        </button>
+                                    ))}
+                                </div>
+                                {advancedView === "overview" && lifecycle && (
+                                    <section className="dry-run-result">
+                                        <h3>Detection overview</h3>
+                                        <dl className="metadata-grid">
+                                            <div><dt>Configuration state</dt><dd>{humanize(lifecycle.configuration_state)}</dd></div>
+                                            <div><dt>Validation state</dt><dd>{humanize(lifecycle.validation_state)}</dd></div>
+                                            <div><dt>Deployment eligibility</dt><dd>{humanize(lifecycle.deployment_eligibility)}</dd></div>
+                                            <div><dt>Runtime activation</dt><dd>{humanize(lifecycle.runtime_activation_state)}</dd></div>
+                                            <div><dt>Telemetry</dt><dd>{humanize(lifecycle.telemetry_status)}</dd></div>
+                                            <div><dt>Configuration version</dt><dd>{lifecycle.active_configuration_version}</dd></div>
+                                        </dl>
+                                        <p className="stale-warning">{lifecycle.inactive_reason}</p>
+                                        <p className="trust-note">A validated or tested configuration remains inactive until a separate backend-enforced approval milestone.</p>
+                                    </section>
+                                )}
+                                {advancedView === "configuration" && (
+                                    <section className="dry-run-result">
+                                        <h3>Versioned rule configuration</h3>
+                                        {configurations.length === 0 ? (
+                                            <p className="muted-copy">No approved schema-backed configuration is available.</p>
+                                        ) : (
+                                            <div className="table-frame">
+                                                <table className="data-table">
+                                                    <thead><tr><th>Version</th><th>State</th><th>Threshold</th><th>Window</th><th>Limits</th><th>Reason</th></tr></thead>
+                                                    <tbody>
+                                                        {configurations.map((config) => (
+                                                            <tr key={config.config_id}>
+                                                                <td className="mono">v{config.version}</td>
+                                                                <td>{humanize(config.lifecycle_state)}</td>
+                                                                <td>{config.threshold_count}</td>
+                                                                <td>{config.time_window_seconds}s</td>
+                                                                <td>{config.evaluation_limits.max_events} events / {config.evaluation_limits.max_findings} findings / {config.evaluation_limits.max_execution_ms}ms</td>
+                                                                <td>{config.change_reason}</td>
+                                                            </tr>
+                                                        ))}
+                                                    </tbody>
+                                                </table>
+                                            </div>
+                                        )}
+                                        <p className="trust-note">Configuration is declarative JSON only; Python, shell, SQL, and direct Wazuh deployment are not accepted. ADMIN mutation permission is separate from runtime activation.</p>
+                                    </section>
+                                )}
+                                {advancedView === "test" && (
+                                    <section className="dry-run-result">
+                                        <h3>Historical deterministic test</h3>
+                                        <button className="button button--secondary" type="button" disabled={!canMutate || busy} onClick={() => void runAdvancedDryRun(selectedAdvancedRule)}>Run bounded 30-day dry-run</button>
+                                        <p className="trust-note">A PASS may support TESTED state but never changes runtime activation.</p>
+                                    </section>
+                                )}
+                                {advancedView === "shadow" && (
+                                    <section className="dry-run-result">
+                                        <div className="section-heading">
+                                            <div><h3>Shadow runs</h3><p>Read-only evaluation stored outside production alert and incident pipelines.</p></div>
+                                            <button className="button button--primary" type="button" disabled={!canMutate || busy} onClick={() => void runShadow()}>Run 24-hour shadow evaluation</button>
+                                        </div>
+                                        {shadowRuns.length === 0 ? <p className="muted-copy">No operator-triggered shadow runs recorded.</p> : (
+                                            <ul className="audit-list">
+                                                {shadowRuns.map((run) => (
+                                                    <li key={run.run_id}>
+                                                        <div><strong>{run.status} · {run.match_count} finding(s)</strong><TimeValue value={run.started_at} /></div>
+                                                        <p>{run.evaluated_event_count} events · {run.execution_ms.toFixed(2)} ms · source {humanize(run.source_availability)} · no production side effects</p>
+                                                    </li>
+                                                ))}
+                                            </ul>
+                                        )}
+                                    </section>
+                                )}
+                                {advancedView === "tuning" && (
+                                    <section className="dry-run-result">
+                                        <div className="section-heading">
+                                            <div><h3>Tuning comparison</h3><p>Compare the active threshold with a more conservative candidate over the same history.</p></div>
+                                            <button className="button button--secondary" type="button" disabled={!canMutate || busy || configurations.length === 0 || !["DET-001", "DET-002"].includes(selectedAdvancedRule.rule_id)} onClick={() => void compareTuning()}>Compare sensitivity</button>
+                                        </div>
+                                        {!['DET-001', 'DET-002'].includes(selectedAdvancedRule.rule_id) && <p className="trust-note">This multi-branch packaged rule has fixed M11 thresholds and windows; changing them would create a divergent algorithm.</p>}
+                                        {tuningComparison && (
+                                            <>
+                                                <div className="table-frame"><table className="data-table">
+                                                    <thead><tr><th>Threshold</th><th>Window</th><th>Events</th><th>Findings</th><th>Duplicates</th><th>Missing fields</th></tr></thead>
+                                                    <tbody>{tuningComparison.results.map((result) => (
+                                                        <tr key={`${result.candidate.threshold_count}-${result.candidate.time_window_seconds}`}>
+                                                            <td>{result.candidate.threshold_count}</td><td>{result.candidate.time_window_seconds}s</td><td>{result.evaluated_event_count}</td><td>{result.finding_count}</td><td>{result.duplicate_count}</td><td>{result.missing_field_count}</td>
+                                                        </tr>
+                                                    ))}</tbody>
+                                                </table></div>
+                                                <p className="trust-note">{tuningComparison.interpretation}</p>
+                                            </>
+                                        )}
+                                    </section>
+                                )}
+                                {advancedView === "quality" && (
+                                    <section className="dry-run-result">
+                                        <h3>Golden dataset quality</h3>
+                                        {!detectionQuality ? (
+                                            <p className="muted-copy">Quality result is unavailable for this rule.</p>
+                                        ) : (
+                                            <>
+                                                <dl className="metadata-grid">
+                                                    <div><dt>Fixture status</dt><dd>{detectionQuality.all_applicable_fixtures_passed ? "PASS" : "FAIL"}</dd></div>
+                                                    <div><dt>Precision</dt><dd>{detectionQuality.metrics.precision === null ? "Unavailable" : `${(detectionQuality.metrics.precision * 100).toFixed(1)}%`}</dd></div>
+                                                    <div><dt>Recall</dt><dd>{detectionQuality.metrics.recall === null ? "Unavailable" : `${(detectionQuality.metrics.recall * 100).toFixed(1)}%`}</dd></div>
+                                                    <div><dt>False-positive rate</dt><dd>{detectionQuality.metrics.false_positive_rate === null ? "Unavailable" : `${(detectionQuality.metrics.false_positive_rate * 100).toFixed(1)}%`}</dd></div>
+                                                    <div><dt>Duplicate finding rate</dt><dd>{(detectionQuality.metrics.duplicate_finding_rate * 100).toFixed(1)}%</dd></div>
+                                                    <div><dt>Evaluation p95</dt><dd>{detectionQuality.metrics.evaluation_time_p95_ms.toFixed(3)} ms</dd></div>
+                                                    <div><dt>Event ordering</dt><dd>{detectionQuality.metrics.event_order_consistent ? "Consistent" : "Mismatch"}</dd></div>
+                                                    <div><dt>Repeat recovery</dt><dd>{detectionQuality.metrics.repeat_evaluation_consistent ? "Consistent" : "Mismatch"}</dd></div>
+                                                </dl>
+                                                <div className="table-frame">
+                                                    <table className="data-table">
+                                                        <thead><tr><th>Scenario</th><th>Label</th><th>Expected</th><th>Actual</th><th>Duplicates</th><th>Result</th></tr></thead>
+                                                        <tbody>{detectionQuality.fixtures.map((fixture) => (
+                                                            <tr key={fixture.scenario}>
+                                                                <td>{humanize(fixture.scenario)}</td>
+                                                                <td>{fixture.applicable ? fixture.ground_truth : "NOT APPLICABLE"}</td>
+                                                                <td>{fixture.expected_finding_count}</td>
+                                                                <td>{fixture.actual_finding_count}</td>
+                                                                <td>{fixture.evaluator_duplicate_count}</td>
+                                                                <td>{fixture.passed ? "PASS" : "FAIL"}</td>
+                                                            </tr>
+                                                        ))}</tbody>
+                                                    </table>
+                                                </div>
+                                                <p className="trust-note">
+                                                    {detectionQuality.dataset_label}: classification metrics use labeled synthetic fixtures only. They are not live-production accuracy scores. Runtime remains {humanize(detectionQuality.runtime_activation_state)} and deployment remains {humanize(detectionQuality.deployment_eligibility)}.
+                                                </p>
+                                            </>
+                                        )}
+                                    </section>
+                                )}
+                                {advancedView === "readiness" && telemetryReadiness && (
+                                    <section className="dry-run-result">
+                                        <h3>Telemetry readiness</h3>
+                                        <dl className="metadata-grid">
+                                            <div><dt>Status</dt><dd>{humanize(telemetryReadiness.status)}</dd></div>
+                                            <div><dt>Latest evidence</dt><dd><TimeValue value={telemetryReadiness.latest_observed_event} /></dd></div>
+                                            <div><dt>Normalization</dt><dd>{telemetryReadiness.normalization_compatible ? "Compatible" : "Incomplete"}</dd></div>
+                                            <div><dt>Required events</dt><dd>{[...telemetryReadiness.required_event_codes, ...telemetryReadiness.required_categories].join(", ") || "Category-based"}</dd></div>
+                                        </dl>
+                                        <p>{telemetryReadiness.explanation}</p>
+                                        {telemetryReadiness.missing_prerequisites.length > 0 && <p className="stale-warning">Missing: {telemetryReadiness.missing_prerequisites.join(", ")}</p>}
+                                        {canarySafety && (
+                                            <>
+                                                <h3>Canary readiness checklist</h3>
+                                                <ul>{canarySafety.blockers.map((blocker) => <li key={blocker}>{blocker}</li>)}</ul>
+                                                <p className="trust-note">Activation path enabled: no · operator approval recorded: no · runtime state: {canarySafety.runtime_activation_state}</p>
+                                            </>
+                                        )}
+                                    </section>
+                                )}
+                                {advancedView === "diagnostics" && detectionDiagnostics && (
+                                    <section className="dry-run-result">
+                                        <h3>Bounded diagnostics</h3>
+                                        <dl className="metadata-grid">
+                                            <div><dt>Evaluations</dt><dd>{detectionDiagnostics.evaluation_count}</dd></div>
+                                            <div><dt>Average duration</dt><dd>{detectionDiagnostics.average_duration_ms.toFixed(2)} ms</dd></div>
+                                            <div><dt>Findings</dt><dd>{detectionDiagnostics.finding_count}</dd></div>
+                                            <div><dt>Duplicate events</dt><dd>{detectionDiagnostics.duplicate_event_count}</dd></div>
+                                            <div><dt>Missing fields</dt><dd>{detectionDiagnostics.missing_field_count}</dd></div>
+                                            <div><dt>State recoveries</dt><dd>{detectionDiagnostics.state_recovery_count}</dd></div>
+                                            <div><dt>Timeouts</dt><dd>{detectionDiagnostics.evaluation_timeout_count}</dd></div>
+                                            <div><dt>Truncations</dt><dd>{detectionDiagnostics.truncation_count}</dd></div>
+                                        </dl>
+                                        <p className="trust-note">Diagnostics expose bounded aggregate counts only; account names and private evidence are not operational metric labels.</p>
+                                    </section>
+                                )}
+                                {advancedView === "test" && advancedDryRun && advancedDryRun.rule.rule_id === selectedAdvancedRule.rule_id && (
+                                    <section className="dry-run-result">
+                                        <h3>Advanced dry-run result</h3>
+                                        <p>
+                                            {advancedDryRun.finding_count} findings among {advancedDryRun.evaluated_event_count} bounded events in {advancedDryRun.execution_ms.toFixed(2)} ms (budget {advancedDryRun.execution_budget_ms} ms).
+                                        </p>
+                                        <p className="trust-note">
+                                            Deterministic event-time ordering; no alerts, incidents, cases, notifications, or live rule changes.
+                                        </p>
+                                        {advancedDryRun.findings.length === 0 ? (
+                                            <p className="muted-copy">No correlation met the rule threshold in this range.</p>
+                                        ) : advancedDryRun.findings.map((finding) => (
+                                            <article className="panel" key={finding.finding_id}>
+                                                <div className="section-heading">
+                                                    <div>
+                                                        <strong>{finding.finding_id}</strong>
+                                                        <p>{finding.explanation}</p>
+                                                    </div>
+                                                    <SeverityBadge level={finding.severity} />
+                                                </div>
+                                                <p>
+                                                    {finding.matched_event_count} evidence events · threshold {finding.threshold} · {Object.entries(finding.group).map(([key, value]) => `${key}=${value}`).join(" · ")}
+                                                </p>
+                                                <button className="button button--primary" type="button" onClick={() => onInvestigateFinding(selectedAdvancedRule.rule_id, finding.deduplication_key, advancedDryRun.start_time, advancedDryRun.end_time)}>Open Investigation Workbench</button>
+                                                <ul className="audit-list">
+                                                    {finding.evidence.map((evidence) => (
+                                                        <li key={evidence.event_id}>
+                                                            <button className="row-link mono" type="button" onClick={() => onOpenEvent(evidence.event_id)}>{evidence.event_id}</button>
+                                                            <span>{evidence.summary} · <TimeValue value={evidence.timestamp} /></span>
+                                                        </li>
+                                                    ))}
+                                                </ul>
+                                            </article>
+                                        ))}
+                                    </section>
+                                )}
+                            </section>
+                        )}
                     </>
                 )}
 
@@ -964,6 +1548,14 @@ export function DetectionEngineeringPage({
                                                             "hostname",
                                                             "agent_id",
                                                             "agent_name",
+                                                            "operating_system",
+                                                            "event_provider",
+                                                            "event_channel",
+                                                            "process_name",
+                                                            "process_path",
+                                                            "command_line",
+                                                            "parent_process_name",
+                                                            "parent_process_path",
                                                             "source_ip",
                                                             "destination_ip",
                                                             "username",

@@ -372,6 +372,7 @@ def test_incident_persists_across_application_restart(database_path: Path) -> No
     settings = Settings(
         database_url=f"sqlite:///{database_path.as_posix()}",
         wazuh_ingest_api_key="test-ingest-key",
+        allow_m14_schema_migration=True,
     )
     with TestClient(create_app(settings)) as first_client:
         bootstrap_and_login(first_client)

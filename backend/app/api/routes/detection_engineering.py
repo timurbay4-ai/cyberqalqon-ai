@@ -21,10 +21,14 @@ from app.db.detection_engineering import (
 )
 from app.schemas.auth import AnalystPrincipal
 from app.schemas.detection_engineering import (
+    AdvancedDetectionRule,
+    AdvancedRuleDryRunRequest,
+    AdvancedRuleDryRunResult,
     DeploymentConfirmation,
     DeploymentConfirmationResult,
     DetectionAnalytics,
     DetectionCoverage,
+    DetectionQualityReport,
     IndicatorType,
     IOCImportRequest,
     IOCImportResult,
@@ -47,6 +51,8 @@ from app.schemas.detection_engineering import (
 )
 from app.schemas.investigations import VersionedMutation
 from app.schemas.siem import DetectionRuleSummary
+from app.services.advanced_detection import AdvancedDetectionEvaluationLimitError
+from app.services.detection_quality import quality_catalog, quality_report
 
 
 router = APIRouter(prefix="/api/v1", tags=["Detection engineering"])
@@ -142,6 +148,112 @@ async def detection_coverage(
     return request.app.state.detection_engineering_repository.coverage(
         request.app.state.siem_repository.rules()
     )
+
+
+@router.get(
+    "/detection-engineering/advanced-rules",
+    response_model=list[AdvancedDetectionRule],
+)
+async def advanced_detection_inventory(
+    request: Request,
+    _: Annotated[AnalystPrincipal, Depends(require_soc_reader)],
+    days: Annotated[int, Query(ge=1, le=31)] = 30,
+) -> list[AdvancedDetectionRule]:
+    """Return the disabled M11 catalog with evidence-based telemetry availability."""
+    try:
+        return request.app.state.advanced_detection_engine.catalog(days=days)
+    except AdvancedDetectionEvaluationLimitError as exc:
+        raise HTTPException(
+            503,
+            detail=_error("catalog_limit", "Advanced detection catalog exceeded its bounded read budget"),
+        ) from exc
+
+
+@router.get(
+    "/detection-engineering/advanced-rules/{rule_id}",
+    response_model=AdvancedDetectionRule,
+)
+async def advanced_detection_detail(
+    request: Request,
+    _: Annotated[AnalystPrincipal, Depends(require_soc_reader)],
+    rule_id: Annotated[str, Path(pattern=r"^DET-00[1-9]$")],
+) -> AdvancedDetectionRule:
+    try:
+        return request.app.state.advanced_detection_engine.rule(rule_id)
+    except KeyError as exc:
+        raise HTTPException(404, detail=_error("rule_not_found", "Advanced detection rule does not exist")) from exc
+    except AdvancedDetectionEvaluationLimitError as exc:
+        raise HTTPException(
+            503,
+            detail=_error("catalog_limit", "Advanced detection rule detail exceeded its bounded read budget"),
+        ) from exc
+
+
+@router.get(
+    "/detection-engineering/advanced-quality",
+    response_model=list[DetectionQualityReport],
+)
+async def advanced_detection_quality_catalog(
+    _: Annotated[AnalystPrincipal, Depends(require_soc_reader)],
+) -> list[DetectionQualityReport]:
+    """Evaluate labeled synthetic fixtures only; no live event or alert writes occur."""
+
+    return quality_catalog()
+
+
+@router.get(
+    "/detection-engineering/advanced-quality/{rule_id}",
+    response_model=DetectionQualityReport,
+)
+async def advanced_detection_quality_detail(
+    _: Annotated[AnalystPrincipal, Depends(require_soc_reader)],
+    rule_id: Annotated[str, Path(pattern=r"^DET-00[1-9]$")],
+) -> DetectionQualityReport:
+    try:
+        return quality_report(rule_id)
+    except KeyError as exc:
+        raise HTTPException(
+            404,
+            detail=_error("rule_not_found", "Advanced detection rule does not exist"),
+        ) from exc
+
+
+@router.post(
+    "/detection-engineering/advanced-rules/{rule_id}/dry-run",
+    response_model=AdvancedRuleDryRunResult,
+)
+async def advanced_detection_dry_run(
+    request: Request,
+    payload: AdvancedRuleDryRunRequest,
+    principal: Annotated[AnalystPrincipal, Depends(require_alert_mutation)],
+    rule_id: Annotated[str, Path(pattern=r"^DET-00[1-9]$")],
+) -> AdvancedRuleDryRunResult:
+    try:
+        result = request.app.state.advanced_detection_engine.evaluate(rule_id, payload)
+    except KeyError as exc:
+        raise HTTPException(404, detail=_error("rule_not_found", "Advanced detection rule does not exist")) from exc
+    except AdvancedDetectionEvaluationLimitError as exc:
+        raise HTTPException(
+            409,
+            detail=_error("evaluation_limit", "Advanced detection dry-run exceeded its bounded execution budget"),
+        ) from exc
+    request.app.state.audit_repository.append(
+        action="ADVANCED_DETECTION_DRY_RUN",
+        actor_id=principal.analyst_id,
+        actor_display=principal.audit_display,
+        target_type="advanced_detection_rule",
+        target_id=rule_id,
+        details={
+            "start_time": result.start_time.isoformat(),
+            "end_time": result.end_time.isoformat(),
+            "evaluated_events": result.evaluated_event_count,
+            "findings": result.finding_count,
+            "result_truncated": result.result_truncated,
+            "execution_budget_ms": result.execution_budget_ms,
+            "live_activation": False,
+        },
+    )
+    return result
 
 
 @router.get("/detection-engineering/analytics", response_model=DetectionAnalytics)

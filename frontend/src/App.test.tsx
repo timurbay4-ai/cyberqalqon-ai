@@ -18,8 +18,8 @@ describe("App", () => {
     expect(await screen.findByRole("heading", { name: "Security alerts" })).toBeInTheDocument();
     fireEvent.click(screen.getByRole("button", { name: /Incidents/ }));
     expect(await screen.findByRole("heading", { name: "Incidents" })).toBeInTheDocument();
-    fireEvent.click(screen.getByRole("button", { name: /^Hosts$/ }));
-    expect(await screen.findByRole("heading", { name: "Hosts and log sources" })).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: /^Agents$/ }));
+    expect(await screen.findByRole("heading", { name: "Agent management" })).toBeInTheDocument();
     fireEvent.click(screen.getByRole("button", { name: /Detection Rules/ }));
     expect(await screen.findByRole("heading", { name: "Rules, coverage and quality" })).toBeInTheDocument();
     fireEvent.click(screen.getByRole("button", { name: /Reports/ }));
@@ -141,11 +141,37 @@ describe("App", () => {
 
     expect(await screen.findByRole("heading", { name: "Security alerts" })).toBeInTheDocument();
     await waitFor(() => expect(api.getAlertWorkflow).toHaveBeenCalledWith("alert-001", expect.any(AbortSignal)));
-    fireEvent.click(screen.getByRole("button", { name: /^Hosts$/ }));
+    fireEvent.click(screen.getByRole("button", { name: /^Agents$/ }));
     expect(window.location.search).toBe("?view=hosts");
     window.history.pushState({}, "", "/?view=incidents");
     fireEvent.popState(window);
     expect(await screen.findByRole("heading", { name: "Incidents" })).toBeInTheDocument();
+  });
+
+  it("restores sensitive workbench pivots from history state without URL disclosure", async () => {
+    const target = {
+      target_type: "ENTITY" as const,
+      entity_type: "USERNAME" as const,
+      entity_value: "sensitive-user@example.test",
+      relative_minutes: 1440,
+      related_limit: 25,
+      timeline_limit: 100,
+      sort: "oldest" as const,
+    };
+    window.history.replaceState({ cyberqalqonWorkbench: target }, "", "/?view=investigate");
+    const api = createMockApi();
+    render(<App api={api} />);
+
+    expect(await screen.findByRole("heading", { name: /Event EVT-/ })).toBeInTheDocument();
+    expect(api.getInvestigationWorkbench).toHaveBeenCalledWith(target, expect.any(AbortSignal));
+    expect(window.location.search).toBe("?view=investigate");
+    expect(window.location.href).not.toContain("sensitive-user");
+
+    fireEvent.click(screen.getByRole("button", { name: /Alerts/ }));
+    expect(await screen.findByRole("heading", { name: "Security alerts" })).toBeInTheDocument();
+    window.history.replaceState({ cyberqalqonWorkbench: target }, "", "/?view=investigate");
+    fireEvent.popState(window);
+    expect(await screen.findByRole("heading", { name: /Event EVT-/ })).toBeInTheDocument();
   });
 
   it("offers discoverable keyboard shortcuts without hijacking text input", async () => {
@@ -154,9 +180,9 @@ describe("App", () => {
     await screen.findByRole("heading", { name: "Security overview" });
 
     fireEvent.keyDown(window, { key: "?" });
-    expect(screen.getByRole("dialog", { name: "Shortcuts" })).toBeInTheDocument();
+    expect(await screen.findByRole("dialog", { name: "Shortcuts" })).toBeInTheDocument();
     fireEvent.keyDown(window, { key: "Escape" });
-    expect(screen.queryByRole("dialog", { name: "Shortcuts" })).not.toBeInTheDocument();
+    await waitFor(() => expect(screen.queryByRole("dialog", { name: "Shortcuts" })).not.toBeInTheDocument());
 
     fireEvent.keyDown(window, { key: "g" });
     fireEvent.keyDown(window, { key: "a" });

@@ -1,0 +1,40 @@
+[Unit]
+Description=CyberQalqon approval-gated independent forward ingestion
+Documentation=file:/opt/cyberqalqon-sender/docs/M22_FORWARD_INGESTION_SERVICE.md
+After=network-online.target wazuh-manager.service cyberqalqon-sender.service
+Wants=network-online.target
+ConditionPathExists=/etc/cyberqalqon/forward-approval.json
+StartLimitIntervalSec=120
+StartLimitBurst=3
+
+[Service]
+Type=simple
+User=wazuh
+Group=wazuh
+UMask=0077
+EnvironmentFile=/etc/cyberqalqon/sender.env
+EnvironmentFile=/etc/cyberqalqon/forward.env
+ExecStart=/opt/cyberqalqon-sender/.venv/bin/cyberqalqon-sender forward run --state ${CYBERQALQON_FORWARD_STATE} --approval /etc/cyberqalqon/forward-approval.json --audit /var/log/cyberqalqon/forward-ingestion-audit.jsonl --batch-limit ${CYBERQALQON_FORWARD_READ_LIMIT} --records-per-second ${CYBERQALQON_FORWARD_RECORDS_PER_SECOND} --poll-seconds ${CYBERQALQON_FORWARD_POLL_SECONDS}
+Restart=on-failure
+RestartSec=15s
+TimeoutStopSec=30s
+NoNewPrivileges=true
+PrivateTmp=true
+PrivateDevices=true
+ProtectHome=true
+ProtectSystem=strict
+ProtectKernelTunables=true
+ProtectKernelModules=true
+ProtectKernelLogs=true
+ProtectControlGroups=true
+ProtectClock=true
+RestrictAddressFamilies=AF_UNIX AF_INET AF_INET6
+RestrictRealtime=true
+LockPersonality=true
+CapabilityBoundingSet=
+AmbientCapabilities=
+ReadOnlyPaths=/var/ossec/logs/archives /var/lib/cyberqalqon-sender /etc/cyberqalqon
+ReadWritePaths=/var/lib/cyberqalqon-forward /var/log/cyberqalqon
+
+# Deliberately no installation target section. Installation, enablement, and start require
+# the separate live approval gate documented in the M22 runbook.

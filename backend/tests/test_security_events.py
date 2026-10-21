@@ -1,13 +1,18 @@
 from __future__ import annotations
 
 import copy
+import json
 import sqlite3
+from concurrent.futures import ThreadPoolExecutor
 from datetime import datetime, timedelta, timezone
+from pathlib import Path
 
+import pytest
 from fastapi.testclient import TestClient
 
 from app.services.event_normalizer import normalize_wazuh_event
-from app.db.events import EventRepository
+from app.services.event_normalizer import EventNormalizationError
+from app.db.events import EventFilters, EventRepository
 
 
 def archive_event(*, event_id: str = "1791469000.1", timestamp: str = "2026-10-08T14:30:00+00:00") -> dict:
@@ -35,6 +40,24 @@ def archive_event(*, event_id: str = "1791469000.1", timestamp: str = "2026-10-0
     }
 
 
+def windows_archive_event() -> dict:
+    fixture = Path(__file__).resolve().parents[2] / "wazuh" / "fixtures" / "windows-eventchannel" / "security-4625.json"
+    return {
+        "timestamp": datetime.now(timezone.utc).isoformat(),
+        "id": "windows-security-4625",
+        "agent": {"id": "002", "name": "WIN-M10-SYNTHETIC"},
+        "manager": {"name": "lab-manager"},
+        "decoder": {"name": "windows_eventchannel"},
+        "rule": {"id": "60122", "level": 5, "description": "Windows failed logon"},
+        "data": json.loads(fixture.read_text(encoding="utf-8")),
+    }
+
+
+def endpoint_fixture(*parts: str) -> dict:
+    fixture = Path(__file__).resolve().parents[2] / "wazuh" / "fixtures"
+    return json.loads(fixture.joinpath(*parts).read_text(encoding="utf-8"))
+
+
 def test_event_normalizer_preserves_fields_and_redacts_sensitive_values() -> None:
     event = normalize_wazuh_event(archive_event())
     assert event.source_type == "web"
@@ -45,6 +68,175 @@ def test_event_normalizer_preserves_fields_and_redacts_sensitive_values() -> Non
     assert event.raw_payload["data"]["password"] == "[REDACTED]"
     assert "do-not-store" not in event.raw_payload["data"]["url"]
     assert "do-not-store" not in event.raw_payload["full_log"]
+
+
+def test_windows_event_normalization_preserves_provenance_and_unknowns() -> None:
+    raw = windows_archive_event()
+    raw["data"]["win"]["eventdata"].update(
+        {
+            "processName": "C:\\Program Files\\CyberQalqon\\қалқон.exe",
+            "processId": "0x4d2",
+            "parentProcessName": "C:\\Windows\\explorer.exe",
+            "parentProcessId": "512",
+        }
+    )
+    event = normalize_wazuh_event(raw)
+    assert event.source_type == "windows_event"
+    assert event.event_code == "4625"
+    assert event.event_provider == "Microsoft-Windows-Security-Auditing"
+    assert event.event_channel == "Security"
+    assert event.event_category == "windows_security"
+    assert event.manager_identity == "lab-manager"
+    assert event.process_name.endswith("қалқон.exe")
+    assert event.process_id == "0x4d2"
+    assert event.parent_process_name.endswith("explorer.exe")
+    assert event.parent_process_id == "512"
+    assert event.operating_system == "windows"
+    assert event.event_action == "logon"
+    assert event.outcome == "failure"
+    assert event.normalization_schema == "wazuh-event-v3"
+
+
+def test_process_creation_normalization_preserves_redacted_execution_context() -> None:
+    raw = windows_archive_event()
+    raw["data"] = endpoint_fixture("windows-eventchannel", "security-4688.json")
+    raw["data"]["win"]["eventdata"]["commandLine"] += " password=fixture-secret"
+    raw["rule"]["mitre"] = {
+        "id": ["T1059.001"],
+        "tactic": ["Execution"],
+        "technique": ["PowerShell"],
+    }
+
+    event = normalize_wazuh_event(raw)
+
+    assert event.event_code == "4688"
+    assert event.event_action == "process_start"
+    assert event.outcome == "success"
+    assert event.process_path == r"C:\Windows\System32\whoami.exe"
+    assert event.command_line == "whoami.exe /all password=[REDACTED]"
+    assert event.parent_process_path and event.parent_process_path.endswith("powershell.exe")
+    assert event.mitre.ids == ["T1059.001"]
+
+
+@pytest.mark.parametrize(
+    ("event_code", "action", "outcome"),
+    [
+        ("4624", "logon", "success"),
+        ("4634", "logoff", "success"),
+        ("4648", "explicit_credentials", "observed"),
+        ("4672", "privileged_logon", "success"),
+        ("4720", "account_create", "success"),
+        ("4726", "account_delete", "success"),
+        ("4732", "group_member_add", "success"),
+        ("4103", "powershell_module", "observed"),
+        ("4104", "powershell_script_block", "observed"),
+        ("7045", "service_install", "success"),
+        ("1116", "malware_detect", "detected"),
+        ("1117", "malware_remediate", "remediated"),
+    ],
+)
+def test_windows_event_semantics_are_stable(event_code: str, action: str, outcome: str) -> None:
+    raw = windows_archive_event()
+    raw["data"]["win"]["system"]["eventID"] = event_code
+    event = normalize_wazuh_event(raw)
+    assert (event.event_action, event.outcome) == (action, outcome)
+
+
+@pytest.mark.parametrize(
+    ("fixture_name", "category", "action", "outcome"),
+    [
+        ("ssh-failed.json", "linux_ssh", "authenticate", "failure"),
+        ("sudo-command.json", "linux_sudo", "privilege_escalation", "success"),
+    ],
+)
+def test_linux_event_normalization(fixture_name: str, category: str, action: str, outcome: str) -> None:
+    event = normalize_wazuh_event(endpoint_fixture("linux", fixture_name))
+    assert event.operating_system == "Ubuntu 24.04"
+    assert event.event_category == category
+    assert event.event_action == action
+    assert event.outcome == outcome
+    if fixture_name == "ssh-failed.json":
+        assert event.mitre.ids == ["T1110"]
+    else:
+        assert event.command_line == "/usr/bin/systemctl status ssh"
+
+
+def test_windows_event_malformed_nested_identifier_fails_closed() -> None:
+    raw = windows_archive_event()
+    raw["data"]["win"]["eventdata"]["processId"] = ["not", "text"]
+    with pytest.raises(EventNormalizationError) as error:
+        normalize_wazuh_event(raw)
+    assert error.value.field == "process_id"
+
+
+def test_invalid_event_mitre_identifier_fails_closed() -> None:
+    raw = windows_archive_event()
+    raw["rule"]["mitre"] = {"id": ["NOT-A-TECHNIQUE"]}
+    with pytest.raises(EventNormalizationError) as error:
+        normalize_wazuh_event(raw)
+    assert error.value.field == "rule.mitre.id"
+
+
+def test_windows_event_ingest_exposes_provenance_without_creating_alert(client, auth_headers) -> None:
+    created = client.post("/api/v1/events/ingest", headers=auth_headers, json=windows_archive_event())
+    assert created.status_code == 201, created.text
+    event_id = created.json()["event"]["event_id"]
+    detail = client.get(f"/api/v1/events/{event_id}").json()
+    assert detail["event_provider"] == "Microsoft-Windows-Security-Auditing"
+    assert detail["event_channel"] == "Security"
+    assert detail["raw_evidence_ref"] == event_id
+    assert detail["normalization_schema"] == "wazuh-event-v3"
+    assert client.get("/api/v1/alerts").json()["page"]["total"] == 0
+
+
+def test_endpoint_context_filters_are_server_side_and_exact(client, auth_headers) -> None:
+    raw = windows_archive_event()
+    raw["data"] = endpoint_fixture("windows-eventchannel", "security-4688.json")
+    created = client.post("/api/v1/events/ingest", headers=auth_headers, json=raw)
+    assert created.status_code == 201, created.text
+
+    response = client.get(
+        "/api/v1/events",
+        params={
+            "operating_system": "WINDOWS",
+            "event_provider": "microsoft-windows-security-auditing",
+            "event_channel": "security",
+            "process_name": r"C:\Windows\System32\whoami.exe",
+            "event_action": "PROCESS_START",
+        },
+    )
+
+    assert response.status_code == 200, response.text
+    assert response.json()["page"]["total"] == 1
+    assert response.json()["items"][0]["command_line"] == "whoami.exe /all"
+
+
+def test_telemetry_coverage_reports_only_observed_event_evidence(client, auth_headers) -> None:
+    now = datetime.now(timezone.utc)
+    windows = windows_archive_event()
+    windows["timestamp"] = (now - timedelta(minutes=2)).isoformat()
+    linux = endpoint_fixture("linux", "ssh-failed.json")
+    linux["timestamp"] = (now - timedelta(minutes=1)).isoformat()
+    assert client.post("/api/v1/events/ingest", headers=auth_headers, json=windows).status_code == 201
+    assert client.post("/api/v1/events/ingest", headers=auth_headers, json=linux).status_code == 201
+
+    response = client.get(
+        "/api/v1/events/coverage",
+        params={
+            "start_time": (now - timedelta(hours=1)).isoformat(),
+            "end_time": now.isoformat(),
+        },
+    )
+
+    assert response.status_code == 200, response.text
+    report = response.json()
+    assert report["total_events"] == 2
+    assert {entry["event_category"] for entry in report["entries"]} == {
+        "windows_security",
+        "linux_ssh",
+    }
+    assert {entry["evidence"] for entry in report["entries"]} == {"STORED_EVENTS"}
+    assert {entry["state"] for entry in report["entries"]} == {"OBSERVED"}
 
 
 def test_authenticated_event_ingestion_deduplication_and_detail(
@@ -156,6 +348,123 @@ def test_record_limit_is_enforced_between_scheduled_retention_runs(
     assert deleted == 1
 
 
+def test_concurrent_event_reads_and_ingestion_preserve_cap_and_integrity(
+    client: TestClient,
+    database_path: Path,
+) -> None:
+    repository = EventRepository(database_path, retention_days=30, max_records=25)
+    now = datetime.now(timezone.utc)
+    for offset in range(20):
+        repository.ingest(
+            normalize_wazuh_event(
+                archive_event(
+                    event_id=f"concurrent-seed-{offset}",
+                    timestamp=(now + timedelta(milliseconds=offset)).isoformat(),
+                )
+            ),
+            now=now + timedelta(milliseconds=offset),
+        )
+
+    def ingest(offset: int) -> str:
+        stored = repository.ingest(
+            normalize_wazuh_event(
+                archive_event(
+                    event_id=f"concurrent-new-{offset}",
+                    timestamp=(now + timedelta(seconds=1, milliseconds=offset)).isoformat(),
+                )
+            ),
+            now=now + timedelta(seconds=1, milliseconds=offset),
+        )
+        return stored.event.event_id
+
+    def read() -> int:
+        return repository.list(
+            EventFilters(), limit=25, sort="newest"
+        ).total
+
+    with ThreadPoolExecutor(max_workers=4) as executor:
+        futures = [executor.submit(ingest, offset) for offset in range(10)]
+        futures.extend(executor.submit(read) for _ in range(12))
+        results = [future.result(timeout=20) for future in futures]
+
+    assert len({item for item in results[:10] if isinstance(item, str)}) == 10
+    with sqlite3.connect(database_path) as connection:
+        assert connection.execute("SELECT COUNT(*) FROM security_events").fetchone()[0] == 25
+        assert connection.execute("PRAGMA quick_check").fetchone()[0] == "ok"
+        assert connection.execute("PRAGMA foreign_key_check").fetchall() == []
+
+
+def test_retention_preserves_case_evidence_and_audits_protected_pressure(
+    client: TestClient,
+    database_path: Path,
+) -> None:
+    repository = EventRepository(database_path, retention_days=30, max_records=2)
+    now = datetime.now(timezone.utc)
+    protected_ids: list[str] = []
+    for offset, event_id in enumerate(("protected-link", "protected-evidence")):
+        payload = archive_event(
+            event_id=event_id,
+            timestamp=(now - timedelta(seconds=3 - offset)).isoformat(),
+        )
+        protected_ids.append(
+            repository.ingest(normalize_wazuh_event(payload), now=now).event.event_id
+        )
+
+    created = client.post(
+        "/api/v1/cases",
+        json={
+            "title": "Retention evidence protection",
+            "description": "Forensic references must outlive ordinary FIFO cleanup.",
+            "severity": "HIGH",
+            "priority": "HIGH",
+        },
+    )
+    assert created.status_code == 201, created.text
+    case_id = created.json()["case_id"]
+    linked = client.post(
+        f"/api/v1/cases/{case_id}/related/event",
+        json={"reference_id": protected_ids[0], "expected_version": 1},
+    )
+    assert linked.status_code == 201, linked.text
+    acquired = client.post(
+        f"/api/v1/cases/{case_id}/evidence",
+        json={
+            "reference_type": "EVENT",
+            "reference_id": protected_ids[1],
+            "annotation": "Preserve this raw event.",
+            "expected_version": 2,
+        },
+    )
+    assert acquired.status_code == 201, acquired.text
+
+    newest = archive_event(event_id="preserved-ingest", timestamp=now.isoformat())
+    stored = repository.ingest(normalize_wazuh_event(newest), now=now)
+    newest_event_id = stored.event.event_id
+
+    with sqlite3.connect(database_path) as connection:
+        event_ids = {
+            row[0] for row in connection.execute("SELECT event_id FROM security_events")
+        }
+        retained, deleted = connection.execute(
+            "SELECT retained_records, last_deleted_count FROM security_event_store_state"
+        ).fetchone()
+        audit_rows = connection.execute(
+            "SELECT details_json FROM security_audit_events "
+            "WHERE action = 'SECURITY_EVENT_RETENTION' ORDER BY occurred_at"
+        ).fetchall()
+
+    assert event_ids == {*protected_ids, newest_event_id}
+    assert retained == 3
+    assert deleted == 0
+    assert len(audit_rows) == 1
+    audit = json.loads(audit_rows[0][0])
+    assert audit["protected_records"] == 2
+    assert audit["protected_records_measurement"] == "LOWER_BOUND"
+    assert audit["over_limit_records"] == 1
+    assert audit["decision"] == "PROTECTED_OVER_LIMIT"
+    assert protected_ids[0] not in audit_rows[0][0]
+
+
 def test_saved_searches_are_user_scoped_csrf_protected_and_audited(
     client: TestClient,
 ) -> None:
@@ -252,6 +561,46 @@ def test_alert_ingestion_projects_related_security_event(
     event_id = related.json()["items"][0]["event_id"]
     detail = client.get(f"/api/v1/events/{event_id}").json()
     assert detail["related_alert_id"] == alert_id
+
+
+def test_retention_preserves_event_linked_to_alert(
+    client: TestClient,
+    auth_headers: dict[str, str],
+    sample_alert: dict,
+    database_path: Path,
+) -> None:
+    alert = copy.deepcopy(sample_alert)
+    alert["timestamp"] = (datetime.now(timezone.utc) - timedelta(minutes=2)).isoformat()
+    created = client.post("/api/v1/alerts/ingest", headers=auth_headers, json=alert)
+    assert created.status_code == 201, created.text
+    alert_id = created.json()["alert"]["alert_id"]
+    related = client.get("/api/v1/events", params={"related_alert_id": alert_id}).json()
+    protected_event_id = related["items"][0]["event_id"]
+
+    repository = EventRepository(database_path, retention_days=30, max_records=1)
+    now = datetime.now(timezone.utc)
+    newest = repository.ingest(
+        normalize_wazuh_event(
+            archive_event(event_id="new-at-alert-cap", timestamp=now.isoformat())
+        ),
+        now=now,
+    )
+
+    with sqlite3.connect(database_path) as connection:
+        event_ids = {
+            row[0] for row in connection.execute("SELECT event_id FROM security_events")
+        }
+        audit = json.loads(
+            connection.execute(
+                "SELECT details_json FROM security_audit_events "
+                "WHERE action='SECURITY_EVENT_RETENTION' "
+                "ORDER BY occurred_at DESC LIMIT 1"
+            ).fetchone()[0]
+        )
+    assert event_ids == {protected_event_id, newest.event.event_id}
+    assert audit["protected_records"] == 1
+    assert audit["protected_records_measurement"] == "LOWER_BOUND"
+    assert audit["over_limit_records"] == 1
 
 
 def test_overview_uses_real_event_alert_and_incident_aggregates(

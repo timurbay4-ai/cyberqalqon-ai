@@ -1,0 +1,21 @@
+{
+  "win": {
+    "system": {
+      "providerName": "Microsoft-Windows-Security-Auditing",
+      "eventID": "4688",
+      "level": "0",
+      "channel": "Security",
+      "computer": "WIN-M10-SYNTHETIC",
+      "severityValue": "AUDIT_SUCCESS",
+      "message": "Synthetic process creation fixture"
+    },
+    "eventdata": {
+      "subjectUserName": "cq-m10-synthetic",
+      "newProcessId": "0x4d2",
+      "newProcessName": "C:\\Windows\\System32\\whoami.exe",
+      "commandLine": "whoami.exe /all",
+      "creatorProcessId": "0x200",
+      "creatorProcessName": "C:\\Windows\\System32\\WindowsPowerShell\\v1.0\\powershell.exe"
+    }
+  }
+}

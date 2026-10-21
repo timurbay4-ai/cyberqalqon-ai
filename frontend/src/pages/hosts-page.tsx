@@ -3,53 +3,123 @@ import { useEffect, useMemo, useState } from "react";
 import { CopyButton } from "../components/copy-button";
 import { StatePanel } from "../components/state-panel";
 import { TimeValue } from "../components/time-value";
+import type { AgentConnectionStatus, AgentDetail, AgentHealthResponse, AgentListResponse, AgentSummary, WazuhIntegrationStatus } from "../types/agents";
 import type { BackendApi } from "../types/api";
-import type { HostSummary, LogSourceSummary } from "../types/siem";
+import type { LogSourceSummary } from "../types/siem";
 import { humanize } from "../utils/format";
 
+const PAGE_SIZE = 25;
+
+function statusClass(status: AgentConnectionStatus): string {
+  if (status === "ONLINE") return "healthy";
+  if (status === "DISCONNECTED") return "unavailable";
+  if (status === "NEVER_CONNECTED") return "degraded";
+  return "unknown";
+}
+
+function selectedFromUrl(): string | null {
+  return new URLSearchParams(window.location.search).get("agent");
+}
+
 export function HostsPage({ api }: { api: BackendApi }) {
-  const [hosts, setHosts] = useState<HostSummary[] | null>(null);
+  const [agents, setAgents] = useState<AgentListResponse | null>(null);
   const [sources, setSources] = useState<LogSourceSummary[] | null>(null);
+  const [integration, setIntegration] = useState<WazuhIntegrationStatus | null>(null);
+  const [detail, setDetail] = useState<AgentDetail | null>(null);
+  const [history, setHistory] = useState<AgentHealthResponse | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [detailError, setDetailError] = useState<string | null>(null);
   const [revision, setRevision] = useState(0);
   const [search, setSearch] = useState("");
+  const [status, setStatus] = useState<AgentConnectionStatus | "">("");
+  const [platform, setPlatform] = useState("");
+  const [manager, setManager] = useState("");
   const [sourceType, setSourceType] = useState("");
-  const [selectedHost, setSelectedHost] = useState<HostSummary | null>(null);
+  const [sort, setSort] = useState<"name" | "agent_id" | "status" | "last_seen" | "version">("name");
+  const [order, setOrder] = useState<"asc" | "desc">("asc");
+  const [offset, setOffset] = useState(0);
+  const [selectedKey, setSelectedKey] = useState<string | null>(selectedFromUrl);
 
   useEffect(() => {
-    const controller = new AbortController(); setHosts(null); setSources(null); setError(null);
-    Promise.all([api.listHosts(controller.signal), api.listSources(controller.signal)])
-      .then(([nextHosts, nextSources]) => { setHosts(nextHosts); setSources(nextSources); })
-      .catch((reason: unknown) => { if (!(reason instanceof DOMException && reason.name === "AbortError")) setError(reason instanceof Error ? reason.message : "Inventory unavailable."); });
+    const controller = new AbortController();
+    setAgents(null); setSources(null); setIntegration(null); setError(null);
+    Promise.all([
+      api.listAgents({ search: search.trim() || undefined, os: platform || undefined, connectionStatus: status || undefined, manager: manager.trim() || undefined, sourceType: sourceType || undefined, sort, order, limit: PAGE_SIZE, offset }, controller.signal),
+      api.listSources(controller.signal),
+      api.getWazuhIntegrationStatus(controller.signal),
+    ]).then(([nextAgents, nextSources, nextIntegration]) => {
+      setAgents(nextAgents); setSources(nextSources); setIntegration(nextIntegration);
+    }).catch((reason: unknown) => {
+      if (!(reason instanceof DOMException && reason.name === "AbortError")) setError(reason instanceof Error ? reason.message : "Agent inventory is unavailable.");
+    });
     return () => controller.abort();
-  }, [api, revision]);
+  }, [api, manager, offset, order, platform, revision, search, sort, sourceType, status]);
 
   useEffect(() => {
-    const close = () => setSelectedHost(null);
+    if (!selectedKey) { setDetail(null); setHistory(null); setDetailError(null); return; }
+    const controller = new AbortController();
+    setDetail(null); setHistory(null); setDetailError(null);
+    Promise.all([api.getAgent(selectedKey, controller.signal), api.getAgentHealth(selectedKey, controller.signal)])
+      .then(([nextDetail, nextHistory]) => { setDetail(nextDetail); setHistory(nextHistory); })
+      .catch((reason: unknown) => {
+        if (!(reason instanceof DOMException && reason.name === "AbortError")) setDetailError(reason instanceof Error ? reason.message : "Agent details are unavailable.");
+      });
+    return () => controller.abort();
+  }, [api, revision, selectedKey]);
+
+  useEffect(() => {
+    const sync = () => setSelectedKey(selectedFromUrl());
+    const close = () => selectAgent(null);
+    window.addEventListener("popstate", sync);
     window.addEventListener("cyberqalqon:escape", close);
-    return () => window.removeEventListener("cyberqalqon:escape", close);
+    return () => { window.removeEventListener("popstate", sync); window.removeEventListener("cyberqalqon:escape", close); };
   }, []);
 
   const sourceTypes = useMemo(() => [...new Set((sources ?? []).map((source) => source.source_type))].sort(), [sources]);
-  const visibleHosts = useMemo(() => (hosts ?? []).filter((host) => `${host.hostname} ${host.agent_id ?? ""} ${host.agent_name ?? ""}`.toLocaleLowerCase().includes(search.trim().toLocaleLowerCase())), [hosts, search]);
-  const visibleSources = useMemo(() => (sources ?? []).filter((source) => !sourceType || source.source_type === sourceType), [sourceType, sources]);
 
+  function selectAgent(agent: AgentSummary | null) {
+    const parameters = new URLSearchParams(window.location.search);
+    if (agent) parameters.set("agent", agent.agent_key); else parameters.delete("agent");
+    const query = parameters.toString();
+    window.history.pushState({}, "", `${window.location.pathname}${query ? `?${query}` : ""}`);
+    setSelectedKey(agent?.agent_key ?? null);
+  }
+
+  function resetFilters() {
+    setSearch(""); setStatus(""); setPlatform(""); setManager(""); setSourceType(""); setOffset(0);
+  }
+
+  const total = agents?.page.total ?? 0;
   return <div className="page-grid">
     <section className="page-column">
-      <header className="page-header"><div><span className="eyebrow">Assets &amp; collection</span><h1>Hosts and log sources</h1><p>Observed source freshness is separate from Wazuh agent connectivity state.</p></div></header>
-      <div className="inventory-explanation" role="note"><strong>State evidence</strong><span>ACTIVE SOURCE / STALE SOURCE comes from stored telemetry freshness. Pipeline health uses persisted delivery timestamps. Agent state remains UNKNOWN; queue depth and archive cursor lag remain unavailable because this API has no authoritative runtime feed.</span></div>
-      <section className="panel inventory-filters" aria-label="Inventory filters"><label className="filter-field"><span>Host or agent</span><input type="search" value={search} onChange={(event) => setSearch(event.target.value)} /></label><label className="filter-field"><span>Source type</span><select value={sourceType} onChange={(event) => setSourceType(event.target.value)}><option value="">All sources</option>{sourceTypes.map((source) => <option value={source} key={source}>{humanize(source)}</option>)}</select></label><button className="button button--ghost" type="button" onClick={() => { setSearch(""); setSourceType(""); }}>Reset</button></section>
-      {!hosts && !error && <StatePanel kind="loading" title="Loading inventory" message="Aggregating bounded event-source observations…" />}
-      {error && <StatePanel kind="unavailable" title="Inventory unavailable" message={error} actionLabel="Retry" onAction={() => setRevision((value) => value + 1)} />}
-      {hosts && sources && <>
-        <article className="panel"><header className="panel__header"><div><span className="eyebrow">Observed assets</span><h2>Host inventory</h2></div></header>
-          {visibleHosts.length === 0 ? <p className="muted-copy">{hosts.length === 0 ? "No host-attributed security events have been ingested." : "No host matches the current search."}</p> : <div className="table-frame"><table className="data-table"><thead><tr><th>Host</th><th>Platform</th><th>Agent state</th><th>Source health</th><th>Last seen</th><th>Events / alerts</th><th>Recent detections</th></tr></thead><tbody>{visibleHosts.map((host) => <tr className={selectedHost === host ? "is-selected" : undefined} key={`${host.agent_id}:${host.hostname}`}><td><button className="row-select" type="button" onClick={() => setSelectedHost(host)}><strong>{host.hostname}</strong><span className="cell-subtle">{host.agent_id ? `Agent ${host.agent_id}` : "No agent ID"}</span></button></td><td>{host.platform}</td><td><span className="health-pill health-pill--unknown">UNKNOWN</span></td><td><span className={`health-pill health-pill--${host.source_health.toLowerCase()}`}>{host.source_health} SOURCE</span></td><td><TimeValue value={host.last_seen} relative /></td><td>{host.event_count} / {host.alert_count}</td><td><span className="tag-list">{host.recent_detections.length ? host.recent_detections.map((rule) => <span className="tag" key={rule}>{rule}</span>) : "—"}</span></td></tr>)}</tbody></table></div>}
-        </article>
-        <article className="panel"><header className="panel__header"><div><span className="eyebrow">Collection</span><h2>Log source inventory</h2></div></header>
-          {visibleSources.length === 0 ? <p className="muted-copy">{sources.length === 0 ? "No event sources have reported." : "No source matches the selected type."}</p> : <div className="table-frame"><table className="data-table"><thead><tr><th>Source</th><th>Type</th><th>Last event / ingest</th><th>Lag</th><th>Events</th><th>Source / pipeline</th><th>Runtime counters</th><th>Last error</th></tr></thead><tbody>{visibleSources.map((source) => <tr key={`${source.source_name}:${source.collection_method}`}><td><strong>{source.source_name}</strong><span className="cell-subtle">{source.hostname ?? source.agent_name ?? source.agent_id ?? "Unattributed"}</span></td><td>{humanize(source.source_type)}<span className="cell-subtle mono">{source.collection_method}</span></td><td><TimeValue value={source.last_event_at} relative /><span className="cell-subtle">Ingested <TimeValue value={source.last_ingested_at} relative /></span></td><td>{source.ingestion_lag_seconds.toFixed(1)} s</td><td>{source.event_count}</td><td><span className={`health-pill health-pill--${source.source_health.toLowerCase()}`}>{source.source_health} SOURCE</span><span className={`health-pill health-pill--${source.pipeline_health.toLowerCase()}`}>{source.pipeline_health} PIPELINE</span><span className="cell-subtle">Agent UNKNOWN</span></td><td>Queue {source.queue_depth ?? "unavailable"}<span className="cell-subtle">Cursor lag {source.archive_cursor_lag_bytes == null ? "unavailable" : `${source.archive_cursor_lag_bytes} B`}</span></td><td>{source.last_error ?? "No persisted delivery error"}</td></tr>)}</tbody></table></div>}
-        </article>
-      </>}
+      <header className="page-header"><div><span className="eyebrow">Enterprise inventory</span><h1>Agent management</h1><p>Authoritative Wazuh connectivity, observed telemetry freshness, and pipeline state remain separate.</p></div><div className="page-header__actions"><button className="button button--ghost" type="button" onClick={() => setRevision((value) => value + 1)}>Refresh</button></div></header>
+      {integration && <div className="inventory-explanation" role="note"><strong>Wazuh API: {integration.state}</strong><span>{integration.reason} Authority: WAZUH_API · TLS: {humanize(integration.tls_verification)} · observed <TimeValue value={integration.observed_at} relative />{integration.cache_stale ? " · cache stale" : ""}.</span></div>}
+      <section className="panel inventory-filters" aria-label="Agent filters">
+        <label className="filter-field"><span>Agent, name, IP</span><input type="search" value={search} onChange={(event) => { setSearch(event.target.value); setOffset(0); }} /></label>
+        <label className="filter-field"><span>Connection</span><select value={status} onChange={(event) => { setStatus(event.target.value as AgentConnectionStatus | ""); setOffset(0); }}><option value="">All states</option><option>ONLINE</option><option>DISCONNECTED</option><option>NEVER_CONNECTED</option><option>UNKNOWN</option></select></label>
+        <label className="filter-field"><span>Operating system</span><select value={platform} onChange={(event) => { setPlatform(event.target.value); setOffset(0); }}><option value="">All operating systems</option><option value="windows">Windows</option><option value="linux">Linux</option></select></label>
+        <label className="filter-field"><span>Manager</span><input type="search" placeholder="All managers" value={manager} onChange={(event) => { setManager(event.target.value); setOffset(0); }} /></label>
+        <label className="filter-field"><span>Source type</span><select value={sourceType} onChange={(event) => { setSourceType(event.target.value); setOffset(0); }}><option value="">All sources</option>{sourceTypes.map((value) => <option key={value}>{value}</option>)}</select></label>
+        <label className="filter-field"><span>Sort</span><select value={sort} onChange={(event) => setSort(event.target.value as typeof sort)}><option value="name">Name</option><option value="agent_id">Agent ID</option><option value="status">Connection</option><option value="last_seen">Last event</option><option value="version">Version</option></select></label>
+        <button className="button button--ghost" type="button" onClick={() => setOrder((value) => value === "asc" ? "desc" : "asc")}>Order {order === "asc" ? "↑" : "↓"}</button>
+        <button className="button button--ghost" type="button" onClick={resetFilters}>Reset</button>
+      </section>
+      {!agents && !error && <StatePanel kind="loading" title="Loading agents" message="Reading the bounded provider cache and telemetry relationships…" />}
+      {error && <StatePanel kind="unavailable" title="Agent inventory unavailable" message={error} actionLabel="Retry" onAction={() => setRevision((value) => value + 1)} />}
+      {agents && <article className="panel"><header className="panel__header"><div><span className="eyebrow">Agents</span><h2>{total.toLocaleString()} inventory records</h2></div><span className={`health-pill health-pill--${agents.authoritative_inventory ? "healthy" : "unknown"}`}>{agents.authoritative_inventory ? "AUTHORITATIVE" : "PARTIAL"}</span></header>
+        <p className="cell-subtle">{agents.message} Observation <TimeValue value={agents.observation_timestamp} relative />.</p>
+        {agents.items.length === 0 ? <p className="muted-copy">No agent matches the selected filters. If the Wazuh API is unavailable, only telemetry-observed sources can be shown.</p> : <div className="table-frame"><table className="data-table"><thead><tr><th>Agent</th><th>OS / version</th><th>Manager</th><th>Connection</th><th>Keepalive / event</th><th>Data / pipeline</th><th>Authority</th></tr></thead><tbody>{agents.items.map((agent) => <tr className={selectedKey === agent.agent_key ? "is-selected" : undefined} key={agent.agent_key}><td><button className="row-select" type="button" onClick={() => selectAgent(agent)}><strong>{agent.name}</strong><span className="cell-subtle mono">{agent.agent_id}</span></button></td><td>{agent.operating_system ?? humanize(agent.os_platform ?? "unknown")}<span className="cell-subtle">{agent.agent_version ?? "Version unavailable"}</span></td><td>{agent.manager ?? "Unavailable"}</td><td><span className={`health-pill health-pill--${statusClass(agent.connection_status)}`}>{agent.connection_status}</span><span className="cell-subtle">Enrollment {agent.enrollment_status}</span></td><td>{agent.last_keepalive ? <TimeValue value={agent.last_keepalive} relative /> : "No keepalive"}<span className="cell-subtle">Event {agent.last_security_event ? <TimeValue value={agent.last_security_event} relative /> : "unavailable"}</span></td><td><span className={`health-pill health-pill--${agent.data_freshness.toLowerCase()}`}>{agent.data_freshness}</span><span className={`health-pill health-pill--${agent.pipeline_health.toLowerCase()}`}>{agent.pipeline_health}</span></td><td className="mono">{agent.status_authority}{agent.cache_stale && <span className="cell-subtle">STALE CACHE</span>}</td></tr>)}</tbody></table></div>}
+        <nav className="pagination" aria-label="Agent pages"><button className="button button--ghost" type="button" disabled={offset === 0} onClick={() => setOffset(Math.max(0, offset - PAGE_SIZE))}>Previous</button><span>{total === 0 ? "0" : `${offset + 1}–${Math.min(offset + PAGE_SIZE, total)}`} of {total}</span><button className="button button--ghost" type="button" disabled={offset + PAGE_SIZE >= total} onClick={() => setOffset(offset + PAGE_SIZE)}>Next</button></nav>
+      </article>}
     </section>
-    {selectedHost && <aside className="detail-panel" aria-label="Host detail"><header className="detail-panel__header"><div><span className="eyebrow">Observed host</span><h2>{selectedHost.hostname}</h2></div><button className="icon-button" type="button" aria-label="Close host detail" onClick={() => setSelectedHost(null)}>×</button></header><div className="detail-panel__body"><div className="detail-hero"><span className={`health-pill health-pill--${selectedHost.source_health.toLowerCase()}`}>{selectedHost.source_health} SOURCE</span><span className="health-pill health-pill--unknown">AGENT UNKNOWN</span></div><dl className="metadata-grid"><div><dt>Hostname</dt><dd>{selectedHost.hostname}</dd></div><div><dt>Platform</dt><dd>{selectedHost.platform}</dd></div><div><dt>Agent ID</dt><dd className="mono">{selectedHost.agent_id ?? "Not observed"}</dd></div><div><dt>Agent name</dt><dd>{selectedHost.agent_name ?? "Not observed"}</dd></div><div><dt>Last seen</dt><dd><TimeValue value={selectedHost.last_seen} /></dd></div><div><dt>Events / alerts</dt><dd>{selectedHost.event_count} / {selectedHost.alert_count}</dd></div></dl><div className="copy-actions"><CopyButton value={selectedHost.hostname} label="Copy hostname" />{selectedHost.agent_id && <CopyButton value={selectedHost.agent_id} label="Copy agent ID" />}</div><p className="trust-note">No IP address is shown because the current inventory contract does not provide an authoritative host IP.</p></div></aside>}
+    {selectedKey && <aside className="detail-panel" aria-label="Agent detail"><header className="detail-panel__header"><div><span className="eyebrow">Agent diagnostics</span><h2>{detail?.name ?? "Loading agent…"}</h2></div><button className="icon-button" type="button" aria-label="Close agent detail" onClick={() => selectAgent(null)}>×</button></header><div className="detail-panel__body">
+      {!detail && !detailError && <StatePanel kind="loading" title="Loading agent details" message="Joining provider state with recent evidence…" />}
+      {detailError && <StatePanel kind="unavailable" title="Agent detail unavailable" message={detailError} actionLabel="Retry" onAction={() => setRevision((value) => value + 1)} />}
+      {detail && <><div className="detail-hero"><span className={`health-pill health-pill--${statusClass(detail.connection_status)}`}>{detail.connection_status}</span><span className="tag">{detail.status_authority}</span></div><dl className="metadata-grid"><div><dt>Agent ID</dt><dd className="mono">{detail.agent_id}</dd></div><div><dt>Manager</dt><dd>{detail.manager ?? "Unavailable"}</dd></div><div><dt>OS</dt><dd>{detail.operating_system ?? "Unknown"}</dd></div><div><dt>Agent version</dt><dd>{detail.agent_version ?? "Unavailable"}</dd></div><div><dt>IP address</dt><dd className="mono">{detail.ip_address ?? "Unavailable"}</dd></div><div><dt>Enrollment</dt><dd>{detail.enrollment_status}</dd></div><div><dt>Last keepalive</dt><dd>{detail.last_keepalive ? <TimeValue value={detail.last_keepalive} /> : "Unavailable"}</dd></div><div><dt>Last security event</dt><dd>{detail.last_security_event ? <TimeValue value={detail.last_security_event} /> : "No data"}</dd></div></dl><div className="copy-actions"><CopyButton value={detail.agent_id} label="Copy agent ID" /><CopyButton value={detail.agent_key} label="Copy inventory ID" />{detail.ip_address && <CopyButton value={detail.ip_address} label="Copy IP address" />}</div>
+        <section className="detail-section"><h3>Telemetry sources</h3>{detail.telemetry_sources.length === 0 ? <p className="muted-copy">No security event source is related to this agent.</p> : <ul className="compact-list">{detail.telemetry_sources.map((source) => <li key={`${source.source_type}:${source.ingestion_source}`}><strong>{humanize(source.source_type)}</strong> · {source.event_count} events · {source.freshness}<span className="cell-subtle">Last event <TimeValue value={source.last_event_at} relative /></span></li>)}</ul>}</section>
+        <section className="detail-section"><h3>Health history</h3>{history?.items.length ? <ol className="workflow-activity">{history.items.map((item) => <li key={item.history_id}><div><strong>{item.previous_status ?? "INITIAL"} → {item.connection_status}</strong><span>WAZUH_API</span></div><TimeValue value={item.observed_at} relative /></li>)}</ol> : <p className="muted-copy">{detail.status_authority === "WAZUH_API" ? "No status transition has been recorded." : "Health history is unavailable for telemetry-only identity."}</p>}</section>
+        <section className="detail-section"><h3>Relationships</h3><dl className="metadata-grid"><div><dt>Recent events</dt><dd>{detail.recent_event_ids.length}</dd></div><div><dt>Related alerts</dt><dd>{detail.related_alert_ids.length}</dd></div><div><dt>Related incidents</dt><dd>{detail.related_incident_ids.length}</dd></div><div><dt>Groups</dt><dd>{detail.groups.join(", ") || "None reported"}</dd></div></dl></section>
+        <section className="detail-section"><h3>Troubleshooting</h3><ul className="compact-list">{detail.troubleshooting.map((item) => <li key={item}>{item}</li>)}</ul></section><p className="trust-note">This workspace is read-only. It cannot restart, enroll, reconfigure, or upgrade an agent.</p></>}
+    </div></aside>}
   </div>;
 }

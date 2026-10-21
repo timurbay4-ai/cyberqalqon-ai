@@ -105,8 +105,15 @@ def _decode_cursor(cursor: str) -> tuple[str, str]:
 
 
 class AlertRepository:
-    def __init__(self, database_url: str) -> None:
+    def __init__(
+        self, database_url: str, *, migration_target_version: int | None = None,
+    ) -> None:
         self.path = _database_path(database_url)
+        self.migration_target_version = (
+            len(MIGRATIONS) if migration_target_version is None else migration_target_version
+        )
+        if not 1 <= self.migration_target_version <= len(MIGRATIONS):
+            raise ValueError("migration_target_version is outside the supported range")
 
     def _connect(self) -> sqlite3.Connection:
         connection = sqlite3.connect(self.path, timeout=5)
@@ -120,7 +127,9 @@ class AlertRepository:
         with closing(self._connect()) as connection:
             with connection:
                 connection.execute("PRAGMA journal_mode = WAL")
-                apply_migrations(connection)
+                apply_migrations(
+                    connection, target_version=self.migration_target_version
+                )
 
     def is_ready(self) -> bool:
         """Return whether storage is reachable and at this build's schema version."""
@@ -128,9 +137,12 @@ class AlertRepository:
         try:
             with closing(self._connect()) as connection:
                 versions = applied_migration_versions(connection)
-                expected = tuple(migration.version for migration in MIGRATIONS)
                 user_version = int(connection.execute("PRAGMA user_version").fetchone()[0])
-                return versions == expected and user_version == expected[-1]
+                if user_version > len(MIGRATIONS):
+                    return False
+                target = max(user_version, self.migration_target_version)
+                expected = tuple(migration.version for migration in MIGRATIONS[:target])
+                return versions == expected and user_version == target
         except (OSError, sqlite3.Error, MigrationError):
             return False
 

@@ -1,0 +1,22 @@
+{
+  "timestamp": "2026-10-11T09:31:00+05:00",
+  "id": "linux-sudo-synthetic",
+  "agent": {
+    "id": "001",
+    "name": "cyberqalqon-test-web",
+    "os": {"name": "Ubuntu 24.04"}
+  },
+  "decoder": {"name": "sudo"},
+  "rule": {
+    "id": "5402",
+    "level": 3,
+    "description": "Synthetic sudo command fixture",
+    "groups": ["syslog", "sudo"]
+  },
+  "data": {
+    "srcuser": "cq-m10-synthetic",
+    "command": "/usr/bin/systemctl status ssh"
+  },
+  "location": "/var/log/auth.log",
+  "full_log": "cq-m10-synthetic : TTY=pts/0 ; COMMAND=/usr/bin/systemctl status ssh"
+}

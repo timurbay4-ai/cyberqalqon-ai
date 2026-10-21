@@ -23,6 +23,14 @@ class RuleConditionField(str, Enum):
     HOSTNAME = "hostname"
     AGENT_ID = "agent_id"
     AGENT_NAME = "agent_name"
+    OPERATING_SYSTEM = "operating_system"
+    EVENT_PROVIDER = "event_provider"
+    EVENT_CHANNEL = "event_channel"
+    PROCESS_NAME = "process_name"
+    PROCESS_PATH = "process_path"
+    COMMAND_LINE = "command_line"
+    PARENT_PROCESS_NAME = "parent_process_name"
+    PARENT_PROCESS_PATH = "parent_process_path"
     SOURCE_IP = "source_ip"
     DESTINATION_IP = "destination_ip"
     USERNAME = "username"
@@ -68,6 +76,12 @@ class RuleCondition(StrictModel):
                 RuleConditionField.HOSTNAME,
                 RuleConditionField.AGENT_NAME,
                 RuleConditionField.USERNAME,
+                RuleConditionField.EVENT_PROVIDER,
+                RuleConditionField.PROCESS_NAME,
+                RuleConditionField.PROCESS_PATH,
+                RuleConditionField.COMMAND_LINE,
+                RuleConditionField.PARENT_PROCESS_NAME,
+                RuleConditionField.PARENT_PROCESS_PATH,
             }:
                 raise ValueError("partial matching is not supported for this field")
             if len(self.value) < 3:
@@ -204,6 +218,186 @@ class RuleDryRunResult(StrictModel):
     matched_event_ids: list[str] = Field(max_length=100)
     execution_ms: float = Field(ge=0)
     result_ids_truncated: bool
+    side_effects: Literal[False] = False
+
+
+class AdvancedDetectionPrerequisite(StrictModel):
+    """Telemetry contract that must be satisfied before a rule can be trusted."""
+
+    source_types: list[str] = Field(min_length=1, max_length=8)
+    event_codes: list[str] = Field(default_factory=list)
+    event_categories: list[str] = Field(default_factory=list)
+    required_fields: list[str] = Field(min_length=1, max_length=16)
+    parser_supported: bool
+    configuration_status: Literal["CONFIGURED", "NOT_CONFIGURED", "UNKNOWN"] = "UNKNOWN"
+    configuration_evidence: str
+
+
+class AdvancedDetectionAvailability(StrictModel):
+    parser_supported: bool
+    data_observed: bool
+    recently_observed: bool
+    configuration_status: Literal["CONFIGURED", "NOT_CONFIGURED", "UNKNOWN"]
+    status: Literal[
+        "RECENTLY_OBSERVED",
+        "OBSERVED_STALE",
+        "PREREQUISITE_MISSING",
+        "NO_DATA",
+        "UNKNOWN",
+    ]
+    observed_event_count: int = Field(ge=0)
+    latest_event_at: datetime | None = None
+    missing_required_fields: list[str]
+    explanation: str
+
+
+class AdvancedMitreMapping(StrictModel):
+    technique_id: str = Field(pattern=r"^T\d{4}(?:\.\d{3})?$")
+    technique_name: str
+    tactic: str
+    relationship: str
+
+
+class AdvancedDetectionRule(StrictModel):
+    rule_id: str = Field(pattern=r"^DET-00[1-9]$")
+    name: str = Field(min_length=1, max_length=128)
+    description: str = Field(min_length=1, max_length=2048)
+    enabled: Literal[False] = False
+    activation_state: Literal["DISABLED_BY_POLICY"] = "DISABLED_BY_POLICY"
+    severity: int = Field(ge=0, le=16)
+    prerequisites: AdvancedDetectionPrerequisite
+    conditions: list[str] = Field(min_length=1, max_length=16)
+    grouping_fields: list[str] = Field(min_length=1, max_length=12)
+    window_seconds: int = Field(ge=1, le=86400)
+    threshold: int = Field(ge=1, le=1000)
+    deduplication: str
+    mitre_ids: list[str]
+    mitre_mappings: list[AdvancedMitreMapping]
+    false_positive_notes: list[str] = Field(min_length=1, max_length=12)
+    evidence_fields: list[str] = Field(min_length=1, max_length=24)
+    analyst_guidance: list[str] = Field(min_length=1, max_length=12)
+    version: str = Field(pattern=r"^\d+\.\d+\.\d+-m11$")
+    validation_status: Literal["VALIDATED_FOR_DRY_RUN"] = "VALIDATED_FOR_DRY_RUN"
+    validation_notes: list[str] = Field(min_length=1, max_length=12)
+    availability: AdvancedDetectionAvailability | None = None
+
+    @model_validator(mode="after")
+    def consistent_mitre_mapping(self) -> "AdvancedDetectionRule":
+        mapped_ids = [item.technique_id for item in self.mitre_mappings]
+        if len(self.mitre_ids) != len(set(self.mitre_ids)):
+            raise ValueError("MITRE IDs must be unique")
+        if self.mitre_ids != mapped_ids:
+            raise ValueError("MITRE mapping metadata must exactly match MITRE IDs")
+        return self
+
+
+class AdvancedRuleDryRunRequest(BoundedTimeWindow):
+    max_events: int = Field(default=1000, ge=1, le=1000)
+    max_findings: int = Field(default=100, ge=1, le=100)
+    max_execution_ms: int = Field(default=1000, ge=50, le=5000)
+
+
+class AdvancedDetectionEvidence(StrictModel):
+    event_id: str
+    timestamp: datetime
+    summary: str
+
+
+class AdvancedDetectionFinding(StrictModel):
+    finding_id: str
+    rule_id: str
+    severity: int = Field(ge=0, le=16)
+    first_event_at: datetime
+    last_event_at: datetime
+    group: dict[str, str]
+    matched_event_count: int = Field(ge=1)
+    threshold: int = Field(ge=1)
+    event_ids: list[str]
+    explanation: str
+    evidence: list[AdvancedDetectionEvidence]
+    deduplication_key: str
+    mitre_ids: list[str]
+
+
+class AdvancedRuleDryRunResult(StrictModel):
+    rule: AdvancedDetectionRule
+    availability: AdvancedDetectionAvailability
+    start_time: datetime
+    end_time: datetime
+    evaluated_event_count: int = Field(ge=0)
+    finding_count: int = Field(ge=0)
+    findings: list[AdvancedDetectionFinding]
+    execution_ms: float = Field(ge=0)
+    execution_budget_ms: int = Field(ge=50, le=5000)
+    result_truncated: bool
+    deterministic_ordering: Literal[True] = True
+    side_effects: Literal[False] = False
+
+
+class GoldenFixtureResult(StrictModel):
+    scenario: Literal[
+        "positive",
+        "negative",
+        "boundary",
+        "duplicate",
+        "out_of_order",
+        "missing_field",
+        "cross_host",
+        "cross_account",
+        "false_positive_candidate",
+    ]
+    synthetic_test_data: Literal[True] = True
+    applicable: bool
+    ground_truth: Literal["POSITIVE", "NEGATIVE", "UNLABELED"]
+    expected_finding_count: int = Field(ge=0)
+    actual_finding_count: int = Field(ge=0)
+    expected_evidence_ids: list[str]
+    actual_evidence_ids: list[str]
+    evaluator_duplicate_count: int = Field(ge=0)
+    evaluation_ms: float = Field(ge=0)
+    passed: bool
+    expected_explanation: str
+    grouping_behavior: str
+    deduplication_behavior: str
+
+
+class DetectionQualityMetrics(StrictModel):
+    labeled_fixture_count: int = Field(ge=0)
+    unlabeled_fixture_count: int = Field(ge=0)
+    true_positives: int = Field(ge=0)
+    false_positives: int = Field(ge=0)
+    true_negatives: int = Field(ge=0)
+    false_negatives: int = Field(ge=0)
+    precision: float | None = Field(default=None, ge=0, le=1)
+    recall: float | None = Field(default=None, ge=0, le=1)
+    false_positive_rate: float | None = Field(default=None, ge=0, le=1)
+    duplicate_input_count: int = Field(ge=0)
+    duplicate_finding_rate: float = Field(ge=0, le=1)
+    missing_field_fixture_passed: bool
+    event_order_consistent: bool
+    repeat_evaluation_consistent: bool
+    evidence_latency_p50_ms: float = Field(ge=0)
+    evidence_latency_p95_ms: float = Field(ge=0)
+    evidence_latency_max_ms: float = Field(ge=0)
+    evaluation_time_p50_ms: float = Field(ge=0)
+    evaluation_time_p95_ms: float = Field(ge=0)
+    evaluation_time_max_ms: float = Field(ge=0)
+
+
+class DetectionQualityReport(StrictModel):
+    rule_id: str = Field(pattern=r"^DET-00[1-9]$")
+    dataset_version: Literal["m15-golden-v1"] = "m15-golden-v1"
+    dataset_label: Literal["SYNTHETIC TEST DATA"] = "SYNTHETIC TEST DATA"
+    ground_truth_scope: Literal["LABELED_SYNTHETIC_FIXTURES_ONLY"] = (
+        "LABELED_SYNTHETIC_FIXTURES_ONLY"
+    )
+    live_ground_truth_available: Literal[False] = False
+    enabled: Literal[False] = False
+    runtime_activation_state: Literal["DISABLED_BY_POLICY"] = "DISABLED_BY_POLICY"
+    deployment_eligibility: Literal["SHADOW_ONLY"] = "SHADOW_ONLY"
+    fixtures: list[GoldenFixtureResult] = Field(min_length=9, max_length=9)
+    metrics: DetectionQualityMetrics
+    all_applicable_fixtures_passed: bool
     side_effects: Literal[False] = False
 
 

@@ -41,9 +41,42 @@ def test_validator_includes_siem_event_store_and_event_shipper() -> None:
     assert '"backend_relay_path"' in source
     assert "http://127.0.0.1:18000/health" in source
     assert "SELECT COUNT(*) FROM security_events" in source
-    assert "schema_version == 14" in source
+    assert "RELEASE_TARGET_SCHEMA = 17" in source
+    assert "PRAGMA foreign_key_check" in source
+    assert "socket.create_connection" in source
+    assert '"DEFERRED_BY_USER"' in source
     assert "seq 1 12" in source
     assert source.index('"sensitive_path_loopback"') < source.index('"gobuster_loopback"')
+
+
+def test_validator_reports_schema_compatibility_without_hiding_integrity() -> None:
+    validator = _load_validator()
+
+    current, current_status = validator.assess_database(
+        integrity="ok", foreign_key_errors=0, schema_version=17
+    )
+    older, older_status = validator.assess_database(
+        integrity="ok", foreign_key_errors=0, schema_version=15
+    )
+    corrupt, corrupt_status = validator.assess_database(
+        integrity="ok", foreign_key_errors=1, schema_version=17
+    )
+    prepared, prepared_status = validator.assess_database(
+        integrity="ok", foreign_key_errors=0, schema_version=18
+    )
+
+    assert current is True
+    assert current_status["runtime_compatibility"] == "TARGET"
+    assert current_status["target_ready"] is True
+    assert older is False
+    assert older_status["integrity"] == "PASS"
+    assert older_status["runtime_compatibility"] == "SUPPORTED_OLDER"
+    assert older_status["target_ready"] is False
+    assert corrupt is False
+    assert corrupt_status["integrity"] == "FAIL"
+    assert prepared is False
+    assert prepared_status["runtime_compatibility"] == "PREPARED_NEWER_NOT_RELEASE_TARGET"
+    assert prepared_status["target_ready"] is False
 
 
 def test_active_validator_honors_wazuh_correlation_cooldown(tmp_path: Path) -> None:
