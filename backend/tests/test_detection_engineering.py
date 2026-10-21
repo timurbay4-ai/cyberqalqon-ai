@@ -8,6 +8,7 @@ from fastapi.testclient import TestClient
 
 from app.schemas.auth import AnalystCreate, AnalystRole
 from tests.conftest import TEST_ORIGIN, TEST_PASSWORD
+from tests.test_security_events import endpoint_fixture, windows_archive_event
 
 
 def _login(client: TestClient, username: str) -> None:
@@ -176,6 +177,53 @@ def test_draft_lifecycle_is_versioned_audited_and_side_effect_free(
         "DETECTION_DRAFT_ROLLED_BACK",
     } <= actions
 
+
+def test_endpoint_context_draft_uses_m10_fields_in_bounded_dry_run(client: TestClient) -> None:
+    raw = windows_archive_event()
+    raw["data"] = endpoint_fixture("windows-eventchannel", "security-4688.json")
+    raw["timestamp"] = datetime.now(timezone.utc).isoformat()
+    ingested = client.post(
+        "/api/v1/events/ingest",
+        headers={"X-API-Key": "test-ingest-key"},
+        json=raw,
+    )
+    assert ingested.status_code == 201, ingested.text
+
+    payload = {
+        "name": "PowerShell process candidate",
+        "description": "Review normalized PowerShell parent and command-line evidence.",
+        "severity": 8,
+        "source_type": "windows_event",
+        "mitre_ids": ["T1059.001"],
+        "conditions": [
+            {"field": "operating_system", "operator": "EQUALS", "value": "windows"},
+            {
+                "field": "event_provider",
+                "operator": "EQUALS",
+                "value": "Microsoft-Windows-Security-Auditing",
+            },
+            {"field": "event_code", "operator": "EQUALS", "value": "4688"},
+            {"field": "command_line", "operator": "CONTAINS", "value": "whoami.exe"},
+            {"field": "parent_process_path", "operator": "CONTAINS", "value": "powershell.exe"},
+        ],
+        "documentation": "Preview only; no alert or live Wazuh change is performed.",
+        "change_summary": "Exercise M10 endpoint fields",
+    }
+    created = client.post("/api/v1/detection-engineering/drafts", json=payload)
+    assert created.status_code == 201, created.text
+    draft_id = created.json()["draft_id"]
+    validated = client.post(
+        f"/api/v1/detection-engineering/drafts/{draft_id}/validate",
+        json={"expected_version": 1},
+    )
+    assert validated.status_code == 200, validated.text
+    result = client.post(
+        f"/api/v1/detection-engineering/drafts/{draft_id}/dry-run",
+        json={"relative_minutes": 1440, "expected_version": 2, "max_events": 1000},
+    )
+    assert result.status_code == 200, result.text
+    assert result.json()["match_count"] == 1
+    assert result.json()["side_effects"] is False
 
 def test_hunts_are_bounded_exported_and_isolated_by_analyst(client: TestClient) -> None:
     now = datetime.now(timezone.utc)

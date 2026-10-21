@@ -5,7 +5,7 @@ import { DashboardPage } from "./dashboard-page";
 import { HostsPage } from "./hosts-page";
 import { ReportsPage } from "./reports-page";
 import { RulesPage } from "./rules-page";
-import { SAMPLE_HOSTS, SAMPLE_REPORT, SAMPLE_RULES, SECURITY_OVERVIEW, createMockApi } from "../test/fixtures";
+import { SAMPLE_AGENT, SAMPLE_REPORT, SAMPLE_RULES, SECURITY_OVERVIEW, WAZUH_INTEGRATION_STATUS, createMockApi } from "../test/fixtures";
 
 afterEach(() => vi.restoreAllMocks());
 
@@ -38,13 +38,13 @@ describe("SIEM experience pages", () => {
     expect(screen.getByText("No matching rules")).toBeInTheDocument();
   });
 
-  it("distinguishes source activity from unknown agent connectivity", async () => {
+  it("distinguishes authoritative connectivity from telemetry freshness", async () => {
     render(<HostsPage api={createMockApi()} />);
-    expect(await screen.findByText(/Agent state remains UNKNOWN/)).toBeInTheDocument();
-    fireEvent.click(screen.getByRole("button", { name: new RegExp(SAMPLE_HOSTS[0].hostname) }));
-    const detail = await screen.findByRole("complementary", { name: "Host detail" });
-    expect(within(detail).getByText("AGENT UNKNOWN")).toBeInTheDocument();
-    expect(within(detail).getByText(/does not provide an authoritative host IP/)).toBeInTheDocument();
+    expect(await screen.findByText(/Authoritative Wazuh connectivity/)).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: new RegExp(SAMPLE_AGENT.name) }));
+    const detail = await screen.findByRole("complementary", { name: "Agent detail" });
+    expect(within(detail).getAllByText("ONLINE").length).toBeGreaterThan(0);
+    expect(within(detail).getByText(/read-only/)).toBeInTheDocument();
   });
 
   it("downloads JSON through the authenticated API and reports export errors", async () => {
@@ -67,12 +67,12 @@ describe("SIEM experience pages", () => {
 
   it("renders truthful empty rule, host, and report states", async () => {
     const emptyReport = { ...SAMPLE_REPORT, total_events: 0, total_alerts: 0, total_incidents: 0, event_sources: [], alert_severities: [], top_rules: [], host_activity: [] };
-    const emptyApi = createMockApi({ listRules: vi.fn().mockResolvedValue([]), listHosts: vi.fn().mockResolvedValue([]), listSources: vi.fn().mockResolvedValue([]), getSecurityActivityReport: vi.fn().mockResolvedValue(emptyReport) });
+    const emptyApi = createMockApi({ listRules: vi.fn().mockResolvedValue([]), listAgents: vi.fn().mockResolvedValue({ items: [], page: { limit: 25, offset: 0, total: 0 }, authoritative_inventory: false, partial: true, observation_timestamp: "2026-10-09T16:49:55Z", cache_age_seconds: 5, message: "Wazuh API unavailable; observed sources are shown with UNKNOWN connection state." }), getWazuhIntegrationStatus: vi.fn().mockResolvedValue({ ...WAZUH_INTEGRATION_STATUS, state: "UNAVAILABLE", configured: false, reason: "Read-only Wazuh API credentials are not configured.", agent_count: null }), listSources: vi.fn().mockResolvedValue([]), getSecurityActivityReport: vi.fn().mockResolvedValue(emptyReport) });
     const { unmount } = render(<RulesPage api={emptyApi} />);
     expect(await screen.findByText("No matching rules")).toBeInTheDocument();
     unmount();
     render(<HostsPage api={emptyApi} />);
-    expect(await screen.findByText("No host-attributed security events have been ingested.")).toBeInTheDocument();
+    expect(await screen.findByText(/No agent matches the selected filters/)).toBeInTheDocument();
     unmount();
     render(<ReportsPage api={emptyApi} />);
     expect(await screen.findByText(/completed successfully but no matching activity/)).toBeInTheDocument();

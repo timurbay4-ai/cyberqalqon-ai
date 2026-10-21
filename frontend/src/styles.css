@@ -632,12 +632,42 @@ kbd { display: inline-block; min-width: 25px; padding: 3px 6px; border: 1px soli
 .case-report-record code { color: #8ea8c2; }
 .empty-inline { margin: 0; color: var(--muted); font-size: .68rem; }
 
+.investigation-workbench { display: grid; gap: 1rem; min-width: 0; }
+.investigation-header { position: sticky; top: 0; z-index: 8; padding: .75rem 0; background: linear-gradient(180deg, var(--background) 82%, transparent); }
+.investigation-section { display: grid; gap: .8rem; min-width: 0; }
+.investigation-section h2, .investigation-section h3 { margin: 0; }
+.investigation-section h3 { color: #c9d8e8; font-size: .76rem; }
+.investigation-section ul { margin: 0; padding-left: 1.25rem; color: #b9c9d9; }
+.investigation-grid { display: grid; grid-template-columns: minmax(0, 1.35fr) minmax(18rem, .65fr); gap: 1rem; align-items: start; }
+.entity-list { display: grid; gap: .55rem; }
+.entity-pivot { display: grid; gap: .2rem; width: 100%; padding: .7rem; border: 1px solid var(--line); border-radius: .65rem; color: var(--text); background: var(--surface-soft); text-align: left; cursor: pointer; }
+.entity-pivot:hover:not(:disabled), .entity-pivot:focus-visible { border-color: var(--teal); background: rgba(63,214,200,.045); }
+.entity-pivot:disabled { cursor: not-allowed; opacity: .58; }
+.entity-pivot span, .entity-pivot small { color: var(--muted); font-size: .6rem; }
+.wrap-anywhere { overflow-wrap: anywhere; word-break: break-word; }
+.filter-chip-row { display: flex; flex-wrap: wrap; gap: .35rem; }
+.filter-chip { display: inline-flex; padding: .25rem .45rem; border: 1px solid var(--line); border-radius: 999px; color: #9dcce6; background: rgba(98,169,255,.04); font-size: .57rem; }
+.filter-chip--warning { color: #f4c06c; border-color: rgba(255,187,82,.4); }
+.investigation-timeline { display: grid; gap: .6rem; }
+.timeline-card { border-left: 2px solid var(--teal); border-radius: .5rem; background: rgba(63,214,200,.025); }
+.timeline-card__toggle { display: grid; grid-template-columns: max-content minmax(0, 1fr) max-content; gap: .65rem; align-items: center; width: 100%; padding: .7rem; border: 0; color: var(--text); background: transparent; text-align: left; cursor: pointer; }
+.timeline-card__toggle:focus-visible { outline: 2px solid var(--teal); outline-offset: 2px; }
+.timeline-card__body { display: grid; gap: .55rem; padding: 0 .7rem .7rem; }
+.compact-json { max-height: 15rem; overflow: auto; padding: .65rem; border: 1px solid var(--line-soft); border-radius: .45rem; white-space: pre-wrap; overflow-wrap: anywhere; background: #07111c; font-size: .62rem; }
+.investigation-skeleton { min-height: 12rem; align-content: center; }
+.investigation-action-form { display: grid; grid-template-columns: minmax(16rem, 1fr) auto; gap: .65rem; align-items: end; padding: .7rem; border: 1px solid var(--line-soft); border-radius: .65rem; background: rgba(255,255,255,.012); }
+.investigation-action-form label { display: grid; gap: .35rem; color: var(--muted); font-size: .64rem; }
+.investigation-action-form input, .investigation-action-form textarea { width: 100%; min-height: 38px; padding: .5rem .65rem; border: 1px solid var(--line); border-radius: .45rem; outline: 0; color: var(--text); background: #081421; font: inherit; text-transform: none; }
+.investigation-action-form textarea { min-height: 76px; resize: vertical; }
+.investigation-action-form input:focus-visible, .investigation-action-form textarea:focus-visible { border-color: var(--teal); box-shadow: 0 0 0 2px rgba(63,214,200,.12); }
+
 @media (max-width: 1100px) {
   .hunt-filters { grid-template-columns: repeat(2, minmax(10rem, 1fr)); }
   .detection-draft-layout { grid-template-columns: 1fr; }
   .case-metrics { grid-template-columns: repeat(3, minmax(0, 1fr)); }
   .case-filters { grid-template-columns: repeat(3, minmax(10rem, 1fr)); }
   .case-filter-search { grid-column: span 2; }
+  .investigation-grid { grid-template-columns: 1fr; }
 }
 
 @media (max-width: 700px) {
@@ -648,6 +678,8 @@ kbd { display: inline-block; min-width: 25px; padding: 3px 6px; border: 1px soli
   .case-filter-search, .case-form-grid__wide { grid-column: 1; }
   .case-timeline li { grid-template-columns: 1fr; }
   .case-detail { width: min(100%, calc(100vw - 36px)); }
+  .timeline-card__toggle, .investigation-action-form { grid-template-columns: 1fr; }
+  .investigation-header { position: static; }
 }
 
 @media (prefers-reduced-motion: reduce) {

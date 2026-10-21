@@ -2,7 +2,8 @@
 
 **Privacy-first SOC investigation platform designed around open-source security tooling.**
 
-> v0.8 release candidate — Deterministic SOC workflow; optional local advisory AI remains disabled by default | Built in Uzbekistan
+> v1.0 development line from the v0.9.1 baseline — deterministic SOC workflow; optional local
+> advisory AI remains disabled | Built in Uzbekistan
 
 ---
 
@@ -92,11 +93,11 @@ See [`docs/GIT_WORKFLOW.md`](docs/GIT_WORKFLOW.md) for the full branching strate
 | Shared JSON schemas           | `normalized_alert.schema.json`, `ai_analysis.schema.json` |
 | Example fixtures              | Alert example, 3 synthetic incidents                 |
 | Backend health service        | `GET /health` → `{"status": "ok", "service": "cyberqalqon-backend"}` |
-| Production readiness          | DB/migration-aware `GET /readiness` without sensitive diagnostics |
+| Readiness endpoint            | DB/migration-aware `GET /readiness` without sensitive diagnostics |
 | Wazuh alert ingestion         | Authenticated raw JSON ingestion with deterministic normalization |
 | Reliable Wazuh delivery       | Enqueue-first sender, bounded SQLite retry spool, dead letters, CLI, and systemd/Wazuh entrypoints |
 | SQLite persistence            | Raw + normalized retention and idempotent duplicate handling |
-| SIEM event store              | Bounded Wazuh archive ingestion, schema v14, redaction, dedupe, hard-cap retention, indexes, FTS5, and saved searches |
+| SIEM event store              | Bounded Wazuh archive ingestion, schema-17 live compatibility, endpoint context, redaction, dedupe, hard-cap retention, indexes, FTS5, and saved searches; schema 18 remains approval-gated |
 | SIEM investigation workspace  | Overview, Discover, hunting, linked evidence, hosts/sources, detection engineering, IOC intelligence, reports, and Administration |
 | Detection engineering        | Consolidated Wazuh/M9 inventory, truthful MITRE coverage, local drafts, bounded dry-run, versions, audit, and deterministic quality analytics |
 | Versioned migrations          | Transactional upgrades with legacy-row preservation and drift checks |
@@ -106,14 +107,36 @@ See [`docs/GIT_WORKFLOW.md`](docs/GIT_WORKFLOW.md) for the full branching strate
 | Incident correlation engine   | Deterministic scoped rules, atomic auto-linking, explainable metadata, and timeline UI |
 | SOC frontend                  | Live dashboard, alert/incident investigation, durable case workflow, evidence, playbooks, and reporting |
 | Analyst security boundary     | Argon2id accounts, server sessions, CSRF, roles, verified audit actors |
-| Local AI analyst              | Ollama provider, bounded server context, structured validation, provenance, history, and safe UI |
-| Production deployment         | Non-root images, HTTPS reverse proxy, same-origin UI/API, private services, persistent volumes |
+| Local AI analyst              | Ollama provider, bounded server context, structured validation, provenance, history, and safe UI; disabled by default and in the current lab |
+| Deployment foundation         | Non-root images, HTTPS reverse proxy, same-origin UI/API, private services, persistent volumes; external acceptance gates remain |
 | Backup and recovery           | Online verified SQLite backup, deliberate restore, safety copy, session invalidation |
 | Backend test suite            | Ingestion, contracts, migrations, reads, validation, and security boundaries |
 | Git workflow documentation    | Branch strategy, commit conventions, PR process      |
 | Team responsibilities map     | Directory ownership clearly defined                  |
 | Security baseline             | `.gitignore`, `.env.example`, no secrets committed   |
 | Contributing guide            | Branch, commit, review, ownership rules              |
+
+### Current operational acceptance
+
+This repository is an engineering snapshot, not a claim of full production readiness. The
+implemented M1–M24 source and disposable-test evidence must be interpreted with these live gates:
+
+- Historical archive continuity remains `UNPROVEN`; the legacy inode/rotated-generation mismatch
+  is unresolved. Preserved unread data requires a separately approved reconciliation procedure.
+- DET-001–DET-009 remain `DISABLED_BY_POLICY` / `SHADOW_ONLY`, `AI_ENABLED=false`, and historical
+  replay is not active.
+- The live database remains schema 17. Schema 18 is implemented as an approval-gated migration but
+  has not been applied live.
+- Production batch ingestion is disabled; the approved path remains conservative single-event
+  ingestion.
+- M23 Operations live cold-query acceptance did not pass. M24 performance improvements pass
+  disposable tests but have not been deployed or verified in the live runtime.
+- Forward-ingestion approval and the current source generation/checkpoint must be revalidated
+  before any activation or renewal; an expired approval must never be bypassed.
+- Chrome/Edge browser UAT is `DEFERRED_BY_USER` and is not implied by component or build results.
+
+See [`docs/siem/KNOWN_LIMITATIONS.md`](docs/siem/KNOWN_LIMITATIONS.md) and
+[`docs/siem/M24_VALIDATION.md`](docs/siem/M24_VALIDATION.md) for detailed evidence and constraints.
 
 ### 📋 PLANNED
 
@@ -237,6 +260,11 @@ git checkout dev/cyberqalqon
 ---
 
 ## Roadmap
+
+The active v1.0 milestone plan and evidence checklist are:
+
+- [`docs/roadmap/CYBERQALQON_V1_DEVELOPMENT_PLAN.md`](docs/roadmap/CYBERQALQON_V1_DEVELOPMENT_PLAN.md)
+- [`docs/roadmap/CYBERQALQON_V1_CHECKLIST.md`](docs/roadmap/CYBERQALQON_V1_CHECKLIST.md)
 
 | Phase | Milestone                                      | Target          |
 |-------|------------------------------------------------|-----------------|

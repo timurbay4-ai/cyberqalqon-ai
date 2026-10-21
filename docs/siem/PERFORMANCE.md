@@ -144,3 +144,95 @@ bounded to 200 indicators, 5,000 events, 12 structured levels, 200 object keys, 
 elements. Dry-run evaluated the newest 1,000 events, matched 17 existing `100111` events, and
 measured 44.411 ms. Alerts, incidents, and notifications remained 40, three, and zero before and
 after. These local observations are not production capacity or concurrent-load guarantees.
+
+## M12 investigation projection (2026-10-12)
+
+`scripts/benchmark_m12.py` uses a temporary database only. It applied schema 17, inserted 10,000
+synthetic normalized events, ran a bounded event investigation 30 times, exercised eight reads
+through four threads, and deleted the database on exit. The projection cap was 50 related events,
+150 timeline items, and 5,000 ms.
+
+| Measurement | Result |
+|---|---:|
+| Sequential median | 91.503 ms |
+| Sequential p95 | 116.199 ms |
+| Sequential maximum | 168.711 ms |
+| Python tracked peak allocation | 777,726 bytes |
+| Four-worker / eight-read wall time | 489.263 ms |
+| Slowest concurrent read | 276.715 ms |
+
+Every relationship query has an explicit cap; the combined result is deduplicated by immutable
+event ID. SQLite uses `query_only`, a deadline progress handler, and a per-request connection that
+is explicitly closed. Schema 17 adds only compound process-name/time and process-ID/time indexes.
+`EXPLAIN QUERY PLAN` in the M12 tests confirms the process-name query selects its compound index.
+Entity, incident, case, and existing-correlation lookups reuse existing normalized columns and
+ownership indexes. No background poller, cache, model, or new service was introduced.
+
+The numbers are local synthetic observations, not an SLA or production-capacity claim. The live
+schema-15 database was not benchmarked through M12 because development was not authorized to
+migrate it and the runtime listeners were unavailable during passive validation.
+
+## M14 readiness benchmark (2026-10-13)
+
+`scripts/benchmark_m14.py` used an automatically removed schema-18 SQLite
+database with 10,000 synthetic events. Evaluation was capped at 5,000 events and
+no production output record was created. Median/max wall times were 97.066/144.387
+ms for one rule, 184.370/190.718 ms for all nine, 1,172.272/1,220.703 ms for a
+shadow run, 314.327/355.310 ms for tuning, 259.600/309.637 ms for lifecycle
+inventory, and 20.277/41.510 ms for the bounded SQLite input query.
+
+Initial state persistence took 657.560 ms; restart replay took 518.742 ms and
+deduplicated all 5,000 events. Four workers completed 12 inventory reads in
+5,615.602 ms. Shadow evaluation's Python-tracked peak allocation was 16,686,096
+bytes. The database grew from 34,447,360 to 42,065,920 bytes after persisted
+shadow/replay runs. `quick_check=ok`, FK errors were zero, and alert/incident/case
+counts remained zero. These are local synthetic observations, not an SLA.
+
+## M15 reliability and quality benchmark (2026-10-13)
+
+The M15 run repeated the disposable 10,000-event schema-18 benchmark after the
+quality and observability changes. Evaluation remained capped at 5,000 events.
+
+| Operation | Runs | p50 | p95 | Maximum |
+|---|---:|---:|---:|---:|
+| Single advanced rule | 10 | 214.844 ms | 273.601 ms | 273.601 ms |
+| Nine advanced rules | 5 | 390.494 ms | 402.478 ms | 402.478 ms |
+| Isolated shadow run | 3 | 2,291.411 ms | 2,352.177 ms | 2,352.177 ms |
+| Tuning comparison | 5 | 628.242 ms | 653.069 ms | 653.069 ms |
+| Lifecycle inventory | 20 | 377.745 ms | 420.481 ms | 420.481 ms |
+| Bounded SQLite query | 20 | 38.033 ms | 71.970 ms | 71.970 ms |
+
+State persistence/recovery took 1,313.074/783.558 ms and the replay recognized
+all 5,000 events as duplicates. Peak Python-tracked shadow allocation was
+16,665,712 bytes. The database grew from 34,447,360 to 42,024,960 bytes and
+retained zero alerts, incidents and cases. A separate disposable insertion of
+10,000 events completed at 2,522.3 events/s and passed FK/quick checks.
+
+The 81-fixture golden catalog completed individual evaluations with per-rule
+p95 values from 0.4898 to 1.2341 ms. This measures tiny deterministic fixtures,
+not live throughput. Live backlog drain rate is unknown while the relay is
+blocked. The host had only 0.94 GiB free RAM; 50k, 100k and 250k runs were not
+attempted under the resource guard. None of these figures is an SLA or production
+capacity claim.
+
+Twenty authenticated TestClient reads against a disposable empty schema-18
+database measured Operations overview at 8.017/16.659/17.367 ms, the nine-rule
+quality catalog at 45.639/55.269/56.400 ms, and one quality detail at
+8.329/16.998/17.566 ms (p50/p95/max). This isolates API/serialization overhead
+from live-dataset cost and must not be interpreted as the latency of the live
+1.49 GB database.
+
+## M16 retention and capacity benchmark (2026-10-14)
+
+The isolated schema-17 M16 benchmark passed `quick_check` and foreign-key checks
+at 50k, 100k, 150k and 250k events. Database sizes were 178,409,472;
+365,088,768; 551,047,168; and 927,862,784 bytes. Event-query p95 stayed between
+9.674 and 14.337 ms, while workbench p95 ranged from 206.956 to 348.143 ms and
+IOC p95 from 656.324 to 811.347 ms.
+
+Retention returned to the exact configured cap at every checkpoint, but elapsed
+time rose from 505.349 ms at 50k to 978.488 ms at 100k, 1,379.086 ms at 150k,
+and 39,505.217 ms at 250k. The 500k run was skipped under the host memory guard.
+The live 100k-row database is substantially larger than the synthetic 100k file,
+so the approved 100k setting remains the conservative operating target. See
+`M16_CAPACITY_BENCHMARK.md` for methodology and limitations.

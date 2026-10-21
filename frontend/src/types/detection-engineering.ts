@@ -3,6 +3,14 @@ export type RuleConditionField =
     | "hostname"
     | "agent_id"
     | "agent_name"
+    | "operating_system"
+    | "event_provider"
+    | "event_channel"
+    | "process_name"
+    | "process_path"
+    | "command_line"
+    | "parent_process_name"
+    | "parent_process_path"
     | "source_ip"
     | "destination_ip"
     | "username"
@@ -84,6 +92,176 @@ export interface RuleDryRunResult {
     matched_event_ids: string[];
     execution_ms: number;
     result_ids_truncated: boolean;
+    side_effects: false;
+}
+
+export type AdvancedAvailabilityStatus =
+    | "RECENTLY_OBSERVED"
+    | "OBSERVED_STALE"
+    | "PREREQUISITE_MISSING"
+    | "NO_DATA"
+    | "UNKNOWN";
+
+export interface AdvancedDetectionPrerequisite {
+    source_types: string[];
+    event_codes: string[];
+    event_categories: string[];
+    required_fields: string[];
+    parser_supported: boolean;
+    configuration_status: "CONFIGURED" | "NOT_CONFIGURED" | "UNKNOWN";
+    configuration_evidence: string;
+}
+
+export interface AdvancedDetectionAvailability {
+    parser_supported: boolean;
+    data_observed: boolean;
+    recently_observed: boolean;
+    configuration_status: "CONFIGURED" | "NOT_CONFIGURED" | "UNKNOWN";
+    status: AdvancedAvailabilityStatus;
+    observed_event_count: number;
+    latest_event_at: string | null;
+    missing_required_fields: string[];
+    explanation: string;
+}
+
+export interface AdvancedMitreMapping {
+    technique_id: string;
+    technique_name: string;
+    tactic: string;
+    relationship: string;
+}
+
+export interface AdvancedDetectionRule {
+    rule_id: string;
+    name: string;
+    description: string;
+    enabled: false;
+    activation_state: "DISABLED_BY_POLICY";
+    severity: number;
+    prerequisites: AdvancedDetectionPrerequisite;
+    conditions: string[];
+    grouping_fields: string[];
+    window_seconds: number;
+    threshold: number;
+    deduplication: string;
+    mitre_ids: string[];
+    mitre_mappings: AdvancedMitreMapping[];
+    false_positive_notes: string[];
+    evidence_fields: string[];
+    analyst_guidance: string[];
+    version: string;
+    validation_status: "VALIDATED_FOR_DRY_RUN";
+    validation_notes: string[];
+    availability: AdvancedDetectionAvailability | null;
+}
+
+export interface AdvancedRuleDryRunRequest {
+    relative_minutes?: 15 | 60 | 1440 | 10080 | 43200;
+    start_time?: string;
+    end_time?: string;
+    max_events: number;
+    max_findings: number;
+    max_execution_ms?: number;
+}
+
+export interface AdvancedDetectionEvidence {
+    event_id: string;
+    timestamp: string;
+    summary: string;
+}
+
+export interface AdvancedDetectionFinding {
+    finding_id: string;
+    rule_id: string;
+    severity: number;
+    first_event_at: string;
+    last_event_at: string;
+    group: Record<string, string>;
+    matched_event_count: number;
+    threshold: number;
+    event_ids: string[];
+    explanation: string;
+    evidence: AdvancedDetectionEvidence[];
+    deduplication_key: string;
+    mitre_ids: string[];
+}
+
+export interface AdvancedRuleDryRunResult {
+    rule: AdvancedDetectionRule;
+    availability: AdvancedDetectionAvailability;
+    start_time: string;
+    end_time: string;
+    evaluated_event_count: number;
+    finding_count: number;
+    findings: AdvancedDetectionFinding[];
+    execution_ms: number;
+    execution_budget_ms: number;
+    result_truncated: boolean;
+    deterministic_ordering: true;
+    side_effects: false;
+}
+
+export interface GoldenFixtureResult {
+    scenario:
+        | "positive"
+        | "negative"
+        | "boundary"
+        | "duplicate"
+        | "out_of_order"
+        | "missing_field"
+        | "cross_host"
+        | "cross_account"
+        | "false_positive_candidate";
+    synthetic_test_data: true;
+    applicable: boolean;
+    ground_truth: "POSITIVE" | "NEGATIVE" | "UNLABELED";
+    expected_finding_count: number;
+    actual_finding_count: number;
+    expected_evidence_ids: string[];
+    actual_evidence_ids: string[];
+    evaluator_duplicate_count: number;
+    evaluation_ms: number;
+    passed: boolean;
+    expected_explanation: string;
+    grouping_behavior: string;
+    deduplication_behavior: string;
+}
+
+export interface DetectionQualityMetrics {
+    labeled_fixture_count: number;
+    unlabeled_fixture_count: number;
+    true_positives: number;
+    false_positives: number;
+    true_negatives: number;
+    false_negatives: number;
+    precision: number | null;
+    recall: number | null;
+    false_positive_rate: number | null;
+    duplicate_input_count: number;
+    duplicate_finding_rate: number;
+    missing_field_fixture_passed: boolean;
+    event_order_consistent: boolean;
+    repeat_evaluation_consistent: boolean;
+    evidence_latency_p50_ms: number;
+    evidence_latency_p95_ms: number;
+    evidence_latency_max_ms: number;
+    evaluation_time_p50_ms: number;
+    evaluation_time_p95_ms: number;
+    evaluation_time_max_ms: number;
+}
+
+export interface DetectionQualityReport {
+    rule_id: string;
+    dataset_version: "m15-golden-v1";
+    dataset_label: "SYNTHETIC TEST DATA";
+    ground_truth_scope: "LABELED_SYNTHETIC_FIXTURES_ONLY";
+    live_ground_truth_available: false;
+    enabled: false;
+    runtime_activation_state: "DISABLED_BY_POLICY";
+    deployment_eligibility: "SHADOW_ONLY";
+    fixtures: GoldenFixtureResult[];
+    metrics: DetectionQualityMetrics;
+    all_applicable_fixtures_passed: boolean;
     side_effects: false;
 }
 

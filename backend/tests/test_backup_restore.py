@@ -117,7 +117,7 @@ def test_fresh_database_backup_has_verified_non_secret_metadata(tmp_path: Path) 
     assert verify_backup(artifact.database_path, artifact.metadata_path).schema_version == len(MIGRATIONS)
     metadata = artifact.metadata_path.read_text(encoding="utf-8")
     assert '"integrity_check": "ok"' in metadata
-    assert '"application_version": "0.8.1"' in metadata
+    assert '"application_version": "0.9.0"' in metadata
     assert str(source) not in metadata
     assert "password" not in metadata.lower()
     assert "api_key" not in metadata.lower()

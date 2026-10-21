@@ -3,13 +3,16 @@ from __future__ import annotations
 import importlib.util
 import json
 from pathlib import Path
+import sys
 import xml.etree.ElementTree as ET
 
 import pytest
 
 
 ROOT = Path(__file__).resolve().parents[2]
+sys.path.insert(0, str(ROOT / "backend"))
 RELAY_PATH = ROOT / "scripts" / "windows_wazuh_loopback_relay.py"
+DIAGNOSTIC_PATH = ROOT / "scripts" / "diagnose_windows_wazuh.py"
 
 
 def _relay_module():
@@ -45,18 +48,20 @@ def test_windows_eventchannel_configuration_is_narrow_and_well_formed() -> None:
         "Microsoft-Windows-PowerShell/Operational",
         "Microsoft-Windows-Windows Defender/Operational",
     }
-    for event_id in ("4624", "4625", "4720", "4726", "4732", "1102"):
+    for event_id in ("4624", "4625", "4634", "4648", "4672", "4688", "4720", "4726", "4732", "1102"):
         assert f"EventID={event_id}" in definitions["Security"]
     assert "EventID=7045" in definitions["System"]
-    assert definitions["Microsoft-Windows-PowerShell/Operational"] == "Event/System[EventID=4104]"
-    assert "EventID=1116" in definitions["Microsoft-Windows-Windows Defender/Operational"]
-    assert "EventID=1117" in definitions["Microsoft-Windows-Windows Defender/Operational"]
+    for event_id in ("4103", "4104"):
+        assert f"EventID={event_id}" in definitions["Microsoft-Windows-PowerShell/Operational"]
+    for event_id in ("1116", "1117", "1118", "1119", "5000", "5001", "5004", "5007"):
+        assert f"EventID={event_id}" in definitions["Microsoft-Windows-Windows Defender/Operational"]
 
 
 def test_windows_synthetic_fixtures_have_expected_provider_and_channel() -> None:
     expected = {
         "security-4625.json": ("Microsoft-Windows-Security-Auditing", "Security", "4625"),
         "security-4720.json": ("Microsoft-Windows-Security-Auditing", "Security", "4720"),
+        "security-4688.json": ("Microsoft-Windows-Security-Auditing", "Security", "4688"),
         "system-7045.json": ("Service Control Manager", "System", "7045"),
         "powershell-4104.json": (
             "Microsoft-Windows-PowerShell", "Microsoft-Windows-PowerShell/Operational", "4104"
@@ -79,3 +84,45 @@ def test_windows_installer_refuses_non_admin_and_public_manager() -> None:
     assert "loopback or RFC1918" in source
     assert "Restart-Service -Name WazuhSvc" in source
     assert "agent-auth.exe" in source
+
+
+@pytest.mark.parametrize(
+    ("values", "expected"),
+    [
+        ({"service_running": False}, "SERVICE_STOPPED"),
+        ({"authentication_failed": True}, "AUTHENTICATION_FAILED"),
+        ({"server_confirmed_connection": True}, "CONNECTED"),
+        (
+            {"enrollment_key_present": False, "enrollment_port_reachable": False},
+            "ENROLLMENT_PORT_UNAVAILABLE",
+        ),
+        ({"enrollment_key_present": False}, "ENROLLMENT_REQUIRED"),
+        ({"manager_reachable": False}, "MANAGER_UNREACHABLE"),
+        ({}, "STATUS_UNKNOWN"),
+    ],
+)
+def test_windows_diagnostic_classification(values: dict[str, bool], expected: str) -> None:
+    from app.services.windows_agent_diagnostics import classify_windows_agent
+
+    defaults = {
+        "service_running": True,
+        "manager_reachable": True,
+        "enrollment_key_present": True,
+        "enrollment_enabled": True,
+        "enrollment_port_reachable": True,
+        "authentication_failed": False,
+        "server_confirmed_connection": False,
+    }
+    defaults.update(values)
+    assert classify_windows_agent(**defaults) == expected
+
+
+def test_windows_diagnostic_never_prints_keys_or_manager_address() -> None:
+    source = DIAGNOSTIC_PATH.read_text(encoding="utf-8")
+    service_source = (
+        ROOT / "backend" / "app" / "services" / "windows_agent_diagnostics.py"
+    ).read_text(encoding="utf-8")
+    assert "read_text" not in source
+    assert "client.keys" not in source
+    assert '"manager_address"' not in service_source
+    assert "shell=True" not in service_source

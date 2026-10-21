@@ -1,4 +1,4 @@
-import { useEffect, useState, type FormEvent } from "react";
+import { useLayoutEffect, useState, type FormEvent } from "react";
 
 import { ALLOWED_STATUS_TRANSITIONS, type IncidentDetail as IncidentDetailModel, type IncidentStatus } from "../types/incidents";
 import { formatTimestamp, humanize } from "../utils/format";
@@ -31,7 +31,9 @@ export function IncidentDetail({ incident, api, busy, error, success, canMutate,
   const [note, setNote] = useState("");
   const [assignedTo, setAssignedTo] = useState(incident.assigned_to ?? "");
 
-  useEffect(() => {
+  // Synchronize authoritative incident changes before the browser can accept input. A passive
+  // effect can race with a fast analyst action on first render and overwrite the typed assignee.
+  useLayoutEffect(() => {
     setNextStatus(ALLOWED_STATUS_TRANSITIONS[incident.status][0]);
     setAssignedTo(incident.assigned_to ?? "");
   }, [incident.assigned_to, incident.status]);

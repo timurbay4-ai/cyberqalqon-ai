@@ -69,9 +69,13 @@ import type {
     InvestigationWorkspace,
 } from "./investigations";
 import type {
+    AdvancedDetectionRule,
+    AdvancedRuleDryRunRequest,
+    AdvancedRuleDryRunResult,
     DeploymentConfirmationResult,
     DetectionAnalytics,
     DetectionCoverage,
+    DetectionQualityReport,
     IOCDefinition,
     IOCIndicator,
     IOCMatchSummary,
@@ -88,6 +92,13 @@ import type {
 } from "./detection-engineering";
 import type { OperationalOverview } from "./operations";
 import type {
+    AgentDetail,
+    AgentHealthResponse,
+    AgentListResponse,
+    AgentQuery,
+    WazuhIntegrationStatus,
+} from "./agents";
+import type {
     CaseAnalytics,
     CaseAssignmentUpdate,
     CaseCreate,
@@ -99,6 +110,18 @@ import type {
     PlaybookTemplate,
     SlaEvaluationResult,
 } from "./cases";
+import type { InvestigationWorkbench, WorkbenchTarget } from "./investigation-workbench";
+import type {
+    CanarySafetyStatus,
+    DetectionConfigurationDefinition,
+    DetectionConfigurationVersion,
+    DetectionDiagnostics,
+    DetectionRuleLifecycle,
+    DetectionTuningComparison,
+    ShadowRun,
+    ShadowRunDetail,
+    TelemetryPrerequisiteEvidence,
+} from "./detection-readiness";
 
 export interface PageMetadata {
     limit: number;
@@ -205,6 +228,10 @@ export interface BackendApi {
         eventId: string,
         signal?: AbortSignal,
     ): Promise<SecurityEventDetail>;
+    getInvestigationWorkbench(
+        target: WorkbenchTarget,
+        signal?: AbortSignal,
+    ): Promise<InvestigationWorkbench>;
     listSavedEventSearches(signal?: AbortSignal): Promise<SavedEventSearch[]>;
     saveEventSearch(
         payload: SavedEventSearchCreate,
@@ -226,9 +253,57 @@ export interface BackendApi {
     ): Promise<SecurityOverview>;
     listSources(signal?: AbortSignal): Promise<LogSourceSummary[]>;
     listHosts(signal?: AbortSignal): Promise<HostSummary[]>;
+    listAgents(query?: AgentQuery, signal?: AbortSignal): Promise<AgentListResponse>;
+    getAgent(agentKey: string, signal?: AbortSignal): Promise<AgentDetail>;
+    getAgentHealth(agentKey: string, signal?: AbortSignal): Promise<AgentHealthResponse>;
+    getWazuhIntegrationStatus(signal?: AbortSignal): Promise<WazuhIntegrationStatus>;
     getOperationalOverview(signal?: AbortSignal): Promise<OperationalOverview>;
     listRules(signal?: AbortSignal): Promise<DetectionRuleSummary[]>;
     getDetectionCoverage(signal?: AbortSignal): Promise<DetectionCoverage>;
+    listAdvancedDetectionRules(
+        days?: number,
+        signal?: AbortSignal,
+    ): Promise<AdvancedDetectionRule[]>;
+    dryRunAdvancedDetectionRule(
+        ruleId: string,
+        payload: AdvancedRuleDryRunRequest,
+        signal?: AbortSignal,
+    ): Promise<AdvancedRuleDryRunResult>;
+    getDetectionQuality(
+        ruleId: string,
+        signal?: AbortSignal,
+    ): Promise<DetectionQualityReport>;
+    listDetectionLifecycles(signal?: AbortSignal): Promise<DetectionRuleLifecycle[]>;
+    getDetectionLifecycle(
+        ruleId: string,
+        signal?: AbortSignal,
+    ): Promise<DetectionRuleLifecycle>;
+    listDetectionConfigurations(
+        ruleId: string,
+        signal?: AbortSignal,
+    ): Promise<DetectionConfigurationVersion[]>;
+    getDetectionTelemetry(
+        ruleId: string,
+        signal?: AbortSignal,
+    ): Promise<TelemetryPrerequisiteEvidence>;
+    getDetectionDiagnostics(
+        ruleId: string,
+        signal?: AbortSignal,
+    ): Promise<DetectionDiagnostics>;
+    listShadowRuns(ruleId: string, signal?: AbortSignal): Promise<ShadowRun[]>;
+    runShadowEvaluation(
+        ruleId: string,
+        signal?: AbortSignal,
+    ): Promise<ShadowRunDetail>;
+    compareDetectionTuning(
+        ruleId: string,
+        baseline: DetectionConfigurationDefinition,
+        signal?: AbortSignal,
+    ): Promise<DetectionTuningComparison>;
+    getCanarySafety(
+        ruleId: string,
+        signal?: AbortSignal,
+    ): Promise<CanarySafetyStatus>;
     getDetectionAnalytics(
         days?: number,
         signal?: AbortSignal,

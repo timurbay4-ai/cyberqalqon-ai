@@ -157,6 +157,7 @@ class Settings:
     app_env: str = "development"
     app_debug: bool = False
     database_url: str = DEFAULT_DATABASE_URL
+    allow_m14_schema_migration: bool = False
     cors_origins: tuple[str, ...] = DEFAULT_CORS_ORIGINS
     wazuh_ingest_api_key: str | None = None
     wazuh_api_url: str = "https://127.0.0.1:55000"
@@ -164,8 +165,23 @@ class Settings:
     wazuh_api_password: str | None = None
     wazuh_api_ca_bundle: str | None = None
     wazuh_api_timeout_seconds: float = 3.0
+    wazuh_api_max_response_bytes: int = 2_097_152
+    wazuh_api_page_size: int = 500
+    wazuh_api_max_pages: int = 20
+    wazuh_api_retry_attempts: int = 1
+    wazuh_inventory_cache_seconds: int = 60
+    agent_health_history_max_records: int = 10_000
+    operational_queue_warning_depth: int = 100
+    operational_queue_warning_bytes: int = 67_108_864
+    operational_oldest_pending_warning_seconds: int = 60
+    operational_shipper_lag_warning_bytes: int = 8_388_608
+    operational_source_stale_seconds: int = 900
     max_ingest_bytes: int = 1_048_576
     max_event_ingest_bytes: int = 262_144
+    event_batch_ingest_enabled: bool = False
+    event_batch_max_events: int = 100
+    event_batch_max_bytes: int = 2_097_152
+    event_batch_processing_timeout_seconds: float = 15.0
     security_event_retention_days: int = 30
     security_event_max_records: int = 100_000
     analyst_session_ttl_seconds: int = 28_800
@@ -208,8 +224,20 @@ class Settings:
             ("correlation_max_candidates", self.correlation_max_candidates),
             ("correlation_max_links", self.correlation_max_links),
             ("max_event_ingest_bytes", self.max_event_ingest_bytes),
+            ("event_batch_max_events", self.event_batch_max_events),
+            ("event_batch_max_bytes", self.event_batch_max_bytes),
             ("security_event_retention_days", self.security_event_retention_days),
             ("security_event_max_records", self.security_event_max_records),
+            ("wazuh_api_max_response_bytes", self.wazuh_api_max_response_bytes),
+            ("wazuh_api_page_size", self.wazuh_api_page_size),
+            ("wazuh_api_max_pages", self.wazuh_api_max_pages),
+            ("wazuh_inventory_cache_seconds", self.wazuh_inventory_cache_seconds),
+            ("agent_health_history_max_records", self.agent_health_history_max_records),
+            ("operational_queue_warning_depth", self.operational_queue_warning_depth),
+            ("operational_queue_warning_bytes", self.operational_queue_warning_bytes),
+            ("operational_oldest_pending_warning_seconds", self.operational_oldest_pending_warning_seconds),
+            ("operational_shipper_lag_warning_bytes", self.operational_shipper_lag_warning_bytes),
+            ("operational_source_stale_seconds", self.operational_source_stale_seconds),
             ("ai_max_context_bytes", self.ai_max_context_bytes),
             ("ai_max_alerts_per_request", self.ai_max_alerts_per_request),
             ("ai_max_notes_per_request", self.ai_max_notes_per_request),
@@ -226,6 +254,10 @@ class Settings:
             ("ollama_connect_timeout_seconds", self.ollama_connect_timeout_seconds),
             ("ollama_request_timeout_seconds", self.ollama_request_timeout_seconds),
             ("ai_health_cache_seconds", self.ai_health_cache_seconds),
+            (
+                "event_batch_processing_timeout_seconds",
+                self.event_batch_processing_timeout_seconds,
+            ),
         ):
             if value <= 0:
                 raise ValueError(f"{name} must be greater than zero")
@@ -233,6 +265,18 @@ class Settings:
             raise ValueError("ai_user_cooldown_seconds must be zero or greater")
         if self.correlation_retry_attempts < 0 or self.correlation_retry_attempts > 3:
             raise ValueError("correlation_retry_attempts must be between zero and three")
+        if self.wazuh_api_retry_attempts < 0 or self.wazuh_api_retry_attempts > 2:
+            raise ValueError("wazuh_api_retry_attempts must be between zero and two")
+        if self.wazuh_api_max_response_bytes > 16_777_216:
+            raise ValueError("wazuh_api_max_response_bytes must not exceed 16777216")
+        if self.wazuh_api_page_size > 500:
+            raise ValueError("wazuh_api_page_size must not exceed 500")
+        if self.wazuh_api_max_pages > 100:
+            raise ValueError("wazuh_api_max_pages must not exceed 100")
+        if self.wazuh_inventory_cache_seconds > 3600:
+            raise ValueError("wazuh_inventory_cache_seconds must not exceed 3600")
+        if self.agent_health_history_max_records > 1_000_000:
+            raise ValueError("agent_health_history_max_records must not exceed 1000000")
         if self.correlation_window_seconds > 86_400:
             raise ValueError("correlation_window_seconds must not exceed 86400")
         if not 3 <= self.correlation_max_candidates <= 5_000:
@@ -243,6 +287,18 @@ class Settings:
             raise ValueError("correlation_max_links must not exceed correlation_max_candidates")
         if self.max_event_ingest_bytes > 1_048_576:
             raise ValueError("max_event_ingest_bytes must not exceed 1048576")
+        if self.event_batch_max_events > 100:
+            raise ValueError("event_batch_max_events must not exceed 100")
+        if self.event_batch_max_bytes > 8_388_608:
+            raise ValueError("event_batch_max_bytes must not exceed 8388608")
+        if self.event_batch_max_bytes < self.max_event_ingest_bytes:
+            raise ValueError(
+                "event_batch_max_bytes must be at least max_event_ingest_bytes"
+            )
+        if self.event_batch_processing_timeout_seconds > 60:
+            raise ValueError(
+                "event_batch_processing_timeout_seconds must not exceed 60"
+            )
         if self.security_event_retention_days > 3650:
             raise ValueError("security_event_retention_days must not exceed 3650")
         if not 100 <= self.security_event_max_records <= 10_000_000:
@@ -292,6 +348,9 @@ class Settings:
             app_env=app_env,
             app_debug=_parse_bool(os.getenv("APP_DEBUG")),
             database_url=os.getenv("DATABASE_URL", DEFAULT_DATABASE_URL).strip(),
+            allow_m14_schema_migration=_parse_bool(
+                os.getenv("ALLOW_M14_SCHEMA_MIGRATION"), default=False
+            ),
             cors_origins=_parse_origins(os.getenv("CORS_ORIGINS")),
             wazuh_ingest_api_key=api_key,
             wazuh_api_url=os.getenv("WAZUH_API_URL", "https://127.0.0.1:55000").strip().rstrip("/"),
@@ -300,6 +359,57 @@ class Settings:
             wazuh_api_ca_bundle=os.getenv("WAZUH_API_CA_BUNDLE", "").strip() or None,
             wazuh_api_timeout_seconds=_parse_positive_float(
                 os.getenv("WAZUH_API_TIMEOUT_SECONDS"), default=3.0, name="WAZUH_API_TIMEOUT_SECONDS"
+            ),
+            wazuh_api_max_response_bytes=_parse_positive_int(
+                os.getenv("WAZUH_API_MAX_RESPONSE_BYTES"),
+                default=2_097_152,
+                name="WAZUH_API_MAX_RESPONSE_BYTES",
+            ),
+            wazuh_api_page_size=_parse_positive_int(
+                os.getenv("WAZUH_API_PAGE_SIZE"), default=500, name="WAZUH_API_PAGE_SIZE"
+            ),
+            wazuh_api_max_pages=_parse_positive_int(
+                os.getenv("WAZUH_API_MAX_PAGES"), default=20, name="WAZUH_API_MAX_PAGES"
+            ),
+            wazuh_api_retry_attempts=_parse_nonnegative_int(
+                os.getenv("WAZUH_API_RETRY_ATTEMPTS"),
+                default=1,
+                name="WAZUH_API_RETRY_ATTEMPTS",
+            ),
+            wazuh_inventory_cache_seconds=_parse_positive_int(
+                os.getenv("WAZUH_INVENTORY_CACHE_SECONDS"),
+                default=60,
+                name="WAZUH_INVENTORY_CACHE_SECONDS",
+            ),
+            agent_health_history_max_records=_parse_positive_int(
+                os.getenv("AGENT_HEALTH_HISTORY_MAX_RECORDS"),
+                default=10_000,
+                name="AGENT_HEALTH_HISTORY_MAX_RECORDS",
+            ),
+            operational_queue_warning_depth=_parse_positive_int(
+                os.getenv("OPERATIONAL_QUEUE_WARNING_DEPTH"),
+                default=100,
+                name="OPERATIONAL_QUEUE_WARNING_DEPTH",
+            ),
+            operational_queue_warning_bytes=_parse_positive_int(
+                os.getenv("OPERATIONAL_QUEUE_WARNING_BYTES"),
+                default=67_108_864,
+                name="OPERATIONAL_QUEUE_WARNING_BYTES",
+            ),
+            operational_oldest_pending_warning_seconds=_parse_positive_int(
+                os.getenv("OPERATIONAL_OLDEST_PENDING_WARNING_SECONDS"),
+                default=60,
+                name="OPERATIONAL_OLDEST_PENDING_WARNING_SECONDS",
+            ),
+            operational_shipper_lag_warning_bytes=_parse_positive_int(
+                os.getenv("OPERATIONAL_SHIPPER_LAG_WARNING_BYTES"),
+                default=8_388_608,
+                name="OPERATIONAL_SHIPPER_LAG_WARNING_BYTES",
+            ),
+            operational_source_stale_seconds=_parse_positive_int(
+                os.getenv("OPERATIONAL_SOURCE_STALE_SECONDS"),
+                default=900,
+                name="OPERATIONAL_SOURCE_STALE_SECONDS",
             ),
             max_ingest_bytes=_parse_positive_int(
                 os.getenv("MAX_INGEST_BYTES"),
@@ -310,6 +420,24 @@ class Settings:
                 os.getenv("MAX_EVENT_INGEST_BYTES"),
                 default=262_144,
                 name="MAX_EVENT_INGEST_BYTES",
+            ),
+            event_batch_ingest_enabled=_parse_bool(
+                os.getenv("EVENT_BATCH_INGEST_ENABLED"), default=False
+            ),
+            event_batch_max_events=_parse_positive_int(
+                os.getenv("EVENT_BATCH_MAX_EVENTS"),
+                default=100,
+                name="EVENT_BATCH_MAX_EVENTS",
+            ),
+            event_batch_max_bytes=_parse_positive_int(
+                os.getenv("EVENT_BATCH_MAX_BYTES"),
+                default=2_097_152,
+                name="EVENT_BATCH_MAX_BYTES",
+            ),
+            event_batch_processing_timeout_seconds=_parse_positive_float(
+                os.getenv("EVENT_BATCH_PROCESSING_TIMEOUT_SECONDS"),
+                default=15.0,
+                name="EVENT_BATCH_PROCESSING_TIMEOUT_SECONDS",
             ),
             security_event_retention_days=_parse_positive_int(
                 os.getenv("SECURITY_EVENT_RETENTION_DAYS"),

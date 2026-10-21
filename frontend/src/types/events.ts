@@ -1,3 +1,5 @@
+import type { MitreContext } from "./alerts";
+
 export const EVENT_SOURCE_TYPES = [
   "authentication",
   "file_integrity",
@@ -21,6 +23,18 @@ export interface SecurityEventSummary {
   hostname?: string | null;
   agent_id?: string | null;
   agent_name?: string | null;
+  operating_system?: string | null;
+  manager_identity?: string | null;
+  event_provider?: string | null;
+  event_channel?: string | null;
+  process_name?: string | null;
+  process_path?: string | null;
+  command_line?: string | null;
+  process_id?: string | null;
+  parent_process_name?: string | null;
+  parent_process_path?: string | null;
+  parent_process_id?: string | null;
+  normalization_schema: string;
   source_ip?: string | null;
   destination_ip?: string | null;
   source_port?: number | null;
@@ -31,6 +45,7 @@ export interface SecurityEventSummary {
   outcome?: string | null;
   rule_id?: string | null;
   severity?: number | null;
+  mitre: MitreContext;
   message: string;
   ingestion_source: string;
   related_alert_id?: string | null;
@@ -40,6 +55,8 @@ export interface SecurityEventDetail extends SecurityEventSummary {
   structured_payload: Record<string, unknown>;
   raw_payload: Record<string, unknown>;
   related_incident_ids: string[];
+  related_case_ids: string[];
+  raw_evidence_ref: string;
 }
 
 export interface EventQuery {
@@ -49,9 +66,14 @@ export interface EventQuery {
   destinationIp?: string;
   hostname?: string;
   username?: string;
+  operatingSystem?: string;
+  eventProvider?: string;
+  eventChannel?: string;
+  processName?: string;
   eventId?: string;
   ruleId?: string;
   eventCategory?: string;
+  eventAction?: string;
   outcome?: string;
   severityMin?: number;
   severityMax?: number;
@@ -110,10 +132,15 @@ export interface SecurityOverview {
     delivered_records: number;
   }>;
   retention: {
-    state: "WITHIN_LIMIT" | "AT_LIMIT";
+    state: "WITHIN_LIMIT" | "AT_LIMIT" | "OVER_LIMIT_PROTECTED";
     retention_days: number;
     max_records: number;
     retained_records: number;
+    protected_records: number;
+    over_limit_records: number;
+    usage_percent: number;
+    oldest_event_at?: string | null;
+    newest_event_at?: string | null;
     last_run_at?: string | null;
     last_deleted_count: number;
   };

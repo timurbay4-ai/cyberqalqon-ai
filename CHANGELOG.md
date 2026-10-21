@@ -1,5 +1,14 @@
 # Changelog
 
+## 0.9.0 - 2026-10-10
+
+- Added secure read-only Wazuh API inventory with bounded pagination, response
+  sizes, retries, durable cache, manager metadata, and namespaced agent health.
+- Added the authenticated Agent Management workspace and deterministic,
+  redacted Windows connectivity diagnostics.
+- Added Windows event provenance/process fields, source health transitions, and
+  expanded sender/shipper observability without enabling privileged telemetry.
+
 All notable CyberQalqon SIEM changes are recorded here. The project uses
 semantic version identifiers for application and image metadata. A version entry
 does not by itself mean that production acceptance has been granted.

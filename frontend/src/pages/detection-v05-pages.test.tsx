@@ -138,6 +138,77 @@ describe("CyberQalqon v0.5 analyst pages", () => {
         ).toBeInTheDocument();
     });
 
+    it("shows M11 prerequisites and runs the shared side-effect-free evaluator", async () => {
+        const api = createMockApi();
+        const onOpenEvent = vi.fn();
+        render(
+            <DetectionEngineeringPage
+                api={api}
+                canMutate
+                onOpenAlerts={() => undefined}
+                onOpenEvent={onOpenEvent}
+            />,
+        );
+        await screen.findByText("TCP port scan");
+        fireEvent.click(screen.getByRole("button", { name: "Advanced" }));
+        expect(await screen.findByText("Windows brute-force candidate")).toBeInTheDocument();
+        expect(screen.getAllByText("Recently observed").length).toBeGreaterThan(0);
+        fireEvent.click(screen.getByRole("button", { name: "Windows brute-force candidate" }));
+        expect(screen.getByText(/Four failures do not match/)).toBeInTheDocument();
+        fireEvent.click(screen.getByRole("tab", { name: "Test" }));
+        fireEvent.click(screen.getByRole("button", { name: "Run bounded 30-day dry-run" }));
+        expect(await screen.findByText(/1 findings among 5 bounded events/)).toBeInTheDocument();
+        expect(screen.getByText(/no alerts, incidents, cases, notifications/)).toBeInTheDocument();
+        fireEvent.click(screen.getByRole("button", { name: "EVT-0123456789ABCDEF01234567" }));
+        expect(onOpenEvent).toHaveBeenCalledWith("EVT-0123456789ABCDEF01234567");
+        expect(api.dryRunAdvancedDetectionRule).toHaveBeenCalledWith(
+            "DET-001",
+            { relative_minutes: 43200, max_events: 1000, max_findings: 100, max_execution_ms: 1000 },
+        );
+    });
+
+    it("shows M14 lifecycle, shadow isolation, tuning, readiness, and diagnostics", async () => {
+        const api = createMockApi();
+        render(
+            <DetectionEngineeringPage
+                api={api}
+                canMutate
+                onOpenAlerts={() => undefined}
+                onOpenEvent={() => undefined}
+            />,
+        );
+        await screen.findByText("TCP port scan");
+        fireEvent.click(screen.getByRole("button", { name: "Advanced" }));
+        fireEvent.click(await screen.findByRole("button", { name: "Windows brute-force candidate" }));
+        expect(await screen.findByText(/Live activation is disabled by policy/)).toBeInTheDocument();
+
+        fireEvent.click(screen.getByRole("tab", { name: "Configuration" }));
+        expect(screen.getByText("Imported M11 tested baseline")).toBeInTheDocument();
+        expect(screen.getByText(/Python, shell, SQL/)).toBeInTheDocument();
+
+        fireEvent.click(screen.getByRole("tab", { name: "Shadow" }));
+        expect(screen.getByText(/no production side effects/)).toBeInTheDocument();
+        fireEvent.click(screen.getByRole("button", { name: "Run 24-hour shadow evaluation" }));
+        await waitFor(() => expect(api.runShadowEvaluation).toHaveBeenCalledWith("DET-001"));
+
+        fireEvent.click(await screen.findByRole("tab", { name: "Tuning" }));
+        fireEvent.click(screen.getByRole("button", { name: "Compare sensitivity" }));
+        expect(await screen.findByText(/Finding differences measure sensitivity only/)).toBeInTheDocument();
+
+        fireEvent.click(screen.getByRole("tab", { name: "Quality" }));
+        expect(await screen.findByText("Golden dataset quality")).toBeInTheDocument();
+        expect(screen.getByText(/labeled synthetic fixtures only/i)).toBeInTheDocument();
+        expect(screen.getByText(/Runtime remains disabled by policy/i)).toBeInTheDocument();
+
+        fireEvent.click(screen.getByRole("tab", { name: "Readiness" }));
+        expect(screen.getByText(/Activation path enabled: no/)).toBeInTheDocument();
+        expect(screen.getByText(/M14 activation path is hard-disabled/)).toBeInTheDocument();
+
+        fireEvent.click(screen.getByRole("tab", { name: "Diagnostics" }));
+        expect(screen.getByText(/aggregate counts only/)).toBeInTheDocument();
+        expect(screen.getByText("State recoveries")).toBeInTheDocument();
+    });
+
     it("dry-runs a validated draft without side effects and requires explicit manual-deployment consent", async () => {
         const testedDraft = {
             ...SAMPLE_RULE_DRAFT,

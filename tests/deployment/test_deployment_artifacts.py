@@ -12,7 +12,7 @@ ROOT = Path(__file__).resolve().parents[2]
 
 class ReleaseMetadataTest(unittest.TestCase):
     def test_release_metadata_and_ci_image_tags_are_aligned(self) -> None:
-        version = "0.8.1"
+        version = "0.9.0"
         backend_version = (ROOT / "backend" / "app" / "version.py").read_text(encoding="utf-8")
         frontend_package = json.loads((ROOT / "frontend" / "package.json").read_text(encoding="utf-8"))
         compose = (ROOT / "compose.yaml").read_text(encoding="utf-8")
@@ -27,6 +27,47 @@ class ReleaseMetadataTest(unittest.TestCase):
             self.assertIn(tag, production_env)
             self.assertIn(tag, workflow)
             self.assertNotIn(f"cyberqalqon/{image}:0.8.0", workflow)
+
+
+class M22ForwardDeploymentTest(unittest.TestCase):
+    def test_forward_unit_is_hardened_and_not_installable_by_default(self) -> None:
+        unit = (
+            ROOT / "wazuh" / "configs" / "cyberqalqon-forward-ingestion.service"
+        ).read_text(encoding="utf-8")
+        for required in (
+            "ConditionPathExists=/etc/cyberqalqon/forward-approval.json",
+            "User=wazuh",
+            "Group=wazuh",
+            "NoNewPrivileges=true",
+            "ProtectSystem=strict",
+            "CapabilityBoundingSet=",
+            "forward run --state",
+            "--approval /etc/cyberqalqon/forward-approval.json",
+            "ReadOnlyPaths=/var/ossec/logs/archives /var/lib/cyberqalqon-sender",
+            "ReadWritePaths=/var/lib/cyberqalqon-forward /var/log/cyberqalqon",
+        ):
+            self.assertIn(required, unit)
+        self.assertNotIn("[Install]", unit)
+        self.assertNotIn("WantedBy=", unit)
+
+    def test_forward_environment_keeps_batch_ai_and_adaptive_disabled(self) -> None:
+        environment = (
+            ROOT / "wazuh" / "configs" / "cyberqalqon-forward.env.example"
+        ).read_text(encoding="utf-8")
+        self.assertIn("CYBERQALQON_FORWARD_RECORDS_PER_SECOND=5", environment)
+        self.assertIn("CYBERQALQON_EVENT_BATCH_PROTOCOL_ENABLED=false", environment)
+        self.assertIn("CYBERQALQON_EVENT_ADAPTIVE_ENABLED=false", environment)
+        self.assertIn("AI_ENABLED=false", environment)
+        self.assertNotIn("API_KEY=", environment)
+
+    def test_forward_approval_template_is_non_authorizing_in_source(self) -> None:
+        source = (
+            ROOT / "wazuh" / "cyberqalqon_sender" / "forward_service.py"
+        ).read_text(encoding="utf-8")
+        self.assertIn('"decision": "PENDING_EXPLICIT_USER_APPROVAL"', source)
+        self.assertIn('"accepts_unproven_history": False', source)
+        self.assertIn('"historical_replay_approved": False', source)
+        self.assertIn('"legacy_checkpoint_mutation_approved": False', source)
 
 
 class DeploymentArtifactsTest(unittest.TestCase):
@@ -71,6 +112,11 @@ class DeploymentArtifactsTest(unittest.TestCase):
         self.assertEqual(environment["SESSION_COOKIE_SECURE"], "true")
         self.assertNotEqual(environment["CORS_ORIGINS"], "*")
         self.assertEqual(environment["WAZUH_INGEST_API_KEY_FILE"], "/run/secrets/wazuh_ingest_api_key")
+        self.assertEqual(environment["WAZUH_API_URL"], "https://127.0.0.1:55000")
+        self.assertEqual(environment["WAZUH_API_USERNAME_FILE"], "")
+        self.assertEqual(environment["WAZUH_API_PASSWORD_FILE"], "")
+        self.assertEqual(environment["WAZUH_API_CA_BUNDLE"], "")
+        self.assertEqual(environment["WAZUH_API_RETRY_ATTEMPTS"], "1")
         self.assertTrue(backend["read_only"])
         self.assertIn("ALL", backend["cap_drop"])
         self.assertEqual(backend["restart"], "unless-stopped")

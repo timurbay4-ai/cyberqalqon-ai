@@ -1,0 +1,30 @@
+{
+  "timestamp": "2026-10-11T09:30:00+05:00",
+  "id": "linux-ssh-failed-synthetic",
+  "agent": {
+    "id": "001",
+    "name": "cyberqalqon-test-web",
+    "os": {"name": "Ubuntu 24.04"}
+  },
+  "decoder": {"name": "sshd"},
+  "rule": {
+    "id": "5710",
+    "level": 5,
+    "description": "Synthetic SSH authentication failure",
+    "groups": ["syslog", "sshd", "authentication_failed"],
+    "mitre": {
+      "id": ["T1110"],
+      "tactic": ["Credential Access"],
+      "technique": ["Brute Force"]
+    }
+  },
+  "data": {
+    "srcip": "198.51.100.25",
+    "srcport": "49152",
+    "dstip": "192.0.2.10",
+    "dstport": "22",
+    "srcuser": "cq-m10-synthetic"
+  },
+  "location": "/var/log/auth.log",
+  "full_log": "Sanitized failed password event for cq-m10-synthetic from 198.51.100.25"
+}

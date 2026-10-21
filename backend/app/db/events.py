@@ -7,6 +7,7 @@ import binascii
 import json
 import re
 import sqlite3
+import time
 from contextlib import closing
 from dataclasses import dataclass, replace
 from datetime import datetime, timedelta, timezone
@@ -27,6 +28,8 @@ from app.schemas.events import (
     SecurityEventSummary,
     SecurityOverview,
     SeverityCount,
+    TelemetryCoverageEntry,
+    TelemetryCoverageReport,
     TimeSeriesPoint,
 )
 from app.services.wazuh_normalizer import canonical_json
@@ -56,10 +59,98 @@ class EventOutsideRetentionError(ValueError):
     pass
 
 
+class BatchProcessingTimeoutError(TimeoutError):
+    """Raised when a batch crosses its pre-commit budget.
+
+    ``stage`` and ``timing`` contain bounded numeric diagnostics only. They
+    intentionally exclude event bodies, identifiers, credentials, and SQL.
+    """
+
+    def __init__(
+        self,
+        message: str,
+        *,
+        stage: str = "pre_commit",
+        timing: dict[str, float | int | bool] | None = None,
+    ) -> None:
+        super().__init__(message)
+        self.stage = stage
+        self.timing = dict(timing or {})
+
+
+class BatchItemValidationError(ValueError):
+    def __init__(self, index: int, message: str, *, field: str | None = None) -> None:
+        super().__init__(message)
+        self.index = index
+        self.field = field
+
+
+class BatchItemConflictError(EventIdConflictError):
+    def __init__(self, index: int, event_id: str) -> None:
+        super().__init__(f"event_id '{event_id}' exists with different evidence")
+        self.index = index
+        self.event_id = event_id
+
+
 @dataclass(frozen=True, slots=True)
 class StoredEvent:
     event: SecurityEventSummary
     duplicate: bool
+
+
+@dataclass(frozen=True, slots=True)
+class BatchStoredEvent:
+    index: int
+    event_id: str
+    deduplication_id: str
+    duplicate: bool
+
+
+@dataclass(frozen=True, slots=True)
+class BatchIngestResult:
+    items: list[BatchStoredEvent]
+    inserted: int
+    duplicates: int
+    database_ms: float
+    transaction_ms: float
+    retention_ms: float
+    commit_ms: float
+    connection_ms: float
+    lock_wait_ms: float
+    deduplication_ms: float
+    alert_lookup_ms: float
+    insert_ms: float
+    retention_state_ms: float
+    retention_age_delete_ms: float
+    retention_count_ms: float
+    retention_candidate_ms: float
+    protected_check_ms: float
+    retention_delete_ms: float
+    protected_count_ms: float
+    retention_metadata_ms: float
+    retention_audit_ms: float
+    sql_statement_count: int
+    retention_rows_considered: int
+    retention_rows_deleted: int
+    protected_row_skips: int
+    full_age_sweep: bool
+
+
+@dataclass(frozen=True, slots=True)
+class RetentionProfile:
+    state_ms: float = 0.0
+    age_delete_ms: float = 0.0
+    count_ms: float = 0.0
+    candidate_ms: float = 0.0
+    protected_check_ms: float = 0.0
+    delete_ms: float = 0.0
+    protected_count_ms: float = 0.0
+    metadata_ms: float = 0.0
+    audit_ms: float = 0.0
+    rows_considered: int = 0
+    rows_deleted: int = 0
+    protected_skips: int = 0
+    full_age_sweep: bool = False
 
 
 @dataclass(frozen=True, slots=True)
@@ -70,9 +161,14 @@ class EventFilters:
     destination_ip: str | None = None
     hostname: str | None = None
     username: str | None = None
+    operating_system: str | None = None
+    event_provider: str | None = None
+    event_channel: str | None = None
+    process_name: str | None = None
     event_identifier: str | None = None
     rule_id: str | None = None
     event_category: str | None = None
+    event_action: str | None = None
     outcome: str | None = None
     severity_min: int | None = None
     severity_max: int | None = None
@@ -137,6 +233,17 @@ def _search_document(event: NormalizedSecurityEvent) -> str:
         event.hostname,
         event.agent_id,
         event.agent_name,
+        event.operating_system,
+        event.manager_identity,
+        event.event_provider,
+        event.event_channel,
+        event.process_name,
+        event.process_path,
+        event.command_line,
+        event.process_id,
+        event.parent_process_name,
+        event.parent_process_path,
+        event.parent_process_id,
         str(event.source_ip) if event.source_ip else None,
         str(event.destination_ip) if event.destination_ip else None,
         event.username,
@@ -144,6 +251,9 @@ def _search_document(event: NormalizedSecurityEvent) -> str:
         event.event_action,
         event.outcome,
         event.rule_id,
+        *event.mitre.ids,
+        *event.mitre.tactics,
+        *event.mitre.techniques,
         event.message,
         event.ingestion_source,
     )
@@ -188,6 +298,18 @@ class EventRepository:
             hostname=row["hostname"],
             agent_id=row["agent_id"],
             agent_name=row["agent_name"],
+            operating_system=row["operating_system"],
+            manager_identity=row["manager_identity"],
+            event_provider=row["event_provider"],
+            event_channel=row["event_channel"],
+            process_name=row["process_name"],
+            process_path=row["process_path"],
+            command_line=row["command_line"],
+            process_id=row["process_id"],
+            parent_process_name=row["parent_process_name"],
+            parent_process_path=row["parent_process_path"],
+            parent_process_id=row["parent_process_id"],
+            normalization_schema=row["normalization_schema"],
             source_ip=row["source_ip"],
             destination_ip=row["destination_ip"],
             source_port=row["source_port"],
@@ -198,6 +320,11 @@ class EventRepository:
             outcome=row["outcome"],
             rule_id=row["rule_id"],
             severity=row["severity"],
+            mitre={
+                "ids": json.loads(row["mitre_ids_json"]),
+                "tactics": json.loads(row["mitre_tactics_json"]),
+                "techniques": json.loads(row["mitre_techniques_json"]),
+            },
             message=row["message"],
             ingestion_source=row["ingestion_source"],
             related_alert_id=row["resolved_alert_id"],
@@ -211,40 +338,479 @@ class EventRepository:
             "LEFT JOIN alerts a ON a.alert_id = e.source_event_id"
         )
 
-    def _enforce_retention(self, connection: sqlite3.Connection, now: datetime) -> None:
+    @staticmethod
+    def _protected_event_filter(alias: str = "security_events") -> str:
+        """Return the schema-17 evidence protection predicate for a trusted alias."""
+
+        if alias not in {"security_events", "e"}:
+            raise ValueError("unsupported security event alias")
+        return (
+            f"(EXISTS (SELECT 1 FROM case_events ce WHERE ce.event_id = {alias}.event_id) "
+            f"OR EXISTS (SELECT 1 FROM incident_evidence_pins iep "
+            f"WHERE iep.evidence_type = 'EVENT' AND iep.evidence_id = {alias}.event_id) "
+            f"OR EXISTS (SELECT 1 FROM case_evidence_refs cer "
+            f"WHERE cer.reference_type = 'EVENT' AND cer.reference_id = {alias}.event_id) "
+            f"OR EXISTS (SELECT 1 FROM alerts a WHERE a.alert_id = "
+            f"COALESCE({alias}.related_alert_id, {alias}.source_event_id)))"
+        )
+
+    @staticmethod
+    def _bulk_protected_event_ids(
+        connection: sqlite3.Connection,
+        rows: list[sqlite3.Row],
+    ) -> tuple[set[str], float]:
+        """Resolve evidence protection for one bounded keyset page.
+
+        This replaces one correlated protection lookup per retention candidate
+        with four bounded set lookups. The oldest-event scan remains driven by
+        ``idx_security_events_occurred_id`` and no protection decision is
+        cached across transactions.
+        """
+
+        if not rows:
+            return set(), 0.0
+        started = time.monotonic()
+        event_ids = tuple(str(row["event_id"]) for row in rows)
+        placeholders = ",".join("?" for _ in event_ids)
+        protected: set[str] = {
+            str(row[0])
+            for row in connection.execute(
+                f"SELECT event_id FROM case_events WHERE event_id IN ({placeholders})",
+                event_ids,
+            )
+        }
+        protected.update(
+            str(row[0])
+            for row in connection.execute(
+                "SELECT evidence_id FROM incident_evidence_pins "
+                f"WHERE evidence_type='EVENT' AND evidence_id IN ({placeholders})",
+                event_ids,
+            )
+        )
+        protected.update(
+            str(row[0])
+            for row in connection.execute(
+                "SELECT reference_id FROM case_evidence_refs "
+                f"WHERE reference_type='EVENT' AND reference_id IN ({placeholders})",
+                event_ids,
+            )
+        )
+        linked_events: dict[str, list[str]] = {}
+        for row in rows:
+            reference = (
+                row["related_alert_id"]
+                if row["related_alert_id"] is not None
+                else row["source_event_id"]
+            )
+            if reference:
+                linked_events.setdefault(str(reference), []).append(str(row["event_id"]))
+        if linked_events:
+            alert_ids = tuple(linked_events)
+            alert_placeholders = ",".join("?" for _ in alert_ids)
+            for alert_row in connection.execute(
+                f"SELECT alert_id FROM alerts WHERE alert_id IN ({alert_placeholders})",
+                alert_ids,
+            ):
+                protected.update(linked_events.get(str(alert_row[0]), ()))
+        return protected, round((time.monotonic() - started) * 1000, 3)
+
+    def _select_retention_candidates(
+        self,
+        connection: sqlite3.Connection,
+        *,
+        needed: int,
+        preserved: set[str],
+    ) -> tuple[list[str], int, int, float, float]:
+        """Select exactly the oldest deletable rows with bounded keyset pages."""
+
+        if needed <= 0:
+            return [], 0, 0, 0.0, 0.0
+        selected: list[str] = []
+        considered = 0
+        protected_skips = 0
+        candidate_ms = 0.0
+        protected_check_ms = 0.0
+        after_occurred: str | None = None
+        after_event_id: str | None = None
+        page_size = min(512, max(64, needed * 4))
+        while len(selected) < needed:
+            where = ""
+            parameters: tuple[object, ...]
+            if after_occurred is None:
+                parameters = (page_size,)
+            else:
+                where = "WHERE (e.occurred_at > ? OR (e.occurred_at = ? AND e.event_id > ?))"
+                parameters = (after_occurred, after_occurred, after_event_id, page_size)
+            started = time.monotonic()
+            rows = connection.execute(
+                "SELECT e.event_id, e.occurred_at, e.related_alert_id, e.source_event_id "
+                f"FROM security_events e {where} "
+                "ORDER BY e.occurred_at ASC, e.event_id ASC LIMIT ?",
+                parameters,
+            ).fetchall()
+            candidate_ms += (time.monotonic() - started) * 1000
+            if not rows:
+                break
+            considered += len(rows)
+            protected, elapsed = self._bulk_protected_event_ids(connection, rows)
+            protected_check_ms += elapsed
+            for row in rows:
+                event_id = str(row["event_id"])
+                if event_id in preserved:
+                    continue
+                if event_id in protected:
+                    protected_skips += 1
+                    continue
+                selected.append(event_id)
+                if len(selected) >= needed:
+                    break
+            after_occurred = str(rows[-1]["occurred_at"])
+            after_event_id = str(rows[-1]["event_id"])
+        return (
+            selected,
+            considered,
+            protected_skips,
+            round(candidate_ms, 3),
+            round(protected_check_ms, 3),
+        )
+
+    @staticmethod
+    def _count_protected_records(connection: sqlite3.Connection) -> int:
+        return int(
+            connection.execute(
+                """
+                SELECT COUNT(*)
+                FROM (
+                    SELECT ce.event_id AS protected_event_id
+                    FROM case_events ce
+                    UNION
+                    SELECT e.event_id
+                    FROM incident_evidence_pins iep
+                    JOIN security_events e ON e.event_id = iep.evidence_id
+                    WHERE iep.evidence_type = 'EVENT'
+                    UNION
+                    SELECT e.event_id
+                    FROM case_evidence_refs cer
+                    JOIN security_events e ON e.event_id = cer.reference_id
+                    WHERE cer.reference_type = 'EVENT'
+                    UNION
+                    SELECT e2.event_id FROM security_events e2
+                    JOIN alerts a ON a.alert_id =
+                        COALESCE(e2.related_alert_id, e2.source_event_id)
+                ) protected
+                """
+            ).fetchone()[0]
+        )
+
+    def _audit_retention(
+        self,
+        connection: sqlite3.Connection,
+        now: datetime,
+        *,
+        deleted_by_age: int,
+        deleted_by_limit: int,
+        protected_records: int | None,
+        protected_records_measurement: str | None,
+        retained_records: int,
+    ) -> None:
+        """Aggregate cleanup decisions into one bounded audit record per five minutes."""
+
+        bucket_minute = now.minute - (now.minute % 5)
+        bucket = now.replace(minute=bucket_minute, second=0, microsecond=0)
+        bucket_key = bucket.strftime("%Y%m%dT%H%MZ")
+        audit_id = f"AUD-RETENTION-{bucket_key}"
+        existing = connection.execute(
+            "SELECT details_json FROM security_audit_events WHERE audit_id = ?",
+            (audit_id,),
+        ).fetchone()
+        details: dict[str, Any] = {}
+        if existing is not None:
+            try:
+                parsed = json.loads(existing[0])
+                if isinstance(parsed, dict):
+                    details = parsed
+            except (TypeError, ValueError, json.JSONDecodeError):
+                details = {}
+        cumulative_age = max(0, int(details.get("deleted_by_age", 0))) + max(
+            0, deleted_by_age
+        )
+        cumulative_limit = max(0, int(details.get("deleted_by_limit", 0))) + max(
+            0, deleted_by_limit
+        )
+        over_limit = max(0, retained_records - self.max_records)
+        prior_protected = max(0, int(details.get("protected_records", 0)))
+        if protected_records is None:
+            measured_protected = prior_protected
+            measurement = "CACHED" if existing is not None else "NOT_MEASURED"
+            measured_at = details.get("protected_records_measured_at")
+        else:
+            measured_protected = max(0, protected_records)
+            measurement = protected_records_measurement or "EXACT"
+            measured_at = _utc_iso(now)
+        details = {
+            "version": 1,
+            "window_started_at": _utc_iso(bucket),
+            "runs": max(0, int(details.get("runs", 0))) + 1,
+            "deleted_by_age": cumulative_age,
+            "deleted_by_limit": cumulative_limit,
+            "protected_records": measured_protected,
+            "protected_records_measurement": measurement,
+            "protected_records_measured_at": measured_at,
+            "retained_records": max(0, retained_records),
+            "max_records": self.max_records,
+            "retention_days": self.retention_days,
+            "over_limit_records": over_limit,
+            "decision": "PROTECTED_OVER_LIMIT" if over_limit else "ENFORCED",
+        }
+        connection.execute(
+            """
+            INSERT INTO security_audit_events (
+                audit_id, action, actor_id, actor_display, target_type,
+                target_id, outcome, occurred_at, details_json
+            ) VALUES (?, 'SECURITY_EVENT_RETENTION', NULL,
+                      'CyberQalqon retention policy', 'security_event_store',
+                      ?, 'SUCCESS', ?, ?)
+            ON CONFLICT(audit_id) DO UPDATE SET
+                occurred_at=excluded.occurred_at,
+                details_json=excluded.details_json
+            """,
+            (audit_id, bucket_key, _utc_iso(now), canonical_json(details)),
+        )
+
+    def _enforce_retention(
+        self,
+        connection: sqlite3.Connection,
+        now: datetime,
+        *,
+        preserve_event_id: str | None = None,
+        preserve_event_ids: tuple[str, ...] = (),
+    ) -> RetentionProfile:
+        preserved = tuple(
+            dict.fromkeys(
+                item
+                for item in (
+                    *((preserve_event_id,) if preserve_event_id is not None else ()),
+                    *preserve_event_ids,
+                )
+                if item
+            )
+        )
+        stage_started = time.monotonic()
         row = connection.execute(
             "SELECT last_retention_at, retained_records FROM security_event_store_state "
             "WHERE singleton = 1"
         ).fetchone()
+        state_ms = (time.monotonic() - stage_started) * 1000
         last = datetime.fromisoformat(row[0]) if row and row[0] else None
         retained_before = int(row[1]) if row else 0
-        if (
-            last is not None
-            and now - last < timedelta(minutes=5)
-            and retained_before <= self.max_records
-        ):
-            return
-        cutoff = _utc_iso(now - timedelta(days=self.retention_days))
-        deleted_by_age = connection.execute(
-            "DELETE FROM security_events WHERE occurred_at < ?", (cutoff,)
-        ).rowcount
-        count = int(connection.execute("SELECT COUNT(*) FROM security_events").fetchone()[0])
-        overflow = count - self.max_records
-        if overflow > 0:
-            deleted_by_limit = connection.execute(
-                "DELETE FROM security_events WHERE event_id IN ("
-                "SELECT event_id FROM security_events ORDER BY occurred_at ASC, event_id ASC LIMIT ?"
-                ")",
-                (overflow,),
+        full_age_sweep_due = last is None or now - last >= timedelta(minutes=5)
+        if not full_age_sweep_due and retained_before <= self.max_records:
+            return RetentionProfile(state_ms=round(state_ms, 3))
+        protected = self._protected_event_filter("security_events")
+        age_delete_ms = 0.0
+        count_ms = 0.0
+        if full_age_sweep_due:
+            cutoff = _utc_iso(now - timedelta(days=self.retention_days))
+            stage_started = time.monotonic()
+            deleted_by_age = connection.execute(
+                f"DELETE FROM security_events WHERE occurred_at < ? AND NOT {protected}",
+                (cutoff,),
             ).rowcount
+            age_delete_ms = (time.monotonic() - stage_started) * 1000
+            # Reconcile the durable counter during the bounded five-minute full sweep.
+            stage_started = time.monotonic()
+            count = int(
+                connection.execute("SELECT COUNT(*) FROM security_events").fetchone()[0]
+            )
+            count_ms = (time.monotonic() - stage_started) * 1000
+        else:
+            # At capacity, avoid repeating an archive-wide age predicate for every
+            # inserted row. BEGIN IMMEDIATE serializes writers, so this counter is
+            # exact inside the transaction; the next full sweep reconciles it.
+            deleted_by_age = 0
+            count = retained_before
+        overflow = count - self.max_records
+        considered = 0
+        protected_skips = 0
+        candidate_ms = 0.0
+        protected_check_ms = 0.0
+        delete_ms = 0.0
+        if overflow > 0:
+            (
+                deletion_ids,
+                considered,
+                protected_skips,
+                candidate_ms,
+                protected_check_ms,
+            ) = self._select_retention_candidates(
+                connection,
+                needed=overflow,
+                preserved=set(preserved),
+            )
+            if deletion_ids:
+                placeholders = ",".join("?" for _ in deletion_ids)
+                stage_started = time.monotonic()
+                deleted_by_limit = connection.execute(
+                    f"DELETE FROM security_events WHERE event_id IN ({placeholders})",
+                    tuple(deletion_ids),
+                ).rowcount
+                delete_ms = (time.monotonic() - stage_started) * 1000
+            else:
+                deleted_by_limit = 0
         else:
             deleted_by_limit = 0
-        retained = int(connection.execute("SELECT COUNT(*) FROM security_events").fetchone()[0])
-        connection.execute(
-            "UPDATE security_event_store_state SET last_retention_at = ?, "
-            "last_deleted_count = ?, retained_records = ? WHERE singleton = 1",
-            (_utc_iso(now), max(0, deleted_by_age) + max(0, deleted_by_limit), retained),
+        retained = max(0, count - max(0, deleted_by_limit))
+        protected_count_ms = 0.0
+        protected_records: int | None = None
+        protected_measurement: str | None = None
+        if retained > self.max_records:
+            # The transaction already proved that at least this many of the
+            # oldest rows are protected. Preserve that honest lower bound. An
+            # exact global count is intentionally excluded from the write path:
+            # on the representative 100k backup it scanned the wide event table
+            # and exceeded the entire pre-commit budget by itself.
+            protected_records = protected_skips
+            protected_measurement = "LOWER_BOUND"
+        stage_started = time.monotonic()
+        if full_age_sweep_due:
+            connection.execute(
+                "UPDATE security_event_store_state SET last_retention_at = ?, "
+                "last_deleted_count = ?, retained_records = ? WHERE singleton = 1",
+                (
+                    _utc_iso(now),
+                    max(0, deleted_by_age) + max(0, deleted_by_limit),
+                    retained,
+                ),
+            )
+        else:
+            connection.execute(
+                "UPDATE security_event_store_state SET last_deleted_count = ?, "
+                "retained_records = ? WHERE singleton = 1",
+                (max(0, deleted_by_limit), retained),
+            )
+        metadata_ms = (time.monotonic() - stage_started) * 1000
+        stage_started = time.monotonic()
+        self._audit_retention(
+            connection,
+            now,
+            deleted_by_age=deleted_by_age,
+            deleted_by_limit=deleted_by_limit,
+            protected_records=protected_records,
+            protected_records_measurement=protected_measurement,
+            retained_records=retained,
         )
+        audit_ms = (time.monotonic() - stage_started) * 1000
+        return RetentionProfile(
+            state_ms=round(state_ms, 3),
+            age_delete_ms=round(age_delete_ms, 3),
+            count_ms=round(count_ms, 3),
+            candidate_ms=round(candidate_ms, 3),
+            protected_check_ms=round(protected_check_ms, 3),
+            delete_ms=round(delete_ms, 3),
+            protected_count_ms=round(protected_count_ms, 3),
+            metadata_ms=round(metadata_ms, 3),
+            audit_ms=round(audit_ms, 3),
+            rows_considered=considered,
+            rows_deleted=max(0, deleted_by_age) + max(0, deleted_by_limit),
+            protected_skips=protected_skips,
+            full_age_sweep=full_age_sweep_due,
+        )
+
+    def _insert_event_row(
+        self,
+        connection: sqlite3.Connection,
+        event: NormalizedSecurityEvent,
+        *,
+        occurred_at: datetime,
+        ingested_at: datetime,
+        related_alert_id: str | None,
+    ) -> None:
+        """Insert one normalized row inside an already-owned transaction."""
+
+        connection.execute(
+            """
+            INSERT INTO security_events (
+                event_id, deduplication_id, source_event_id, event_code,
+                occurred_at, ingested_at, source_type, hostname, agent_id, agent_name,
+                operating_system,
+                manager_identity, event_provider, event_channel,
+                process_name, process_path, command_line, process_id,
+                parent_process_name, parent_process_path, parent_process_id,
+                normalization_schema,
+                source_ip, destination_ip, source_port, destination_port, username,
+                event_category, event_action, outcome, rule_id, severity,
+                mitre_ids_json, mitre_tactics_json, mitre_techniques_json, message,
+                structured_json, raw_event_json, ingestion_source, related_alert_id,
+                raw_size_bytes, search_text
+            ) VALUES (
+                ?, ?, ?, ?, ?, ?, ?, ?, ?, ?,
+                ?, ?, ?, ?, ?, ?, ?, ?, ?, ?,
+                ?, ?, ?, ?, ?, ?, ?, ?, ?, ?,
+                ?, ?, ?, ?, ?, ?, ?, ?, ?, ?,
+                ?, ?
+            )
+            """,
+            (
+                event.event_id,
+                event.deduplication_id,
+                event.source_event_id,
+                event.event_code,
+                _utc_iso(occurred_at),
+                _utc_iso(ingested_at),
+                event.source_type,
+                event.hostname,
+                event.agent_id,
+                event.agent_name,
+                event.operating_system,
+                event.manager_identity,
+                event.event_provider,
+                event.event_channel,
+                event.process_name,
+                event.process_path,
+                event.command_line,
+                event.process_id,
+                event.parent_process_name,
+                event.parent_process_path,
+                event.parent_process_id,
+                event.normalization_schema,
+                str(event.source_ip) if event.source_ip else None,
+                str(event.destination_ip) if event.destination_ip else None,
+                event.source_port,
+                event.destination_port,
+                event.username,
+                event.event_category,
+                event.event_action,
+                event.outcome,
+                event.rule_id,
+                event.severity,
+                canonical_json(event.mitre.ids),
+                canonical_json(event.mitre.tactics),
+                canonical_json(event.mitre.techniques),
+                event.message,
+                canonical_json(event.structured_payload),
+                canonical_json(event.raw_payload),
+                event.ingestion_source,
+                related_alert_id,
+                event.raw_size_bytes,
+                _search_document(event),
+            ),
+        )
+
+    def _validate_retention_time(
+        self,
+        event: NormalizedSecurityEvent,
+        ingested_at: datetime,
+    ) -> datetime:
+        occurred_at = event.timestamp.astimezone(timezone.utc)
+        if occurred_at < ingested_at - timedelta(days=self.retention_days):
+            raise EventOutsideRetentionError(
+                f"event timestamp is older than the {self.retention_days}-day retention window"
+            )
+        if occurred_at > ingested_at + timedelta(days=1):
+            raise EventOutsideRetentionError(
+                "event timestamp is more than 24 hours in the future"
+            )
+        return occurred_at
 
     def ingest(
         self,
@@ -254,15 +820,7 @@ class EventRepository:
         now: datetime | None = None,
     ) -> StoredEvent:
         ingested_at = (now or datetime.now(timezone.utc)).astimezone(timezone.utc)
-        occurred_at = event.timestamp.astimezone(timezone.utc)
-        if occurred_at < ingested_at - timedelta(days=self.retention_days):
-            raise EventOutsideRetentionError(
-                f"event timestamp is older than the {self.retention_days}-day retention window"
-            )
-        if occurred_at > ingested_at + timedelta(days=1):
-            raise EventOutsideRetentionError("event timestamp is more than 24 hours in the future")
-        structured_json = canonical_json(event.structured_payload)
-        raw_json = canonical_json(event.raw_payload)
+        occurred_at = self._validate_retention_time(event, ingested_at)
         with self._connect() as connection:
             connection.execute("BEGIN IMMEDIATE")
             existing = connection.execute(
@@ -297,53 +855,22 @@ class EventRepository:
                     (event.source_event_id,),
                 ).fetchone()
                 related_alert_id = str(linked[0]) if linked else None
-            connection.execute(
-                """
-                INSERT INTO security_events (
-                    event_id, deduplication_id, source_event_id, event_code,
-                    occurred_at, ingested_at, source_type, hostname, agent_id, agent_name,
-                    source_ip, destination_ip, source_port, destination_port, username,
-                    event_category, event_action, outcome, rule_id, severity, message,
-                    structured_json, raw_event_json, ingestion_source, related_alert_id,
-                    raw_size_bytes, search_text
-                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?,
-                          ?, ?, ?, ?, ?, ?)
-                """,
-                (
-                    event.event_id,
-                    event.deduplication_id,
-                    event.source_event_id,
-                    event.event_code,
-                    _utc_iso(occurred_at),
-                    _utc_iso(ingested_at),
-                    event.source_type,
-                    event.hostname,
-                    event.agent_id,
-                    event.agent_name,
-                    str(event.source_ip) if event.source_ip else None,
-                    str(event.destination_ip) if event.destination_ip else None,
-                    event.source_port,
-                    event.destination_port,
-                    event.username,
-                    event.event_category,
-                    event.event_action,
-                    event.outcome,
-                    event.rule_id,
-                    event.severity,
-                    event.message,
-                    structured_json,
-                    raw_json,
-                    event.ingestion_source,
-                    related_alert_id,
-                    event.raw_size_bytes,
-                    _search_document(event),
-                ),
+            self._insert_event_row(
+                connection,
+                event,
+                occurred_at=occurred_at,
+                ingested_at=ingested_at,
+                related_alert_id=related_alert_id,
             )
             connection.execute(
                 "UPDATE security_event_store_state SET retained_records = retained_records + 1 "
                 "WHERE singleton = 1"
             )
-            self._enforce_retention(connection, ingested_at)
+            self._enforce_retention(
+                connection,
+                ingested_at,
+                preserve_event_id=event.event_id,
+            )
             row = connection.execute(
                 f"SELECT {self._select_columns()} WHERE e.event_id = ?",
                 (event.event_id,),
@@ -352,6 +879,235 @@ class EventRepository:
         if row is None:
             raise RuntimeError("event was removed immediately by retention policy")
         return StoredEvent(event=self._summary(row), duplicate=False)
+
+    def ingest_batch(
+        self,
+        events: list[NormalizedSecurityEvent],
+        *,
+        now: datetime | None = None,
+        max_processing_seconds: float = 15.0,
+    ) -> BatchIngestResult:
+        """Atomically persist one bounded ordered batch.
+
+        Either every item is durably classified as inserted/duplicate and the
+        transaction commits, or the transaction rolls back and no item is
+        acknowledged. Normalization happens before this method is entered.
+        """
+
+        if not 1 <= len(events) <= 100:
+            raise ValueError("batch must contain between one and 100 events")
+        if max_processing_seconds <= 0:
+            raise ValueError("max_processing_seconds must be positive")
+        started = time.monotonic()
+        deadline = started + max_processing_seconds
+        ingested_at = (now or datetime.now(timezone.utc)).astimezone(timezone.utc)
+        occurred: list[datetime] = []
+        for index, event in enumerate(events):
+            try:
+                occurred.append(self._validate_retention_time(event, ingested_at))
+            except EventOutsideRetentionError as exc:
+                raise BatchItemValidationError(
+                    index,
+                    str(exc),
+                    field="timestamp",
+                ) from exc
+        connection_started = time.monotonic()
+        connection = self._connect()
+        connection_ms = (time.monotonic() - connection_started) * 1000
+        transaction_started = time.monotonic()
+        retention_ms = 0.0
+        commit_ms = 0.0
+        lock_wait_ms = 0.0
+        deduplication_ms = 0.0
+        alert_lookup_ms = 0.0
+        insert_ms = 0.0
+        retention_profile = RetentionProfile()
+        sql_statement_count = 0
+        results: list[BatchStoredEvent] = []
+        inserted_ids: list[str] = []
+
+        def count_statement(_: str) -> None:
+            nonlocal sql_statement_count
+            sql_statement_count += 1
+
+        def timeout_error(stage: str) -> BatchProcessingTimeoutError:
+            return BatchProcessingTimeoutError(
+                "batch processing exceeded its pre-commit deadline",
+                stage=stage,
+                timing={
+                    "elapsed_ms": round((time.monotonic() - started) * 1000, 3),
+                    "connection_ms": round(connection_ms, 3),
+                    "lock_wait_ms": round(lock_wait_ms, 3),
+                    "deduplication_ms": round(deduplication_ms, 3),
+                    "alert_lookup_ms": round(alert_lookup_ms, 3),
+                    "insert_ms": round(insert_ms, 3),
+                    "retention_ms": round(retention_ms, 3),
+                    "sql_statement_count": sql_statement_count,
+                    "full_age_sweep": retention_profile.full_age_sweep,
+                },
+            )
+
+        connection.set_trace_callback(count_statement)
+        try:
+            stage_started = time.monotonic()
+            connection.execute("BEGIN IMMEDIATE")
+            lock_wait_ms = (time.monotonic() - stage_started) * 1000
+            if time.monotonic() >= deadline:
+                raise timeout_error("write_lock")
+            event_ids = tuple(dict.fromkeys(event.event_id for event in events))
+            deduplication_ids = tuple(
+                dict.fromkeys(event.deduplication_id for event in events)
+            )
+            placeholders_event = ",".join("?" for _ in event_ids)
+            placeholders_dedup = ",".join("?" for _ in deduplication_ids)
+            stage_started = time.monotonic()
+            existing_rows = connection.execute(
+                "SELECT event_id, deduplication_id FROM security_events WHERE "
+                f"event_id IN ({placeholders_event}) OR "
+                f"deduplication_id IN ({placeholders_dedup})",
+                (*event_ids, *deduplication_ids),
+            ).fetchall()
+            deduplication_ms = (time.monotonic() - stage_started) * 1000
+            if time.monotonic() >= deadline:
+                raise timeout_error("deduplication")
+            by_event_id = {str(row["event_id"]): row for row in existing_rows}
+            by_deduplication_id = {
+                str(row["deduplication_id"]): row for row in existing_rows
+            }
+
+            source_ids = tuple(
+                dict.fromkeys(
+                    event.source_event_id
+                    for event in events
+                    if event.source_event_id
+                )
+            )
+            linked_alerts: set[str] = set()
+            stage_started = time.monotonic()
+            if source_ids:
+                placeholders = ",".join("?" for _ in source_ids)
+                linked_alerts = {
+                    str(row[0])
+                    for row in connection.execute(
+                        f"SELECT alert_id FROM alerts WHERE alert_id IN ({placeholders})",
+                        source_ids,
+                    )
+                }
+            alert_lookup_ms = (time.monotonic() - stage_started) * 1000
+            if time.monotonic() >= deadline:
+                raise timeout_error("alert_lookup")
+
+            inserts_started = time.monotonic()
+            for index, (event, occurred_at) in enumerate(zip(events, occurred, strict=True)):
+                if time.monotonic() >= deadline:
+                    insert_ms = (time.monotonic() - inserts_started) * 1000
+                    raise timeout_error("insert")
+                existing_by_id = by_event_id.get(event.event_id)
+                if (
+                    existing_by_id is not None
+                    and str(existing_by_id["deduplication_id"])
+                    != event.deduplication_id
+                ):
+                    raise BatchItemConflictError(index, event.event_id)
+                existing = existing_by_id or by_deduplication_id.get(
+                    event.deduplication_id
+                )
+                if existing is not None:
+                    results.append(
+                        BatchStoredEvent(
+                            index=index,
+                            event_id=str(existing["event_id"]),
+                            deduplication_id=event.deduplication_id,
+                            duplicate=True,
+                        )
+                    )
+                    continue
+
+                related_alert_id = (
+                    event.source_event_id
+                    if event.source_event_id in linked_alerts
+                    else None
+                )
+                self._insert_event_row(
+                    connection,
+                    event,
+                    occurred_at=occurred_at,
+                    ingested_at=ingested_at,
+                    related_alert_id=related_alert_id,
+                )
+                inserted_ids.append(event.event_id)
+                synthetic_row = {
+                    "event_id": event.event_id,
+                    "deduplication_id": event.deduplication_id,
+                }
+                by_event_id[event.event_id] = synthetic_row
+                by_deduplication_id[event.deduplication_id] = synthetic_row
+                results.append(
+                    BatchStoredEvent(
+                        index=index,
+                        event_id=event.event_id,
+                        deduplication_id=event.deduplication_id,
+                        duplicate=False,
+                    )
+                )
+            insert_ms = (time.monotonic() - inserts_started) * 1000
+
+            if inserted_ids:
+                connection.execute(
+                    "UPDATE security_event_store_state SET "
+                    "retained_records = retained_records + ? WHERE singleton = 1",
+                    (len(inserted_ids),),
+                )
+                retention_started = time.monotonic()
+                retention_profile = self._enforce_retention(
+                    connection,
+                    ingested_at,
+                    preserve_event_ids=tuple(inserted_ids),
+                ) or RetentionProfile()
+                retention_ms = (time.monotonic() - retention_started) * 1000
+            if time.monotonic() >= deadline:
+                raise timeout_error("retention")
+            commit_started = time.monotonic()
+            connection.commit()
+            commit_ms = (time.monotonic() - commit_started) * 1000
+            transaction_completed = time.monotonic()
+        except Exception:
+            connection.rollback()
+            raise
+        finally:
+            connection.set_trace_callback(None)
+            connection.close()
+
+        completed = time.monotonic()
+        duplicates = sum(1 for item in results if item.duplicate)
+        return BatchIngestResult(
+            items=results,
+            inserted=len(inserted_ids),
+            duplicates=duplicates,
+            database_ms=round((completed - started) * 1000, 3),
+            transaction_ms=round((transaction_completed - transaction_started) * 1000, 3),
+            retention_ms=round(retention_ms, 3),
+            commit_ms=round(commit_ms, 3),
+            connection_ms=round(connection_ms, 3),
+            lock_wait_ms=round(lock_wait_ms, 3),
+            deduplication_ms=round(deduplication_ms, 3),
+            alert_lookup_ms=round(alert_lookup_ms, 3),
+            insert_ms=round(insert_ms, 3),
+            retention_state_ms=retention_profile.state_ms,
+            retention_age_delete_ms=retention_profile.age_delete_ms,
+            retention_count_ms=retention_profile.count_ms,
+            retention_candidate_ms=retention_profile.candidate_ms,
+            protected_check_ms=retention_profile.protected_check_ms,
+            retention_delete_ms=retention_profile.delete_ms,
+            protected_count_ms=retention_profile.protected_count_ms,
+            retention_metadata_ms=retention_profile.metadata_ms,
+            retention_audit_ms=retention_profile.audit_ms,
+            sql_statement_count=sql_statement_count,
+            retention_rows_considered=retention_profile.rows_considered,
+            retention_rows_deleted=retention_profile.rows_deleted,
+            protected_row_skips=retention_profile.protected_skips,
+            full_age_sweep=retention_profile.full_age_sweep,
+        )
 
     def _conditions(self, filters: EventFilters) -> tuple[list[str], list[object], bool]:
         conditions: list[str] = []
@@ -367,8 +1123,13 @@ class EventRepository:
             (filters.destination_ip, "e.destination_ip", False),
             (filters.hostname, "e.hostname", True),
             (filters.username, "e.username", True),
+            (filters.operating_system, "e.operating_system", True),
+            (filters.event_provider, "e.event_provider", True),
+            (filters.event_channel, "e.event_channel", True),
+            (filters.process_name, "e.process_name", True),
             (filters.rule_id, "e.rule_id", False),
             (filters.event_category, "e.event_category", True),
+            (filters.event_action, "e.event_action", True),
             (filters.outcome, "e.outcome", True),
             (filters.source_type, "e.source_type", False),
             (filters.related_alert_id, "COALESCE(e.related_alert_id, a.alert_id)", False),
@@ -578,12 +1339,80 @@ class EventRepository:
                 "WHERE ia.alert_id = COALESCE(?, ?) ORDER BY ia.incident_id",
                 (row["related_alert_id"], row["source_event_id"]),
             ).fetchall()
+            case_rows = connection.execute(
+                "SELECT DISTINCT c.case_id FROM soc_cases c WHERE "
+                "c.case_id IN (SELECT case_id FROM case_events WHERE event_id = ?) OR "
+                "c.case_id IN (SELECT case_id FROM case_alerts WHERE alert_id = COALESCE(?, ?)) OR "
+                "c.case_id IN (SELECT ci.case_id FROM case_incidents ci JOIN incident_alerts ia "
+                "ON ia.incident_id = ci.incident_id WHERE ia.alert_id = COALESCE(?, ?)) "
+                "ORDER BY c.case_id",
+                (event_id, row["related_alert_id"], row["source_event_id"],
+                 row["related_alert_id"], row["source_event_id"]),
+            ).fetchall()
         summary = self._summary(row)
         return SecurityEventDetail(
             **summary.model_dump(),
             structured_payload=json.loads(row["structured_json"]),
             raw_payload=json.loads(row["raw_event_json"]),
             related_incident_ids=[str(item[0]) for item in incident_rows],
+            related_case_ids=[str(item[0]) for item in case_rows],
+            raw_evidence_ref=summary.event_id,
+        )
+
+    def telemetry_coverage(
+        self,
+        start_time: datetime,
+        end_time: datetime,
+        *,
+        limit: int = 100,
+    ) -> TelemetryCoverageReport:
+        if not 1 <= limit <= 100:
+            raise ValueError("limit must be between 1 and 100")
+        start = _utc_iso(start_time)
+        end = _utc_iso(end_time)
+        with self._connect() as connection:
+            rows = connection.execute(
+                """
+                SELECT source_type, event_category, operating_system, event_provider,
+                       event_channel, COUNT(*) AS event_count,
+                       MIN(occurred_at) AS first_event_at,
+                       MAX(occurred_at) AS last_event_at,
+                       MAX(ingested_at) AS last_ingested_at
+                FROM security_events
+                WHERE occurred_at BETWEEN ? AND ?
+                GROUP BY source_type, event_category, operating_system,
+                         event_provider, event_channel
+                ORDER BY event_count DESC, source_type, event_category,
+                         event_provider, event_channel
+                LIMIT ?
+                """,
+                (start, end, limit),
+            ).fetchall()
+            total = int(
+                connection.execute(
+                    "SELECT COUNT(*) FROM security_events WHERE occurred_at BETWEEN ? AND ?",
+                    (start, end),
+                ).fetchone()[0]
+            )
+        return TelemetryCoverageReport(
+            start_time=start_time,
+            end_time=end_time,
+            generated_at=datetime.now(timezone.utc),
+            total_events=total,
+            entries=[
+                TelemetryCoverageEntry(
+                    source_type=row["source_type"],
+                    event_category=row["event_category"],
+                    operating_system=row["operating_system"],
+                    event_provider=row["event_provider"],
+                    event_channel=row["event_channel"],
+                    event_count=int(row["event_count"]),
+                    first_event_at=datetime.fromisoformat(row["first_event_at"]),
+                    last_event_at=datetime.fromisoformat(row["last_event_at"]),
+                    last_ingested_at=datetime.fromisoformat(row["last_ingested_at"]),
+                )
+                for row in rows
+            ],
         )
 
     @staticmethod
@@ -742,6 +1571,11 @@ class EventRepository:
                 "SELECT last_retention_at, last_deleted_count, retained_records "
                 "FROM security_event_store_state WHERE singleton = 1"
             ).fetchone()
+            protected = self._protected_event_filter("security_events")
+            retention_stats = connection.execute(
+                f"SELECT COUNT(*), SUM(CASE WHEN {protected} THEN 1 ELSE 0 END), "
+                "MIN(occurred_at), MAX(occurred_at) FROM security_events"
+            ).fetchone()
 
         if health_row is None:
             ingestion = IngestionHealth(state="EMPTY")
@@ -770,12 +1604,30 @@ class EventRepository:
                 delivered_records=int(row[1]),
             )
 
-        retained_records = int(retention_row[2]) if retention_row else 0
+        retained_records = int(retention_stats[0] or 0)
+        protected_records = int(retention_stats[1] or 0)
+        over_limit_records = max(0, retained_records - self.max_records)
+        retention_state = (
+            "OVER_LIMIT_PROTECTED"
+            if over_limit_records
+            else "AT_LIMIT"
+            if retained_records >= self.max_records
+            else "WITHIN_LIMIT"
+        )
         retention = RetentionStatus(
-            state="AT_LIMIT" if retained_records >= self.max_records else "WITHIN_LIMIT",
+            state=retention_state,
             retention_days=self.retention_days,
             max_records=self.max_records,
             retained_records=retained_records,
+            protected_records=protected_records,
+            over_limit_records=over_limit_records,
+            usage_percent=round((retained_records / self.max_records) * 100.0, 3),
+            oldest_event_at=(
+                datetime.fromisoformat(retention_stats[2]) if retention_stats[2] else None
+            ),
+            newest_event_at=(
+                datetime.fromisoformat(retention_stats[3]) if retention_stats[3] else None
+            ),
             last_run_at=datetime.fromisoformat(retention_row[0]) if retention_row and retention_row[0] else None,
             last_deleted_count=int(retention_row[1]) if retention_row else 0,
         )

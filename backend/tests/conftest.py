@@ -61,6 +61,7 @@ def client(database_path: Path) -> Iterator[TestClient]:
     settings = Settings(
         database_url=f"sqlite:///{database_path.as_posix()}",
         wazuh_ingest_api_key="test-ingest-key",
+        allow_m14_schema_migration=True,
     )
     with TestClient(create_app(settings)) as test_client:
         bootstrap_and_login(test_client)
@@ -72,6 +73,7 @@ def unauthenticated_client(database_path: Path) -> Iterator[TestClient]:
     settings = Settings(
         database_url=f"sqlite:///{database_path.as_posix()}",
         wazuh_ingest_api_key="test-ingest-key",
+        allow_m14_schema_migration=True,
     )
     with TestClient(create_app(settings)) as test_client:
         yield test_client

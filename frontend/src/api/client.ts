@@ -1,5 +1,8 @@
 import {
     parseAlertList,
+    parseAdvancedDetectionRules,
+    parseAdvancedRuleDryRun,
+    parseDetectionQuality,
     parseAlertAssignees,
     parseAlertBulkResponse,
     parseAlertWorkflow,
@@ -11,6 +14,7 @@ import {
     parseIncidentDetail,
     parseIncidentList,
     parseIncidentNote,
+    parseInvestigationWorkbench,
     parseNormalizedAlert,
     parseSecurityEvent,
     parseSecurityEventList,
@@ -20,6 +24,10 @@ import {
     parseLogSources,
     parseHosts,
     parseOperationalOverview,
+    parseAgentList,
+    parseAgentDetail,
+    parseAgentHealth,
+    parseWazuhIntegrationStatus,
     parseDetectionRules,
     parseSecurityActivityReport,
     parseAnalysts,
@@ -47,6 +55,15 @@ import {
     parseSavedHunts,
     parseSavedHunt,
     parseThreatHuntPage,
+    parseCanarySafety,
+    parseDetectionConfigurations,
+    parseDetectionDiagnostics,
+    parseDetectionRuleLifecycle,
+    parseDetectionRuleLifecycles,
+    parseShadowRunDetail,
+    parseShadowRuns,
+    parseTelemetryPrerequisite,
+    parseTuningComparison,
 } from "./contracts";
 import {
     parseCaseAnalytics,
@@ -73,6 +90,7 @@ import type {
     IncidentStatusUpdate,
 } from "../types/incidents";
 import type { ReportQuery } from "../types/siem";
+import type { AgentQuery } from "../types/agents";
 import type {
     ChecklistCreate,
     ChecklistReorder,
@@ -88,12 +106,15 @@ import type {
     CaseStatusUpdate,
 } from "../types/cases";
 import type {
+    AdvancedRuleDryRunRequest,
     IOCDefinition,
     RuleDraftCreate,
     RuleDraftUpdate,
     RuleDryRunRequest,
     ThreatHuntQuery,
 } from "../types/detection-engineering";
+import type { WorkbenchTarget } from "../types/investigation-workbench";
+import type { DetectionConfigurationDefinition } from "../types/detection-readiness";
 
 type Parser<T> = (value: unknown) => T;
 type Fetcher = (
@@ -153,9 +174,14 @@ function savedSearchBody(payload: SavedEventSearchCreate): string {
             destination_ip: query.destinationIp,
             hostname: query.hostname,
             username: query.username,
+            operating_system: query.operatingSystem,
+            event_provider: query.eventProvider,
+            event_channel: query.eventChannel,
+            process_name: query.processName,
             event_id: query.eventId,
             rule_id: query.ruleId,
             event_category: query.eventCategory,
+            event_action: query.eventAction,
             outcome: query.outcome,
             severity_min: query.severityMin,
             severity_max: query.severityMax,
@@ -610,9 +636,14 @@ export class HttpBackendApi implements BackendApi {
                 ["destination_ip", query.destinationIp],
                 ["hostname", query.hostname],
                 ["username", query.username],
+                ["operating_system", query.operatingSystem],
+                ["event_provider", query.eventProvider],
+                ["event_channel", query.eventChannel],
+                ["process_name", query.processName],
                 ["event_id", query.eventId],
                 ["rule_id", query.ruleId],
                 ["event_category", query.eventCategory],
+                ["event_action", query.eventAction],
                 ["outcome", query.outcome],
                 ["severity_min", query.severityMin],
                 ["severity_max", query.severityMax],
@@ -634,6 +665,15 @@ export class HttpBackendApi implements BackendApi {
             `/api/v1/events/${encodeURIComponent(eventId)}`,
             parseSecurityEvent,
             {},
+            signal,
+        );
+    }
+
+    getInvestigationWorkbench(target: WorkbenchTarget, signal?: AbortSignal) {
+        return this.request(
+            "/api/v1/investigations/workbench",
+            parseInvestigationWorkbench,
+            this.mutation({ method: "POST", body: JSON.stringify(target) }),
             signal,
         );
     }
@@ -697,6 +737,54 @@ export class HttpBackendApi implements BackendApi {
         return this.request("/api/v1/hosts", parseHosts, {}, signal);
     }
 
+    listAgents(query: AgentQuery = {}, signal?: AbortSignal) {
+        return this.request(
+            `/api/v1/agents${queryString([
+                ["search", query.search],
+                ["os", query.os],
+                ["connection_status", query.connectionStatus],
+                ["version", query.version],
+                ["manager", query.manager],
+                ["source_type", query.sourceType],
+                ["last_seen_minutes", query.lastSeenMinutes],
+                ["sort", query.sort],
+                ["order", query.order],
+                ["limit", query.limit],
+                ["offset", query.offset],
+            ])}`,
+            parseAgentList,
+            {},
+            signal,
+        );
+    }
+
+    getAgent(agentKey: string, signal?: AbortSignal) {
+        return this.request(
+            `/api/v1/agents/${encodeURIComponent(agentKey)}`,
+            parseAgentDetail,
+            {},
+            signal,
+        );
+    }
+
+    getAgentHealth(agentKey: string, signal?: AbortSignal) {
+        return this.request(
+            `/api/v1/agents/${encodeURIComponent(agentKey)}/health`,
+            parseAgentHealth,
+            {},
+            signal,
+        );
+    }
+
+    getWazuhIntegrationStatus(signal?: AbortSignal) {
+        return this.request(
+            "/api/v1/integrations/wazuh/status",
+            parseWazuhIntegrationStatus,
+            {},
+            signal,
+        );
+    }
+
     getOperationalOverview(signal?: AbortSignal) {
         return this.request(
             "/api/v1/operations/overview",
@@ -714,6 +802,148 @@ export class HttpBackendApi implements BackendApi {
         return this.request(
             "/api/v1/detection-engineering/coverage",
             parseDetectionCoverage,
+            {},
+            signal,
+        );
+    }
+
+    listAdvancedDetectionRules(days = 30, signal?: AbortSignal) {
+        return this.request(
+            `/api/v1/detection-engineering/advanced-rules${queryString([["days", days]])}`,
+            parseAdvancedDetectionRules,
+            {},
+            signal,
+        );
+    }
+
+    dryRunAdvancedDetectionRule(
+        ruleId: string,
+        payload: AdvancedRuleDryRunRequest,
+        signal?: AbortSignal,
+    ) {
+        return this.request(
+            `/api/v1/detection-engineering/advanced-rules/${encodeURIComponent(ruleId)}/dry-run`,
+            parseAdvancedRuleDryRun,
+            this.mutation({ method: "POST", body: JSON.stringify(payload) }),
+            signal,
+        );
+    }
+
+    getDetectionQuality(ruleId: string, signal?: AbortSignal) {
+        return this.request(
+            `/api/v1/detection-engineering/advanced-quality/${encodeURIComponent(ruleId)}`,
+            parseDetectionQuality,
+            {},
+            signal,
+        );
+    }
+
+    listDetectionLifecycles(signal?: AbortSignal) {
+        return this.request(
+            "/api/v1/detection-readiness/rules",
+            parseDetectionRuleLifecycles,
+            {},
+            signal,
+        );
+    }
+
+    getDetectionLifecycle(ruleId: string, signal?: AbortSignal) {
+        return this.request(
+            `/api/v1/detection-readiness/rules/${encodeURIComponent(ruleId)}/lifecycle`,
+            parseDetectionRuleLifecycle,
+            {},
+            signal,
+        );
+    }
+
+    listDetectionConfigurations(ruleId: string, signal?: AbortSignal) {
+        return this.request(
+            `/api/v1/detection-readiness/rules/${encodeURIComponent(ruleId)}/configurations`,
+            parseDetectionConfigurations,
+            {},
+            signal,
+        );
+    }
+
+    getDetectionTelemetry(ruleId: string, signal?: AbortSignal) {
+        return this.request(
+            `/api/v1/detection-readiness/rules/${encodeURIComponent(ruleId)}/telemetry`,
+            parseTelemetryPrerequisite,
+            {},
+            signal,
+        );
+    }
+
+    getDetectionDiagnostics(ruleId: string, signal?: AbortSignal) {
+        return this.request(
+            `/api/v1/detection-readiness/rules/${encodeURIComponent(ruleId)}/diagnostics`,
+            parseDetectionDiagnostics,
+            {},
+            signal,
+        );
+    }
+
+    listShadowRuns(ruleId: string, signal?: AbortSignal) {
+        return this.request(
+            `/api/v1/detection-readiness/rules/${encodeURIComponent(ruleId)}/shadow-runs`,
+            parseShadowRuns,
+            {},
+            signal,
+        );
+    }
+
+    runShadowEvaluation(ruleId: string, signal?: AbortSignal) {
+        return this.request(
+            `/api/v1/detection-readiness/rules/${encodeURIComponent(ruleId)}/shadow-runs`,
+            parseShadowRunDetail,
+            this.mutation({
+                method: "POST",
+                body: JSON.stringify({
+                    relative_minutes: 1440,
+                    max_events: 1000,
+                    max_findings: 100,
+                    max_execution_ms: 2000,
+                }),
+            }),
+            signal,
+        );
+    }
+
+    compareDetectionTuning(
+        ruleId: string,
+        baseline: DetectionConfigurationDefinition,
+        signal?: AbortSignal,
+    ) {
+        return this.request(
+            `/api/v1/detection-readiness/rules/${encodeURIComponent(ruleId)}/tuning`,
+            parseTuningComparison,
+            this.mutation({
+                method: "POST",
+                body: JSON.stringify({
+                    relative_minutes: 1440,
+                    candidates: [
+                        {
+                            threshold_count: baseline.threshold_count,
+                            time_window_seconds: baseline.time_window_seconds,
+                        },
+                        {
+                            threshold_count: Math.min(100, baseline.threshold_count + 5),
+                            time_window_seconds: baseline.time_window_seconds,
+                        },
+                    ],
+                    max_events: 2000,
+                    max_findings: 200,
+                    max_execution_ms: 3000,
+                }),
+            }),
+            signal,
+        );
+    }
+
+    getCanarySafety(ruleId: string, signal?: AbortSignal) {
+        return this.request(
+            `/api/v1/detection-readiness/rules/${encodeURIComponent(ruleId)}/canary-safety`,
+            parseCanarySafety,
             {},
             signal,
         );

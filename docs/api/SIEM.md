@@ -8,6 +8,7 @@ separate and accepts only the configured `X-API-Key`.
 |---|---|---|
 | `POST` | `/api/v1/events/ingest` | Normalize, redact, deduplicate, and retain one bounded Wazuh archive event |
 | `GET` | `/api/v1/events` | Bounded Discover search with exact/FTS filters and opaque keyset pagination |
+| `GET` | `/api/v1/events/coverage` | Evidence-backed telemetry coverage grouped by source/category/provider/channel |
 | `GET` | `/api/v1/events/{event_id}` | Redacted structured/raw evidence and stored relationships |
 | `GET` | `/api/v1/events/saved-searches` | List searches owned by the current analyst |
 | `POST` | `/api/v1/events/saved-searches` | Create one owned validated search |
@@ -22,8 +23,11 @@ separate and accepts only the configured `X-API-Key`.
 | `GET` | `/api/v1/audit-events` | `ADMIN`-only bounded security audit |
 
 Discover accepts offset-aware `start_time`/`end_time`, IPv4/IPv6 endpoints, hostname, username,
-event identifier, rule, category, outcome, severity range, source type, keyword, related alert,
-sort, cursor, and a limit of 1–100. Explicit ranges and reports are capped at 31 days. Report
+operating system, provider, channel, process name, event identifier, rule, category, action,
+outcome, severity range, source type, keyword, related alert, sort, cursor, and a limit of 1–100.
+Explicit ranges and reports are capped at 31 days. The coverage endpoint defaults to 24 hours,
+is capped at 31 days/100 groups, and returns only `OBSERVED` entries backed by `STORED_EVENTS`; it
+does not claim that a configured-but-silent source is healthy. Report
 filters are `severity_min`, `severity_max`, `host`, and `rule_id` and are returned in report
 metadata. All SQL values are parameters; the API returns typed 4xx responses for malformed ranges,
 filters, cursors, oversized bodies, retention violations, and conflicting identifiers.

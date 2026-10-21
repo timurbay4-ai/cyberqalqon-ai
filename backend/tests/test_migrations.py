@@ -72,6 +72,17 @@ def test_fresh_database_applies_every_migration(database_path: Path) -> None:
         ).fetchone()[0] == 2
         event_indexes = {row[1] for row in connection.execute("PRAGMA index_list(security_events)")}
         assert {"idx_security_events_category", "idx_security_events_outcome"} <= event_indexes
+        event_columns = {row[1] for row in connection.execute("PRAGMA table_info(security_events)")}
+        assert {
+            "operating_system",
+            "process_path",
+            "command_line",
+            "parent_process_path",
+            "mitre_ids_json",
+            "mitre_tactics_json",
+            "mitre_techniques_json",
+        } <= event_columns
+        assert {"idx_security_events_os_time", "idx_security_events_action_time"} <= event_indexes
 
 
 def test_migrations_are_idempotent(database_path: Path) -> None:
@@ -82,6 +93,41 @@ def test_migrations_are_idempotent(database_path: Path) -> None:
 
     with sqlite3.connect(database_path) as connection:
         assert connection.execute("SELECT COUNT(*) FROM schema_migrations").fetchone()[0] == len(MIGRATIONS)
+
+
+def test_m14_migration_rolls_back_all_schema_objects_on_interruption(
+    database_path: Path,
+) -> None:
+    with sqlite3.connect(database_path) as connection:
+        connection.execute(
+            "CREATE TABLE schema_migrations ("
+            "version INTEGER PRIMARY KEY, name TEXT NOT NULL, applied_at TEXT NOT NULL)"
+        )
+        for migration in MIGRATIONS[:17]:
+            connection.execute("BEGIN IMMEDIATE")
+            migration.apply(connection)
+            connection.execute(
+                "INSERT INTO schema_migrations VALUES (?, ?, '2026-10-13T00:00:00+00:00')",
+                (migration.version, migration.name),
+            )
+            connection.execute(f"PRAGMA user_version = {migration.version}")
+            connection.commit()
+
+        try:
+            connection.execute("BEGIN IMMEDIATE")
+            MIGRATIONS[17].apply(connection)
+            raise RuntimeError("simulated migration interruption")
+        except RuntimeError:
+            connection.rollback()
+
+        assert connection.execute("PRAGMA user_version").fetchone()[0] == 17
+        assert connection.execute(
+            "SELECT COUNT(*) FROM schema_migrations WHERE version = 18"
+        ).fetchone()[0] == 0
+        assert connection.execute(
+            "SELECT COUNT(*) FROM sqlite_master "
+            "WHERE type = 'table' AND name LIKE 'advanced_detection_%'"
+        ).fetchone()[0] == 0
 
 
 def test_milestone_four_database_upgrades_to_ai_history_without_rewriting_auth(database_path: Path) -> None:
@@ -289,6 +335,56 @@ def test_legacy_ingestion_database_is_upgraded_without_losing_alerts(
     assert "multiple authentication failures" in row[4]
     assert repository.get(alert.alert_id) == alert
     assert repository.list(AlertFilters(search="authentication"), limit=10).total == 1
+
+
+def test_schema_15_event_upgrades_to_endpoint_context_without_rewriting_evidence(
+    database_path: Path,
+) -> None:
+    with sqlite3.connect(database_path) as connection:
+        connection.execute(
+            "CREATE TABLE schema_migrations (version INTEGER PRIMARY KEY, name TEXT NOT NULL, applied_at TEXT NOT NULL)"
+        )
+        for migration in MIGRATIONS[:15]:
+            migration.apply(connection)
+            connection.execute(
+                "INSERT INTO schema_migrations VALUES (?, ?, ?)",
+                (migration.version, migration.name, "2026-10-11T00:00:00+00:00"),
+            )
+            connection.execute(f"PRAGMA user_version = {migration.version}")
+        connection.execute(
+            """
+            INSERT INTO security_events (
+                event_id, deduplication_id, occurred_at, ingested_at, source_type,
+                message, structured_json, raw_event_json, ingestion_source,
+                raw_size_bytes, search_text
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            """,
+            (
+                "EVT-PRESERVE-V15",
+                "a" * 64,
+                "2026-10-11T00:00:00+00:00",
+                "2026-10-11T00:00:01+00:00",
+                "wazuh_archive",
+                "preserve historical evidence",
+                "{}",
+                "{}",
+                "wazuh_archives",
+                2,
+                "preserve historical evidence",
+            ),
+        )
+        connection.commit()
+
+    _repository(database_path).initialize()
+
+    with sqlite3.connect(database_path) as connection:
+        row = connection.execute(
+            "SELECT message, raw_event_json, operating_system, mitre_ids_json "
+            "FROM security_events WHERE event_id = 'EVT-PRESERVE-V15'"
+        ).fetchone()
+        version = connection.execute("PRAGMA user_version").fetchone()[0]
+    assert row == ("preserve historical evidence", "{}", None, "[]")
+    assert version == len(MIGRATIONS)
 
 
 def test_incompatible_legacy_schema_fails_without_dropping_data(database_path: Path) -> None:

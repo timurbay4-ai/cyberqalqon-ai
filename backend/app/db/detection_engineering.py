@@ -6,6 +6,7 @@ import base64
 import json
 import sqlite3
 import time
+from contextlib import closing
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from typing import Any, Iterable
@@ -74,6 +75,14 @@ _EVENT_COLUMNS = {
     "hostname": "hostname",
     "agent_id": "agent_id",
     "agent_name": "agent_name",
+    "operating_system": "operating_system",
+    "event_provider": "event_provider",
+    "event_channel": "event_channel",
+    "process_name": "process_name",
+    "process_path": "process_path",
+    "command_line": "command_line",
+    "parent_process_name": "parent_process_name",
+    "parent_process_path": "parent_process_path",
     "source_ip": "source_ip",
     "destination_ip": "destination_ip",
     "username": "username",
@@ -311,6 +320,10 @@ class DetectionEngineeringRepository:
             warnings.append("Rule documentation is empty.")
         if any(item.field.value == "message" for item in draft.conditions):
             warnings.append("Message matching may be noisy; confirm against representative history.")
+        if any(item.field.value == "command_line" for item in draft.conditions):
+            warnings.append(
+                "Command-line matching depends on endpoint audit policy and redacted collected text."
+            )
         return warnings
 
     def validate_draft(
@@ -921,7 +934,7 @@ class DetectionEngineeringRepository:
             raise ValueError("limit must be between 1 and 1000")
         end = datetime.now(timezone.utc)
         start = end - timedelta(days=days)
-        with self._connect() as connection:
+        with closing(self._connect()) as connection:
             indicator_rows = connection.execute(
                 "SELECT * FROM ioc_indicators WHERE is_active = 1 "
                 "AND (expires_at IS NULL OR expires_at > ?) "

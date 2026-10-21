@@ -42,6 +42,9 @@ event IDs. It never mirrors the archive without an allowlist.
 SQLite schema version 8 added `security_events`, a small state table, indexes, and optional FTS5.
 Version 9 adds analyst-owned `saved_event_searches`, bounded append-only
 `security_audit_events`, retention telemetry, and compound exact-filter indexes.
+Version 15 adds authoritative agent inventory and Windows provenance. Version 16 adds nullable
+endpoint execution context, OS evidence, and upstream MITRE arrays without rewriting historical
+events.
 The default event retention is 30 days and 100,000 records; both are configurable within validated
 bounds. Age cleanup runs at most every five minutes during ingestion, while the record cap is
 enforced on every new event. Events older than the configured retention window or more than 24

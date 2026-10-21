@@ -6,16 +6,18 @@ new verbose audit policy.
 
 | Channel | Provider requirement | Selected Event IDs |
 |---|---|---|
-| Security | Microsoft-Windows-Security-Auditing | 4624, 4625, 4720, 4726, 4732, 1102 |
+| Security | Microsoft-Windows-Security-Auditing | 4624, 4625, 4634, 4648, 4672, 4688, 4720, 4726, 4732, 1102 |
 | System | Service Control Manager | 7045 |
-| Microsoft-Windows-PowerShell/Operational | Microsoft-Windows-PowerShell | 4104 |
-| Microsoft-Windows-Windows Defender/Operational | Microsoft-Windows-Windows Defender | 1116, 1117 |
+| Microsoft-Windows-PowerShell/Operational | Microsoft-Windows-PowerShell | 4103, 4104 |
+| Microsoft-Windows-Windows Defender/Operational | Microsoft-Windows-Windows Defender | 1116–1119, 5000, 5001, 5004, 5007 |
 
 At discovery time System, PowerShell Operational, and Defender Operational were enabled and
 circular. Their record counts were 34,393, 2,139, and 13,684 respectively. Security-log metadata,
 events, and `auditpol` require elevation and therefore could not be inspected. Script Block/Module
-Logging policy was not enabled by this work; collection observes 4104 only when Windows already
-emits it.
+Logging policy was not enabled by this work. Security 4688 requires Process Creation auditing for
+the event and the command-line audit setting for command-line content. PowerShell 4103/4104 require
+the corresponding Module/Script Block Logging policy. The collector observes only what Windows
+already emits; applying those policies requires an authorized elevated operator session.
 
 Read-only historical lookup confirmed the actual providers/channels on this host: System 7045 from
 `Service Control Manager` (2026-10-08 05:34 +05), PowerShell 4104 from
@@ -24,7 +26,8 @@ Read-only historical lookup confirmed the actual providers/channels on this host
 were not printed or copied into artifacts.
 
 The normalizer preserves the Wazuh alert timestamp, agent ID/name, Windows event ID, channel,
-provider, computer name, target/subject username, and source IP/port when present. Wazuh's `-`
+provider, computer name, target/subject username, source IP/port, process path, redacted command
+line, parent process, deterministic action/outcome, and upstream MITRE context when present. Wazuh's `-`
 network sentinel is treated as missing data rather than an invalid IP address. All strings remain
 untrusted display data.
 
@@ -40,3 +43,5 @@ provider, and computer. Authentication, CSRF, RBAC, and ingest API-key validatio
 - Event-channel sizes remain Windows-managed circular logs.
 - Production tuning should measure 4624 volume after enrollment and may further restrict logon
   types if the host workload is noisy.
+- Process creation and PowerShell telemetry can be high volume. The repository fragment is a
+  prerequisite definition, not authorization to deploy or enable policy on the endpoint.

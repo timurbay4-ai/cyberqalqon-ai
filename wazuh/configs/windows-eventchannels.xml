@@ -3,7 +3,7 @@
 <localfile>
   <location>Security</location>
   <log_format>eventchannel</log_format>
-  <query>Event/System[(EventID=4624 or EventID=4625 or EventID=4720 or EventID=4726 or EventID=4732 or EventID=1102)]</query>
+  <query>Event/System[(EventID=4624 or EventID=4625 or EventID=4634 or EventID=4648 or EventID=4672 or EventID=4688 or EventID=4720 or EventID=4726 or EventID=4732 or EventID=1102)]</query>
 </localfile>
 
 <localfile>
@@ -15,11 +15,11 @@
 <localfile>
   <location>Microsoft-Windows-PowerShell/Operational</location>
   <log_format>eventchannel</log_format>
-  <query>Event/System[EventID=4104]</query>
+  <query>Event/System[(EventID=4103 or EventID=4104)]</query>
 </localfile>
 
 <localfile>
   <location>Microsoft-Windows-Windows Defender/Operational</location>
   <log_format>eventchannel</log_format>
-  <query>Event/System[(EventID=1116 or EventID=1117)]</query>
+  <query>Event/System[(EventID=1116 or EventID=1117 or EventID=1118 or EventID=1119 or EventID=5000 or EventID=5001 or EventID=5004 or EventID=5007)]</query>
 </localfile>

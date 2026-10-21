@@ -5,6 +5,7 @@ from __future__ import annotations
 import hmac
 import json
 import logging
+import time
 from datetime import datetime, timezone
 from typing import Annotated, Any
 
@@ -106,20 +107,26 @@ def require_ingest_key(
     request: Request,
     x_api_key: Annotated[str | None, Header()] = None,
 ) -> None:
-    expected_key = request.app.state.settings.wazuh_ingest_api_key
-    if expected_key is None:
-        raise HTTPException(
-            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
-            detail=_error(
-                "ingestion_not_configured",
-                "Wazuh ingestion is disabled until WAZUH_INGEST_API_KEY is configured",
-            ),
-        )
-    if x_api_key is None or not hmac.compare_digest(x_api_key, expected_key):
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail=_error("invalid_api_key", "A valid X-API-Key header is required"),
-            headers={"WWW-Authenticate": "ApiKey"},
+    auth_started = time.monotonic()
+    try:
+        expected_key = request.app.state.settings.wazuh_ingest_api_key
+        if expected_key is None:
+            raise HTTPException(
+                status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+                detail=_error(
+                    "ingestion_not_configured",
+                    "Wazuh ingestion is disabled until WAZUH_INGEST_API_KEY is configured",
+                ),
+            )
+        if x_api_key is None or not hmac.compare_digest(x_api_key, expected_key):
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail=_error("invalid_api_key", "A valid X-API-Key header is required"),
+                headers={"WWW-Authenticate": "ApiKey"},
+            )
+    finally:
+        request.state.ingest_auth_ms = round(
+            (time.monotonic() - auth_started) * 1000, 3
         )
 
 

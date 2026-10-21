@@ -20,9 +20,14 @@ interface FilterValues {
   destinationIp: string;
   hostname: string;
   username: string;
+  operatingSystem: string;
+  eventProvider: string;
+  eventChannel: string;
+  processName: string;
   eventId: string;
   ruleId: string;
   eventCategory: string;
+  eventAction: string;
   outcome: string;
   sourceType: string;
   severityMin: string;
@@ -30,17 +35,24 @@ interface FilterValues {
   sort: "newest" | "oldest";
 }
 
+interface DiscoverHistoryState {
+  cyberqalqonDiscover?: FilterValues;
+  cyberqalqonDiscoverCursor?: string;
+  cyberqalqonDiscoverCursorStack?: Array<string | undefined>;
+}
+
 const EMPTY_FILTERS: FilterValues = {
   preset: "24h", startTime: "", endTime: "", search: "", sourceIp: "", destinationIp: "",
-  hostname: "", username: "", eventId: "", ruleId: "", sourceType: "", severityMin: "",
-  eventCategory: "", outcome: "", severityMax: "", sort: "newest",
+  hostname: "", username: "", operatingSystem: "", eventProvider: "", eventChannel: "",
+  processName: "", eventId: "", ruleId: "", sourceType: "", severityMin: "",
+  eventCategory: "", eventAction: "", outcome: "", severityMax: "", sort: "newest",
 };
 
 const PRESET_MINUTES: Record<Exclude<Preset, "custom">, 15 | 60 | 1440 | 10080> = {
   "15m": 15, "1h": 60, "24h": 1440, "7d": 10080,
 };
 
-const URL_FILTER_KEYS = ["range", "from", "to", "source_type", "rule_id", "category", "outcome", "severity_min", "severity_max", "sort"];
+const URL_FILTER_KEYS = ["range", "from", "to", "source_type", "rule_id", "category", "action", "os", "provider", "channel", "process", "outcome", "severity_min", "severity_max", "sort"];
 
 function filtersFromUrl(): FilterValues {
   const parameters = new URLSearchParams(window.location.search);
@@ -52,8 +64,13 @@ function filtersFromUrl(): FilterValues {
     startTime: preset === "custom" ? parameters.get("from") ?? "" : "",
     endTime: preset === "custom" ? parameters.get("to") ?? "" : "",
     sourceType: EVENT_SOURCE_TYPES.includes(parameters.get("source_type") as never) ? parameters.get("source_type")! : "",
+    operatingSystem: parameters.get("os") ?? "",
+    eventProvider: parameters.get("provider") ?? "",
+    eventChannel: parameters.get("channel") ?? "",
+    processName: parameters.get("process") ?? "",
     ruleId: parameters.get("rule_id") ?? "",
     eventCategory: parameters.get("category") ?? "",
+    eventAction: parameters.get("action") ?? "",
     outcome: parameters.get("outcome") ?? "",
     severityMin: parameters.get("severity_min") ?? "",
     severityMax: parameters.get("severity_max") ?? "",
@@ -72,13 +89,36 @@ function updateDiscoverHistory(values: FilterValues): void {
     if (values.endTime) url.searchParams.set("to", values.endTime);
   }
   if (values.sourceType) url.searchParams.set("source_type", values.sourceType);
+  if (values.operatingSystem) url.searchParams.set("os", values.operatingSystem);
+  if (values.eventProvider) url.searchParams.set("provider", values.eventProvider);
+  if (values.eventChannel) url.searchParams.set("channel", values.eventChannel);
+  if (values.processName) url.searchParams.set("process", values.processName);
   if (values.ruleId) url.searchParams.set("rule_id", values.ruleId);
   if (values.eventCategory) url.searchParams.set("category", values.eventCategory);
+  if (values.eventAction) url.searchParams.set("action", values.eventAction);
   if (values.outcome) url.searchParams.set("outcome", values.outcome);
   if (values.severityMin) url.searchParams.set("severity_min", values.severityMin);
   if (values.severityMax) url.searchParams.set("severity_max", values.severityMax);
   if (values.sort !== "newest") url.searchParams.set("sort", values.sort);
-  window.history.pushState({ cyberqalqonDiscover: values }, "", url);
+  window.history.pushState({ cyberqalqonDiscover: values, cyberqalqonDiscoverCursorStack: [] }, "", url);
+}
+
+function discoverHistoryState(): DiscoverHistoryState {
+  return (window.history.state as DiscoverHistoryState | null) ?? {};
+}
+
+function paginationHistory(
+  values: FilterValues,
+  cursor: string | undefined,
+  cursorStack: Array<string | undefined>,
+  mode: "push" | "replace" = "push",
+): void {
+  const state: DiscoverHistoryState = {
+    cyberqalqonDiscover: values,
+    cyberqalqonDiscoverCursor: cursor,
+    cyberqalqonDiscoverCursorStack: cursorStack,
+  };
+  window.history[mode === "push" ? "pushState" : "replaceState"](state, "", window.location.href);
 }
 
 function presetRange(preset: Preset): { startTime?: string; endTime?: string } {
@@ -105,9 +145,14 @@ function eventQuery(values: FilterValues): EventQuery {
     destinationIp: values.destinationIp.trim() || undefined,
     hostname: values.hostname.trim() || undefined,
     username: values.username.trim() || undefined,
+    operatingSystem: values.operatingSystem.trim() || undefined,
+    eventProvider: values.eventProvider.trim() || undefined,
+    eventChannel: values.eventChannel.trim() || undefined,
+    processName: values.processName.trim() || undefined,
     eventId: values.eventId.trim() || undefined,
     ruleId: values.ruleId.trim() || undefined,
     eventCategory: values.eventCategory.trim() || undefined,
+    eventAction: values.eventAction.trim() || undefined,
     outcome: values.outcome.trim() || undefined,
     sourceType: (values.sourceType || undefined) as EventQuery["sourceType"],
     severityMin: values.severityMin === "" ? undefined : Number(values.severityMin),
@@ -134,7 +179,9 @@ function savedValues(saved: SavedEventSearch): FilterValues {
     startTime: localValue(query.startTime), endTime: localValue(query.endTime),
     search: query.search ?? "", sourceIp: query.sourceIp ?? "", destinationIp: query.destinationIp ?? "",
     hostname: query.hostname ?? "", username: query.username ?? "", eventId: query.eventId ?? "",
-    ruleId: query.ruleId ?? "", eventCategory: query.eventCategory ?? "", outcome: query.outcome ?? "",
+    operatingSystem: query.operatingSystem ?? "", eventProvider: query.eventProvider ?? "",
+    eventChannel: query.eventChannel ?? "", processName: query.processName ?? "",
+    ruleId: query.ruleId ?? "", eventCategory: query.eventCategory ?? "", eventAction: query.eventAction ?? "", outcome: query.outcome ?? "",
     sourceType: query.sourceType ?? "", severityMin: query.severityMin == null ? "" : String(query.severityMin),
     severityMax: query.severityMax == null ? "" : String(query.severityMax), sort: query.sort ?? "newest",
   };
@@ -163,13 +210,14 @@ function EventsTable({ events, selectedId, onSelect, columns, compact }: { event
   );
 }
 
-export function DiscoverPage({ api, preferences = DEFAULT_PREFERENCES, onPreferencesChange = () => undefined, openEventId, onOpenAlert, onOpenIncident }: { api: BackendApi; preferences?: AnalystPreferences; onPreferencesChange?(preferences: AnalystPreferences): void; openEventId?: string | null; onOpenAlert(id: string): void; onOpenIncident(id: string): void }) {
-  const initialFilters = filtersFromUrl();
+export function DiscoverPage({ api, preferences = DEFAULT_PREFERENCES, onPreferencesChange = () => undefined, openEventId, onOpenAlert, onOpenIncident, onOpenCase = () => undefined, onInvestigate = () => undefined }: { api: BackendApi; preferences?: AnalystPreferences; onPreferencesChange?(preferences: AnalystPreferences): void; openEventId?: string | null; onOpenAlert(id: string): void; onOpenIncident(id: string): void; onOpenCase?(id: string): void; onInvestigate?(id: string): void }) {
+  const initialHistory = discoverHistoryState();
+  const initialFilters = initialHistory.cyberqalqonDiscover ?? filtersFromUrl();
   const [draft, setDraft] = useState<FilterValues>(initialFilters);
   const [applied, setApplied] = useState<FilterValues>(initialFilters);
   const [pageSize, setPageSize] = useState(preferences.discover_page_size);
-  const [cursor, setCursor] = useState<string | undefined>();
-  const [cursorStack, setCursorStack] = useState<Array<string | undefined>>([]);
+  const [cursor, setCursor] = useState<string | undefined>(initialHistory.cyberqalqonDiscoverCursor);
+  const [cursorStack, setCursorStack] = useState<Array<string | undefined>>(initialHistory.cyberqalqonDiscoverCursorStack ?? []);
   const [data, setData] = useState<SecurityEventListResponse | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -197,8 +245,9 @@ export function DiscoverPage({ api, preferences = DEFAULT_PREFERENCES, onPrefere
 
   useEffect(() => {
     const restore = (event: PopStateEvent) => {
-      const next = (event.state as { cyberqalqonDiscover?: FilterValues } | null)?.cyberqalqonDiscover ?? filtersFromUrl();
-      setDraft(next); setApplied(next); setCursor(undefined); setCursorStack([]);
+      const state = (event.state as DiscoverHistoryState | null) ?? {};
+      const next = state.cyberqalqonDiscover ?? filtersFromUrl();
+      setDraft(next); setApplied(next); setCursor(state.cyberqalqonDiscoverCursor); setCursorStack(state.cyberqalqonDiscoverCursorStack ?? []);
       setSelectedId(new URLSearchParams(window.location.search).get("event"));
     };
     window.addEventListener("popstate", restore);
@@ -296,11 +345,11 @@ export function DiscoverPage({ api, preferences = DEFAULT_PREFERENCES, onPrefere
   };
   const selectEvent = (eventId: string) => {
     const url = new URL(window.location.href); url.searchParams.set("view", "discover"); url.searchParams.set("event", eventId);
-    window.history.pushState({ cyberqalqonDiscover: applied }, "", url); setSelectedId(eventId);
+    window.history.pushState({ cyberqalqonDiscover: applied, cyberqalqonDiscoverCursor: cursor, cyberqalqonDiscoverCursorStack: cursorStack }, "", url); setSelectedId(eventId);
   };
   const closeEvent = () => {
     const url = new URL(window.location.href); url.searchParams.delete("event");
-    window.history.replaceState({ cyberqalqonDiscover: applied }, "", url); setSelectedId(null);
+    window.history.replaceState({ cyberqalqonDiscover: applied, cyberqalqonDiscoverCursor: cursor, cyberqalqonDiscoverCursorStack: cursorStack }, "", url); setSelectedId(null);
   };
   const persistPreferences = async (changes: Partial<Omit<AnalystPreferences, "version">>) => {
     setPreferenceError(null);
@@ -344,9 +393,14 @@ export function DiscoverPage({ api, preferences = DEFAULT_PREFERENCES, onPrefere
             <label className="filter-field"><span>Destination IP</span><input placeholder="127.0.0.1" maxLength={64} {...field("destinationIp")} /></label>
             <label className="filter-field"><span>Hostname</span><input maxLength={255} {...field("hostname")} /></label>
             <label className="filter-field"><span>Username</span><input maxLength={512} {...field("username")} /></label>
+            <label className="filter-field"><span>Operating system</span><input maxLength={255} placeholder="windows / linux" {...field("operatingSystem")} /></label>
+            <label className="filter-field"><span>Event provider</span><input maxLength={255} {...field("eventProvider")} /></label>
+            <label className="filter-field"><span>Event channel</span><input maxLength={255} {...field("eventChannel")} /></label>
+            <label className="filter-field"><span>Process name</span><input maxLength={1024} {...field("processName")} /></label>
             <label className="filter-field"><span>Event ID / code</span><input maxLength={255} {...field("eventId")} /></label>
             <label className="filter-field"><span>Wazuh rule ID</span><input maxLength={128} {...field("ruleId")} /></label>
             <label className="filter-field"><span>Event category</span><input maxLength={255} {...field("eventCategory")} /></label>
+            <label className="filter-field"><span>Action</span><input maxLength={255} placeholder="logon / process_start" {...field("eventAction")} /></label>
             <label className="filter-field"><span>Outcome</span><input maxLength={128} placeholder="success / failure" {...field("outcome")} /></label>
             <label className="filter-field"><span>Minimum severity</span><input type="number" min="0" max="16" {...field("severityMin")} /></label>
             <label className="filter-field"><span>Maximum severity</span><input type="number" min="0" max="16" {...field("severityMax")} /></label>
@@ -359,11 +413,11 @@ export function DiscoverPage({ api, preferences = DEFAULT_PREFERENCES, onPrefere
         {loading && !data && <StatePanel kind="loading" title="Searching events" message="Running bounded indexed queries…" />}
         {error && <StatePanel kind="unavailable" title="Event search unavailable" message={error} actionLabel="Retry" onAction={() => setRevision((value) => value + 1)} />}
         {!loading && !error && data?.items.length === 0 && <StatePanel kind="empty" title="No matching events" message="No stored event matches this range and filter set." />}
-        {!error && data && data.items.length > 0 && <><EventsTable events={data.items} selectedId={selectedId} onSelect={selectEvent} columns={preferences.discover_columns} compact={preferences.table_density === "COMPACT"} /><Pagination visible={data.items.length} total={data.page.total} hasPrevious={cursorStack.length > 0} hasNext={Boolean(data.page.next_cursor)} loading={loading} pageSize={pageSize} onPageSizeChange={(next) => { const size = next as 25 | 50 | 100; setPageSize(size); setCursor(undefined); setCursorStack([]); void persistPreferences({ discover_page_size: size }); }} onPrevious={() => { setCursor(cursorStack[cursorStack.length - 1]); setCursorStack((current) => current.slice(0, -1)); }} onNext={() => { if (data.page.next_cursor) { setCursorStack((current) => [...current, cursor]); setCursor(data.page.next_cursor); } }} /></>}
+        {!error && data && data.items.length > 0 && <><EventsTable events={data.items} selectedId={selectedId} onSelect={selectEvent} columns={preferences.discover_columns} compact={preferences.table_density === "COMPACT"} /><Pagination visible={data.items.length} total={data.page.total} hasPrevious={cursorStack.length > 0} hasNext={Boolean(data.page.next_cursor)} loading={loading} pageSize={pageSize} onPageSizeChange={(next) => { const size = next as 25 | 50 | 100; setPageSize(size); setCursor(undefined); setCursorStack([]); paginationHistory(applied, undefined, [], "replace"); void persistPreferences({ discover_page_size: size }); }} onPrevious={() => { const nextStack = cursorStack.slice(0, -1); const nextCursor = cursorStack[cursorStack.length - 1]; setCursor(nextCursor); setCursorStack(nextStack); paginationHistory(applied, nextCursor, nextStack); }} onNext={() => { if (data.page.next_cursor) { const nextStack = [...cursorStack, cursor]; setCursorStack(nextStack); setCursor(data.page.next_cursor); paginationHistory(applied, data.page.next_cursor, nextStack); } }} /></>}
       </section>
       {selectedId && !detail && !detailError && <aside className="detail-panel detail-panel--state"><StatePanel kind="loading" title="Loading event" message="Reading redacted structured evidence…" /></aside>}
       {detailError && <aside className="detail-panel detail-panel--state"><StatePanel kind="error" title="Event unavailable" message={detailError} actionLabel="Close" onAction={closeEvent} /></aside>}
-      {detail && <EventDetail event={detail} onClose={closeEvent} onOpenAlert={onOpenAlert} onOpenIncident={onOpenIncident} />}
+      {detail && <EventDetail event={detail} onClose={closeEvent} onOpenAlert={onOpenAlert} onOpenIncident={onOpenIncident} onOpenCase={onOpenCase} onInvestigate={onInvestigate} />}
     </div>
   );
 }

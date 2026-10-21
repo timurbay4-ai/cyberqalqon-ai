@@ -79,3 +79,28 @@ Add a bounded rule to `build_correlation_plan`, define its identity requirements
 then add positive, missing-field, cross-identity, window-boundary, delayed-delivery, lifecycle,
 rollback, and concurrency tests in `backend/tests/test_incident_correlation.py`. Never execute event
 content, perform network calls, or introduce probability scores into this engine.
+
+## M11 advanced detection extension
+
+M11 does not add a second live incident engine. The existing M9 post-alert correlation remains the
+only live automatic incident path. M11 adds a shared, deterministic event evaluator in
+`backend/app/services/advanced_detection.py`; it is currently reachable only through the
+authenticated bounded dry-run API and all nine definitions are disabled by policy.
+
+The M11 evaluator consumes the existing normalized `security_events` evidence, orders it by event
+time plus event ID, and evaluates threshold/sequence state in memory within the selected range.
+Sliding queues expire state at each rule's declared window. Stable logical grouping, reason, and
+window bucket produce a SHA-256 dedupe key. Event-store fingerprints already suppress replayed
+source events. This gives dry-run and a future reviewed live caller one set of matching semantics,
+without altering M9 tables or the live database schema.
+
+The rules are `DET-001` Windows failed-logon threshold, `DET-002` failure→success, `DET-003`
+remote privileged session, `DET-004` account/privileged-group change, `DET-005` suspicious
+PowerShell, `DET-006` high-risk service install, `DET-007` SSH threshold/failure→success, `DET-008`
+unusual sudo, and `DET-009` Defender detection/remediation lifecycle. Their complete prerequisites,
+tuning notes, evidence, and validation contracts are returned by the catalog API and documented in
+`docs/siem/M11_ADVANCED_DETECTION_VALIDATION.md`.
+
+No correlation state is persisted because no M11 rule is live. Restart-safe live state,
+concurrency ownership, incident creation policy, and enable/disable controls remain explicit future
+work and must not be claimed from historical dry-run behavior.
