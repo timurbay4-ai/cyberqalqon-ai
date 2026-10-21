@@ -409,7 +409,10 @@ def initialize_forward_generation(
         raise ForwardIngestionError("forward source rotated during initialization")
     if after.st_size < before.st_size:
         raise ForwardIngestionError("forward source truncated during initialization")
-    identity = "\x00".join(
+
+    # Preserve checkpoints prepared before the content-bound identity was added.
+    # This keeps repeated preparation of an already-enrolled generation idempotent.
+    legacy_identity = "\x00".join(
         (
             "m22-forward-generation-v1",
             namespace,
@@ -417,6 +420,48 @@ def initialize_forward_generation(
             str(after.st_ino),
             str(start_offset),
             prefix_sha256,
+        )
+    )
+    legacy_generation_id = hashlib.sha256(legacy_identity.encode("utf-8")).hexdigest()
+    compatible_state_path = state_directory / namespace / f"{legacy_generation_id}.json"
+    if compatible_state_path.exists():
+        existing = load_forward_state(compatible_state_path)
+        if (
+            existing.generation_id != legacy_generation_id
+            or existing.source_path != str(source_path)
+            or existing.source_device != after.st_dev
+            or existing.source_inode != after.st_ino
+            or existing.start_offset != start_offset
+            or existing.start_prefix_sha256 != prefix_sha256
+        ):
+            raise ForwardIngestionError("existing forward state identity is inconsistent")
+        ForwardIngestionWorker._validate_legacy_inventory(existing)
+        validate_forward_checkpoint(compatible_state_path, deep=True)
+        return compatible_state_path
+
+    # Device/inode pairs can be reused after unlink on POSIX filesystems. Bind new
+    # zero-offset generations to the first complete record as well, while keeping
+    # the identifier stable when that same active file is only appended to.
+    with _open_source(source_path, compression) as handle:
+        _first, first_digest, first_complete, _oversized = _read_bounded_record(
+            handle,
+            max_line_bytes=1_048_576,
+            snapshot_end=None,
+        )
+    if after.st_size and not first_complete:
+        raise ForwardIngestionError("forward source has no complete first record")
+    first_record_sha256 = (
+        first_digest.hex() if first_digest is not None else hashlib.sha256(b"").hexdigest()
+    )
+    identity = "\x00".join(
+        (
+            "m22-forward-generation-v2",
+            namespace,
+            str(after.st_dev),
+            str(after.st_ino),
+            str(start_offset),
+            prefix_sha256,
+            first_record_sha256,
         )
     )
     generation_id = hashlib.sha256(identity.encode("utf-8")).hexdigest()

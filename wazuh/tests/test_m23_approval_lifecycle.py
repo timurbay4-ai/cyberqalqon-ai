@@ -193,11 +193,26 @@ def test_source_prefix_change_blocks_proposal(tmp_path: Path) -> None:
         )
 
 
-def test_cli_writes_proposal_envelope_not_live_authority(tmp_path: Path) -> None:
+def test_cli_writes_proposal_envelope_not_live_authority(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
     now = time.time()
     state, approval = _fixture(tmp_path, issued=now - 10, expires=now + 600)
     output = (tmp_path / "proposal-envelope.json").resolve()
     requested = now + 1_200
+    from cyberqalqon_sender import cli
+
+    build_proposal = cli.build_approval_renewal_proposal
+    monkeypatch.setattr(
+        cli,
+        "build_approval_renewal_proposal",
+        lambda approval_path, checkpoint_path, **kwargs: build_proposal(
+            approval_path,
+            checkpoint_path,
+            require_root_owner=False,
+            **kwargs,
+        ),
+    )
 
     assert cli_main(
         [

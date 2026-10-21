@@ -381,6 +381,19 @@ def test_service_uses_single_event_delivery_and_stops_cleanly(
     monkeypatch.setattr(
         "cyberqalqon_sender.forward_service.EventDeliveryClient", FakeClient
     )
+    from cyberqalqon_sender import forward_service
+
+    validate_approval = forward_service.validate_live_approval
+    monkeypatch.setattr(
+        forward_service,
+        "validate_live_approval",
+        lambda approval_path, checkpoint_path, **kwargs: validate_approval(
+            approval_path,
+            checkpoint_path,
+            require_root_owner=False,
+            **kwargs,
+        ),
+    )
     sender = SenderConfig(
         backend_url="http://127.0.0.1:8000",
         api_key="x" * 32,
