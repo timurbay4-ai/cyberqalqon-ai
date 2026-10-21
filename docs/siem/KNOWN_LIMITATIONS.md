@@ -310,7 +310,7 @@
 - Operations cancellation cannot interrupt an SQLite C call already running in the bounded worker thread; it only protects the ASGI event loop from that work.
 - The 2-second Operations cache is process-local and deliberately labeled FRESH/CACHED; it is not a distributed cache.
 - Approval trust remains a local root-controlled manifest, not a remote signature service. Renewal proposals never authorize themselves.
-- Default Vitest worker scheduling produced two non-repeatable timing failures; all 124 tests passed with `vmThreads`, but default-pool stability remains a warning.
+- Default Vitest worker scheduling produced non-repeatable timing failures under parallel CI load. The test script is pinned to isolated `vmThreads`; all current tests pass in that mode, while unpinned default-pool stability remains a warning.
 - Legacy archive continuity remains UNPROVEN and the validator's inode mismatch remains FAIL.
 - Schema 18, historical replay, batch production ingestion, AI, and DET-001..DET-009 activation remain blocked by separate gates.
 

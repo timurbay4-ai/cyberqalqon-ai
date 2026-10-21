@@ -180,9 +180,9 @@ describe("App", () => {
     await screen.findByRole("heading", { name: "Security overview" });
 
     fireEvent.keyDown(window, { key: "?" });
-    expect(screen.getByRole("dialog", { name: "Shortcuts" })).toBeInTheDocument();
+    expect(await screen.findByRole("dialog", { name: "Shortcuts" })).toBeInTheDocument();
     fireEvent.keyDown(window, { key: "Escape" });
-    expect(screen.queryByRole("dialog", { name: "Shortcuts" })).not.toBeInTheDocument();
+    await waitFor(() => expect(screen.queryByRole("dialog", { name: "Shortcuts" })).not.toBeInTheDocument());
 
     fireEvent.keyDown(window, { key: "g" });
     fireEvent.keyDown(window, { key: "a" });
