@@ -17,6 +17,7 @@ from pathlib import Path
 from typing import Any, Iterable
 
 from app.db.events import EventRepository
+from app.schemas.cuse import CUSEMetadata
 from app.schemas.detection_engineering import AdvancedDetectionFinding, AdvancedDetectionRule
 from app.schemas.events import SecurityEventDetail, SecurityEventSummary
 from app.schemas.investigation_workbench import (
@@ -69,6 +70,7 @@ def _cursor_binding(request: WorkbenchRequest, start: str, end: str) -> str:
         "entity_type": request.entity_type,
         "entity_value": request.entity_value,
         "finding_key": request.finding_key,
+        "shadow_revision": request.shadow_revision,
         "rule_id": request.rule_id,
         "start": start,
         "target_id": request.target_id,
@@ -291,7 +293,10 @@ class InvestigationWorkbenchRepository:
                 kind = "IPV6" if ipaddress.ip_address(str(value)).version == 6 else "IPV4"
                 values.append((kind, value, label, True, field))
         seen = {(str(kind), str(value).casefold()) for kind, value, *_ in values if value}
-        for path, text in _walk_strings(structured):
+        # Provenance/checksum hashes are not observed file hashes. Source-specific
+        # evidence already exists in the original structured data fields.
+        entity_payload = {key: value for key, value in structured.items() if key != "_cuse"}
+        for path, text in _walk_strings(entity_payload):
             for match in _DOMAIN_RE.findall(text):
                 key = ("DOMAIN", match.casefold())
                 if key not in seen and len(seen) < 50:
@@ -657,6 +662,7 @@ class InvestigationWorkbenchRepository:
         evaluated_event_count: int = 0,
         detection_source: str = "HISTORICAL_DRY_RUN",
         shadow_run_id: str | None = None,
+        durable_shadow_context=None,
     ) -> InvestigationWorkbench:
         started = time.perf_counter()
         deadline = started + request.max_execution_ms / 1000
@@ -667,7 +673,12 @@ class InvestigationWorkbenchRepository:
             try:
                 columns = self._columns(connection, "security_events")
                 indexes = self._indexes(connection, "security_events")
-                if request.target_type in {"M11_FINDING", "SHADOW_FINDING"}:
+                if request.target_type == "DURABLE_SHADOW_FINDING":
+                    if durable_shadow_context is None:
+                        raise WorkbenchTargetNotFoundError(str(request.target_id))
+                    event_id = durable_shadow_context.matching_evidence.evidence[0].event_id
+                    label = f"{durable_shadow_context.finding_id} revision {durable_shadow_context.revision}"
+                elif request.target_type in {"M11_FINDING", "SHADOW_FINDING"}:
                     if detection_finding is None:
                         raise WorkbenchTargetNotFoundError(
                             str(request.finding_key or request.target_id)
@@ -682,8 +693,11 @@ class InvestigationWorkbenchRepository:
                     event_id, label = self._resolve_target(connection, request, start_iso, end_iso, indexes)
                 row = self._event_row(connection, event_id, columns)
                 primary = self._summary(row)
+                structured = _safe_json(row["structured_json"])
                 detail = SecurityEventDetail(
-                    **primary.model_dump(), structured_payload=_safe_json(row["structured_json"]),
+                    **primary.model_dump(), structured_payload=structured,
+                    cuse=CUSEMetadata.model_validate(structured["_cuse"])
+                    if isinstance(structured.get("_cuse"), dict) else None,
                     raw_payload=_safe_json(row["raw_event_json"]), related_incident_ids=[], related_case_ids=[],
                     raw_evidence_ref=primary.event_id,
                 )
@@ -726,6 +740,7 @@ class InvestigationWorkbenchRepository:
             summary=self._summary_text(primary, links), entities=entities,
             related_events=related, links=links, timeline=timeline, ioc_matches=iocs,
             correlation_groups=correlations, detection_context=detection,
+            durable_shadow_context=durable_shadow_context,
             query=InvestigationQueryMetadata(
                 start_time=start, end_time=end, related_limit=request.related_limit,
                 related_cursor=request.related_cursor, related_next_cursor=next_cursor,

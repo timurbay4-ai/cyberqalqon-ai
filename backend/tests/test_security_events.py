@@ -12,7 +12,7 @@ from fastapi.testclient import TestClient
 
 from app.services.event_normalizer import normalize_wazuh_event
 from app.services.event_normalizer import EventNormalizationError
-from app.db.events import EventFilters, EventRepository
+from app.db.events import EventFilters, EventRepository, RetentionCapacityError
 
 
 def archive_event(*, event_id: str = "1791469000.1", timestamp: str = "2026-10-08T14:30:00+00:00") -> dict:
@@ -438,8 +438,12 @@ def test_retention_preserves_case_evidence_and_audits_protected_pressure(
     assert acquired.status_code == 201, acquired.text
 
     newest = archive_event(event_id="preserved-ingest", timestamp=now.isoformat())
-    stored = repository.ingest(normalize_wazuh_event(newest), now=now)
-    newest_event_id = stored.event.event_id
+    with sqlite3.connect(database_path) as connection:
+        audit_before = connection.execute(
+            "SELECT details_json FROM security_audit_events WHERE action='SECURITY_EVENT_RETENTION' ORDER BY occurred_at"
+        ).fetchall()
+    with pytest.raises(RetentionCapacityError):
+        repository.ingest(normalize_wazuh_event(newest), now=now)
 
     with sqlite3.connect(database_path) as connection:
         event_ids = {
@@ -453,16 +457,11 @@ def test_retention_preserves_case_evidence_and_audits_protected_pressure(
             "WHERE action = 'SECURITY_EVENT_RETENTION' ORDER BY occurred_at"
         ).fetchall()
 
-    assert event_ids == {*protected_ids, newest_event_id}
-    assert retained == 3
+    assert event_ids == set(protected_ids)
+    assert retained == 2
     assert deleted == 0
-    assert len(audit_rows) == 1
-    audit = json.loads(audit_rows[0][0])
-    assert audit["protected_records"] == 2
-    assert audit["protected_records_measurement"] == "LOWER_BOUND"
-    assert audit["over_limit_records"] == 1
-    assert audit["decision"] == "PROTECTED_OVER_LIMIT"
-    assert protected_ids[0] not in audit_rows[0][0]
+    # A rejected/rolled-back insert must not commit a fictitious over-cap state.
+    assert audit_rows == audit_before
 
 
 def test_saved_searches_are_user_scoped_csrf_protected_and_audited(
@@ -579,28 +578,30 @@ def test_retention_preserves_event_linked_to_alert(
 
     repository = EventRepository(database_path, retention_days=30, max_records=1)
     now = datetime.now(timezone.utc)
-    newest = repository.ingest(
-        normalize_wazuh_event(
-            archive_event(event_id="new-at-alert-cap", timestamp=now.isoformat())
-        ),
-        now=now,
-    )
+    with sqlite3.connect(database_path) as connection:
+        audit_before = connection.execute(
+            "SELECT details_json FROM security_audit_events WHERE action='SECURITY_EVENT_RETENTION' ORDER BY occurred_at DESC LIMIT 1"
+        ).fetchone()
+    with pytest.raises(RetentionCapacityError):
+        repository.ingest(
+            normalize_wazuh_event(
+                archive_event(event_id="new-at-alert-cap", timestamp=now.isoformat())
+            ), now=now,
+        )
 
     with sqlite3.connect(database_path) as connection:
         event_ids = {
             row[0] for row in connection.execute("SELECT event_id FROM security_events")
         }
-        audit = json.loads(
-            connection.execute(
+        audit = connection.execute(
                 "SELECT details_json FROM security_audit_events "
                 "WHERE action='SECURITY_EVENT_RETENTION' "
                 "ORDER BY occurred_at DESC LIMIT 1"
-            ).fetchone()[0]
-        )
-    assert event_ids == {protected_event_id, newest.event.event_id}
-    assert audit["protected_records"] == 1
-    assert audit["protected_records_measurement"] == "LOWER_BOUND"
-    assert audit["over_limit_records"] == 1
+            ).fetchone()
+        assert connection.execute('SELECT retained_records FROM security_event_store_state').fetchone()[0] == 1
+        assert connection.execute('PRAGMA foreign_key_check').fetchall() == []
+    assert event_ids == {protected_event_id}
+    assert audit == audit_before
 
 
 def test_overview_uses_real_event_alert_and_incident_aggregates(

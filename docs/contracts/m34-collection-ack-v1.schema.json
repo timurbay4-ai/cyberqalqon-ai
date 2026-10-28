@@ -1,0 +1,51 @@
+{
+  "additionalProperties": false,
+  "properties": {
+    "contract": {
+      "const": "cq-collection-ack-v1",
+      "default": "cq-collection-ack-v1",
+      "title": "Contract",
+      "type": "string"
+    },
+    "committed": {
+      "const": true,
+      "default": true,
+      "title": "Committed",
+      "type": "boolean"
+    },
+    "duplicate": {
+      "title": "Duplicate",
+      "type": "boolean"
+    },
+    "event_id": {
+      "title": "Event Id",
+      "type": "string"
+    },
+    "source_event_id": {
+      "title": "Source Event Id",
+      "type": "string"
+    },
+    "delivery_identity": {
+      "title": "Delivery Identity",
+      "type": "string"
+    },
+    "checkpoint_identity": {
+      "title": "Checkpoint Identity",
+      "type": "string"
+    },
+    "integrity_fingerprint": {
+      "title": "Integrity Fingerprint",
+      "type": "string"
+    }
+  },
+  "required": [
+    "duplicate",
+    "event_id",
+    "source_event_id",
+    "delivery_identity",
+    "checkpoint_identity",
+    "integrity_fingerprint"
+  ],
+  "title": "CollectionAcknowledgement",
+  "type": "object"
+}

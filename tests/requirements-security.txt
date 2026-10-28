@@ -1,0 +1,3 @@
+# Run in a separate tools venv. The application environment is the audit target.
+pip-audit==2.10.1
+bandit==1.9.4

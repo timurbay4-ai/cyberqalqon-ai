@@ -1,7 +1,7 @@
 import type { AdvancedDetectionFinding, AdvancedDetectionRule } from "./detection-engineering";
 import type { SecurityEventDetail, SecurityEventSummary } from "./events";
 
-export type WorkbenchTargetType = "EVENT" | "ALERT" | "INCIDENT" | "CASE" | "CORRELATION_GROUP" | "M11_FINDING" | "SHADOW_FINDING" | "ENTITY";
+export type WorkbenchTargetType = "EVENT" | "ALERT" | "INCIDENT" | "CASE" | "CORRELATION_GROUP" | "M11_FINDING" | "SHADOW_FINDING" | "DURABLE_SHADOW_FINDING" | "ENTITY";
 export type InvestigationEntityType = "IPV4" | "IPV6" | "HOSTNAME" | "USERNAME" | "AGENT_ID" | "RULE_ID" | "PROCESS_NAME" | "PROCESS_ID" | "FILE_HASH" | "DOMAIN";
 
 export interface WorkbenchTarget {
@@ -11,6 +11,7 @@ export interface WorkbenchTarget {
   entity_value?: string;
   rule_id?: string;
   finding_key?: string;
+  shadow_revision?: number;
   start_time?: string;
   end_time?: string;
   relative_minutes?: number | null;
@@ -103,6 +104,7 @@ export interface InvestigationWorkbench {
   ioc_matches: InvestigationIOCMatch[];
   correlation_groups: InvestigationCorrelationGroup[];
   detection_context?: InvestigationDetectionContext;
+  durable_shadow_context?: import('./shadow-history').FindingDetail;
   query: {
     start_time: string;
     end_time: string;

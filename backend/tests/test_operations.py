@@ -165,7 +165,10 @@ def test_operational_overview_serves_bounded_stale_during_refresh(
     repository.overview_cache_ttl_seconds = 0
     repository.overview_stale_ttl_seconds = 30
     repository.overview(limit=26)
-    time.sleep(0.01)
+    # Avoid relying on Windows monotonic clock granularity and scheduler timing.
+    with repository._overview_cache_lock:
+        cached_at, epoch, snapshot = repository._overview_cache[26]
+        repository._overview_cache[26] = (cached_at - 1.0, epoch, snapshot)
     entered = threading.Event()
     release = threading.Event()
     original = repository._compute_overview
@@ -233,7 +236,9 @@ def test_failed_refresh_returns_typed_stale_snapshot_when_available(
     repository.overview_cache_ttl_seconds = 0
     repository.overview_stale_ttl_seconds = 30
     repository.overview(limit=28)
-    time.sleep(0.01)
+    with repository._overview_cache_lock:
+        cached_at, epoch, snapshot = repository._overview_cache[28]
+        repository._overview_cache[28] = (cached_at - 1.0, epoch, snapshot)
 
     def timeout(**_kwargs):
         raise OperationalQueryTimeout("failure injection")

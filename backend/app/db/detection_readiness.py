@@ -406,7 +406,8 @@ class DetectionReadinessRepository:
             row = connection.execute(
                 "SELECT * FROM advanced_detection_rule_state WHERE rule_id = ?", (rule_id,)
             ).fetchone()
-        assert row is not None
+        if not (row is not None):
+            raise RuntimeError("Internal detection_readiness invariant failed")
         return self._lifecycle_from_row(row, telemetry=evidence.status)
 
     def lifecycle_inventory(self) -> list[DetectionRuleLifecycle]:
@@ -432,7 +433,8 @@ class DetectionReadinessRepository:
             state = connection.execute(
                 "SELECT * FROM advanced_detection_rule_state WHERE rule_id = ?", (rule_id,)
             ).fetchone()
-            assert state is not None
+            if not (state is not None):
+                raise RuntimeError("Internal detection_readiness invariant failed")
             current = int(state["active_configuration_version"])
             if current != payload.expected_version:
                 raise DetectionReadinessConflictError(
@@ -480,7 +482,8 @@ class DetectionReadinessRepository:
                 "SELECT * FROM advanced_detection_config_versions WHERE config_id = ?",
                 (config_id,),
             ).fetchone()
-        assert row is not None
+        if not (row is not None):
+            raise RuntimeError("Internal detection_readiness invariant failed")
         return self._configuration(row)
 
     @staticmethod
@@ -545,7 +548,8 @@ class DetectionReadinessRepository:
             state = connection.execute(
                 "SELECT * FROM advanced_detection_rule_state WHERE rule_id = ?", (rule_id,)
             ).fetchone()
-            assert state is not None
+            if not (state is not None):
+                raise RuntimeError("Internal detection_readiness invariant failed")
             if int(state["active_configuration_version"]) != version:
                 raise DetectionReadinessConflictError("Only the active configuration version can be validated")
             target = "VALIDATED" if not errors else "DRAFT"
@@ -642,7 +646,8 @@ class DetectionReadinessRepository:
             row = connection.execute(
                 "SELECT * FROM advanced_detection_rule_state WHERE rule_id = ?", (rule_id,)
             ).fetchone()
-            assert row is not None
+            if not (row is not None):
+                raise RuntimeError("Internal detection_readiness invariant failed")
             current_version = int(row["state_version"])
             if current_version != payload.expected_state_version:
                 raise DetectionReadinessConflictError(
@@ -1384,7 +1389,8 @@ class DetectionReadinessRepository:
             row = connection.execute(
                 "SELECT * FROM advanced_detection_diagnostics WHERE rule_id = ?", (rule_id,)
             ).fetchone()
-        assert row is not None
+        if not (row is not None):
+            raise RuntimeError("Internal detection_readiness invariant failed")
         count = int(row["evaluation_count"])
         return DetectionDiagnostics(
             rule_id=rule_id, evaluation_count=count,

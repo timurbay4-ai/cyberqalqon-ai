@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState } from "react";
 
 import { StatePanel } from "../components/state-panel";
+import { SourceCoverage } from "../components/source-coverage";
 import type { BackendApi } from "../types/api";
 import type { NamedCount, SecurityOverview, TimeSeriesPoint } from "../types/events";
 import { formatTimestamp, humanize } from "../utils/format";
@@ -30,7 +31,7 @@ function formatBytes(value: number): string {
   return `${(value / 1024 / 1024).toFixed(1)} MiB`;
 }
 
-export function DashboardPage({ api, initialRange = "24h", onOpenAlert, onNavigate = () => undefined }: { api: BackendApi; initialRange?: Range; onOpenAlert(id: string): void; onNavigate?(page: PageId): void }) {
+export function DashboardPage({ api, initialRange = "24h", onOpenAlert, onNavigate = () => undefined, onOpenEvent }: { api: BackendApi; initialRange?: Range; onOpenAlert(id: string): void; onNavigate?(page: PageId): void; onOpenEvent?(id:string):void }) {
   const [overview, setOverview] = useState<SecurityOverview | null>(null);
   const [range, setRange] = useState<Range>(initialRange);
   useEffect(() => setRange(initialRange), [initialRange]);
@@ -60,6 +61,7 @@ export function DashboardPage({ api, initialRange = "24h", onOpenAlert, onNaviga
         <div><span className="eyebrow">Operational picture</span><h1>Security overview</h1><p>Actual event, alert, incident, source, and ingestion aggregates.</p></div>
         <div className="dashboard-controls"><label className="compact-select"><span>Range</span><select value={range} onChange={(event) => setRange(event.target.value as Range)}><option value="24h">Last 24 hours</option><option value="7d">Last 7 days</option><option value="30d">Last 30 days</option></select></label><button className="button button--secondary" type="button" disabled={loading} onClick={retry}>{loading ? "Refreshing…" : "Refresh"}</button>{lastRefreshedAt && <small>Last successful refresh {formatTimestamp(lastRefreshedAt)}</small>}</div>
       </header>
+      <SourceCoverage api={api} onOpenEvent={onOpenEvent} compact/>
       {!overview && !error && <StatePanel kind="loading" title="Building overview" message="Running bounded aggregation queries…" />}
       {error && <StatePanel kind="unavailable" title="Overview unavailable" message={error} actionLabel="Retry" onAction={retry} />}
       {overview && <div aria-busy={loading}>

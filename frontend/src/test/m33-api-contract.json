@@ -1,0 +1,1810 @@
+{
+  "scope": "SYNTHETIC_DISPOSABLE_FULL_APPLICATION",
+  "captured_report_sha256": "6815c5eb2a6e90d058d4bdef490ec4cbd2978619cf3dc9e5e233ab162607f259",
+  "contract": {
+    "finding": {
+      "finding_id": "DSF-c58fa750170dc0b99fc60af1f33f223af1e3f53a0913e328c59b5d6ce5a189cd",
+      "matching_id": "SF-146df460a0ed5ab217443d3838b6624cb80e1ae92612726253c21aaa67d3823e",
+      "rule_version": "0265a87342b65eadc0dce1575a5ca9ae4aa83b10e2ef7b2b44db846af483e5df",
+      "policy_sha": "b2ae98dca860525f1e4d08bbf2006038070b9a969c290e6a3ec69af4907ea88f",
+      "current_revision": 1,
+      "state": "SHADOW_CANDIDATE",
+      "created_at": "2026-10-25T09:03:15.088874Z",
+      "last_observed_at": "2026-10-25T09:03:15.088874Z",
+      "revision": 1,
+      "matching_evidence": {
+        "finding_id": "SF-146df460a0ed5ab217443d3838b6624cb80e1ae92612726253c21aaa67d3823e",
+        "rule_id": "SHADOW-WINDOWS-AUTH",
+        "rule_version": "0265a87342b65eadc0dce1575a5ca9ae4aa83b10e2ef7b2b44db846af483e5df",
+        "evidence_manifest_sha256": "276f7856511882961fc13d7a2a8381b5972b1d0e0d1d204097b02c76b9841934",
+        "rule_snapshot": {
+          "contract": "cdrc-v2",
+          "rule_id": "SHADOW-WINDOWS-AUTH",
+          "title": "Potential suspicious Windows authentication sequence",
+          "description": "Three failures followed by a success in the same claimed endpoint/account/source scope; requires analyst validation.",
+          "author": "CyberQalqon M30",
+          "status": "SHADOW_ONLY",
+          "severity": 8,
+          "confidence": 40,
+          "minimum_confidence": 0,
+          "source_families": [
+            "WINDOWS_EVENTCHANNEL"
+          ],
+          "required_fields": [
+            "host.name",
+            "user.name",
+            "source.ip"
+          ],
+          "steps": [
+            {
+              "query": "event.code = \"4625\" AND event.outcome = \"failure\"",
+              "threshold": 3,
+              "process_basename_equals": null,
+              "parent_basename_equals": null
+            },
+            {
+              "query": "event.code = \"4624\" AND event.outcome = \"success\"",
+              "threshold": 1,
+              "process_basename_equals": null,
+              "parent_basename_equals": null
+            }
+          ],
+          "group_by": [
+            "user.name",
+            "source.ip"
+          ],
+          "window_seconds": 600,
+          "allowed_lateness": 60,
+          "suppression_policy": "EVIDENCE_IDENTITY_ONLY",
+          "account_identity_policy": "SID_WHEN_PRESENT_NO_DOWNGRADE",
+          "source_duplicate_policy": "SOURCE_RECORD_WHEN_AVAILABLE_ELSE_DELIVERY",
+          "mitre_ids": [
+            "T1110.001",
+            "T1078"
+          ],
+          "tags": [
+            "related:DET-002"
+          ],
+          "references": [],
+          "created_at": "2026-10-24T00:00:00Z",
+          "updated_at": "2026-10-24T00:00:00Z"
+        },
+        "evaluation_version": "m30-shadow-v1",
+        "status": "SHADOW_ONLY",
+        "severity": 8,
+        "confidence": 40,
+        "identity_confidence": "CLAIMED_ENDPOINT_SCOPED",
+        "window_start": "2026-10-25T08:43:14Z",
+        "window_end": "2026-10-25T08:43:44Z",
+        "completeness": "UNPROVEN",
+        "group": {
+          "account_identity_basis": "SCOPED_NAME_ONLY_OR_NOT_USED",
+          "source.ip": "192.0.2.30",
+          "user.name": "SYNTHETIC\\analyst"
+        },
+        "explanation": "Observed ordered rule predicates in one claimed endpoint scope. Potential suspicious activity; requires analyst validation.",
+        "uncertainty": [
+          "Endpoint/account ownership is not independently verified.",
+          "No global source watermark; window/historical continuity UNPROVEN.",
+          "Benign retries or approved administration may explain this activity.",
+          "Evidence is not pinned; recheck availability on drill-down."
+        ],
+        "evidence": [
+          {
+            "event_id": "EVT-6FFF461379E4CAD5E3C6F65F",
+            "event_time": "2026-10-25T08:43:14Z",
+            "ingestion_time": "2026-10-25T09:03:14.749333Z",
+            "source_family": "WINDOWS_EVENTCHANNEL",
+            "host": "SYNTH-M30-WINDOWS",
+            "user": "SYNTHETIC\\analyst",
+            "user_sid": null,
+            "process": "C:\\Synthetic\\example.exe",
+            "event_code": "4625",
+            "process_guid": null,
+            "stored_envelope_sha256": "6fff461379e4cad5e3c6f65f5ab9632f808fb0924e76ff0d1fc41980fa6e4e95",
+            "source_identity_sha256": "9b8aa1acefc61e70d7b11cde984003a778fe8e6c1ab2969e9b8dc8de00adc5c7",
+            "source_record_key_sha256": "1ace1321929b51f8ba461e814873da5bbe5e35c3253729adb351419d15cccb9e",
+            "provenance": "PARTIAL"
+          },
+          {
+            "event_id": "EVT-4DE5E0C366DDE5D6502E551F",
+            "event_time": "2026-10-25T08:43:24Z",
+            "ingestion_time": "2026-10-25T09:03:14.768766Z",
+            "source_family": "WINDOWS_EVENTCHANNEL",
+            "host": "SYNTH-M30-WINDOWS",
+            "user": "SYNTHETIC\\analyst",
+            "user_sid": null,
+            "process": "C:\\Synthetic\\example.exe",
+            "event_code": "4625",
+            "process_guid": null,
+            "stored_envelope_sha256": "4de5e0c366dde5d6502e551f072ab9cd6ba9dd457b1bddbd20d8c5a22ecb8a61",
+            "source_identity_sha256": "9b8aa1acefc61e70d7b11cde984003a778fe8e6c1ab2969e9b8dc8de00adc5c7",
+            "source_record_key_sha256": "93d1992a972abcb68de909f644769214eb885ce59003afff100f7c3944e07974",
+            "provenance": "PARTIAL"
+          },
+          {
+            "event_id": "EVT-24CBF8DC5C66BDBB02987A42",
+            "event_time": "2026-10-25T08:43:34Z",
+            "ingestion_time": "2026-10-25T09:03:14.792882Z",
+            "source_family": "WINDOWS_EVENTCHANNEL",
+            "host": "SYNTH-M30-WINDOWS",
+            "user": "SYNTHETIC\\analyst",
+            "user_sid": null,
+            "process": "C:\\Synthetic\\example.exe",
+            "event_code": "4625",
+            "process_guid": null,
+            "stored_envelope_sha256": "24cbf8dc5c66bdbb02987a425489614c9e14f24b23301080b9acd3ca8e2ea27e",
+            "source_identity_sha256": "9b8aa1acefc61e70d7b11cde984003a778fe8e6c1ab2969e9b8dc8de00adc5c7",
+            "source_record_key_sha256": "bb6176bc72c508aac58f9f701b7a11c366b8f14af74e79a6e0cc27167dda7cb0",
+            "provenance": "PARTIAL"
+          },
+          {
+            "event_id": "EVT-4B6CE61117C34686D99C49F3",
+            "event_time": "2026-10-25T08:43:44Z",
+            "ingestion_time": "2026-10-25T09:03:14.807790Z",
+            "source_family": "WINDOWS_EVENTCHANNEL",
+            "host": "SYNTH-M30-WINDOWS",
+            "user": "SYNTHETIC\\analyst",
+            "user_sid": null,
+            "process": "C:\\Synthetic\\example.exe",
+            "event_code": "4624",
+            "process_guid": null,
+            "stored_envelope_sha256": "4b6ce61117c34686d99c49f36f7fee1cdb8c4443e37bc7138c8b5db2ad63f27e",
+            "source_identity_sha256": "9b8aa1acefc61e70d7b11cde984003a778fe8e6c1ab2969e9b8dc8de00adc5c7",
+            "source_record_key_sha256": "0c285e4bf8d68f0980b347024d132d606492361a68383fc1ab12ca0cdb0118fc",
+            "provenance": "PARTIAL"
+          }
+        ],
+        "mitre": [
+          {
+            "technique_id": "T1110.001",
+            "name": "Password Guessing",
+            "tactic": "Credential Access",
+            "evidence_strength": "RULE_TAGGED_TECHNIQUE"
+          },
+          {
+            "technique_id": "T1078",
+            "name": "Valid Accounts",
+            "tactic": "Defense Evasion / Persistence / Privilege Escalation / Initial Access",
+            "evidence_strength": "RULE_TAGGED_TECHNIQUE"
+          }
+        ]
+      },
+      "identity": {
+        "version": "m31-identity-v1",
+        "policy": {
+          "version": "identity-policy-v1",
+          "minimum": "PARTIAL"
+        },
+        "satisfied": true,
+        "entities": [
+          {
+            "kind": "HOST",
+            "status": "PARTIAL",
+            "entity_id": "ENTITY-f1900bb3693f31b7ab189979a909da964a4124cac87e26aa47c04174f0157121",
+            "scope_sha256": "4073cdbb9ff9588f578179e52a890b3a6e8addeeeac30c1a9b8e1d7b32113723",
+            "reason": "CLAIMED_SOURCE_SCOPE_ONLY",
+            "evidence_ids": [
+              "EVT-6FFF461379E4CAD5E3C6F65F",
+              "EVT-4DE5E0C366DDE5D6502E551F",
+              "EVT-24CBF8DC5C66BDBB02987A42",
+              "EVT-4B6CE61117C34686D99C49F3"
+            ],
+            "authority_sha256": null
+          },
+          {
+            "kind": "ACCOUNT",
+            "status": "PARTIAL",
+            "entity_id": "ENTITY-5401337de14f2e26d196dde82991249b25fd81548c192a3e68e12c2b0640b73e",
+            "scope_sha256": "4073cdbb9ff9588f578179e52a890b3a6e8addeeeac30c1a9b8e1d7b32113723",
+            "reason": "CLAIMED_SOURCE_SCOPE_ONLY",
+            "evidence_ids": [
+              "EVT-6FFF461379E4CAD5E3C6F65F",
+              "EVT-4DE5E0C366DDE5D6502E551F",
+              "EVT-24CBF8DC5C66BDBB02987A42",
+              "EVT-4B6CE61117C34686D99C49F3"
+            ],
+            "authority_sha256": null
+          },
+          {
+            "kind": "PROCESS",
+            "status": "UNVERIFIED",
+            "entity_id": null,
+            "scope_sha256": "4073cdbb9ff9588f578179e52a890b3a6e8addeeeac30c1a9b8e1d7b32113723",
+            "reason": "MISSING_IDENTITY",
+            "evidence_ids": [
+              "EVT-6FFF461379E4CAD5E3C6F65F",
+              "EVT-4DE5E0C366DDE5D6502E551F",
+              "EVT-24CBF8DC5C66BDBB02987A42",
+              "EVT-4B6CE61117C34686D99C49F3"
+            ],
+            "authority_sha256": null
+          },
+          {
+            "kind": "NETWORK_ENDPOINT",
+            "status": "UNVERIFIED",
+            "entity_id": null,
+            "scope_sha256": "4073cdbb9ff9588f578179e52a890b3a6e8addeeeac30c1a9b8e1d7b32113723",
+            "reason": "MISSING_IDENTITY",
+            "evidence_ids": [
+              "EVT-6FFF461379E4CAD5E3C6F65F",
+              "EVT-4DE5E0C366DDE5D6502E551F",
+              "EVT-24CBF8DC5C66BDBB02987A42",
+              "EVT-4B6CE61117C34686D99C49F3"
+            ],
+            "authority_sha256": null
+          },
+          {
+            "kind": "SESSION",
+            "status": "UNVERIFIED",
+            "entity_id": null,
+            "scope_sha256": "4073cdbb9ff9588f578179e52a890b3a6e8addeeeac30c1a9b8e1d7b32113723",
+            "reason": "MISSING_IDENTITY",
+            "evidence_ids": [
+              "EVT-6FFF461379E4CAD5E3C6F65F",
+              "EVT-4DE5E0C366DDE5D6502E551F",
+              "EVT-24CBF8DC5C66BDBB02987A42",
+              "EVT-4B6CE61117C34686D99C49F3"
+            ],
+            "authority_sha256": null
+          },
+          {
+            "kind": "AGENT",
+            "status": "PARTIAL",
+            "entity_id": "ENTITY-cf9de1588aff6aa276d98f1e88fe5eb6a2e6d8ece20247238c143dbaca178554",
+            "scope_sha256": "4073cdbb9ff9588f578179e52a890b3a6e8addeeeac30c1a9b8e1d7b32113723",
+            "reason": "CLAIMED_SOURCE_SCOPE_ONLY",
+            "evidence_ids": [
+              "EVT-6FFF461379E4CAD5E3C6F65F",
+              "EVT-4DE5E0C366DDE5D6502E551F",
+              "EVT-24CBF8DC5C66BDBB02987A42",
+              "EVT-4B6CE61117C34686D99C49F3"
+            ],
+            "authority_sha256": null
+          },
+          {
+            "kind": "COLLECTOR",
+            "status": "PARTIAL",
+            "entity_id": "ENTITY-ed9cf83979c0c2f1ef425b8b8d15a5adaf7f3a74071777090f58bd90f514f152",
+            "scope_sha256": "4073cdbb9ff9588f578179e52a890b3a6e8addeeeac30c1a9b8e1d7b32113723",
+            "reason": "CLAIMED_SOURCE_SCOPE_ONLY",
+            "evidence_ids": [
+              "EVT-6FFF461379E4CAD5E3C6F65F",
+              "EVT-4DE5E0C366DDE5D6502E551F",
+              "EVT-24CBF8DC5C66BDBB02987A42",
+              "EVT-4B6CE61117C34686D99C49F3"
+            ],
+            "authority_sha256": null
+          }
+        ],
+        "required_kinds": [
+          "HOST",
+          "ACCOUNT"
+        ],
+        "historical_continuity": "UNPROVEN",
+        "causal_claim": false
+      },
+      "authority_documents": [],
+      "first_observed_at": "2026-10-25T09:03:15.088874Z",
+      "evidence_references": [
+        {
+          "event_id": "EVT-24CBF8DC5C66BDBB02987A42",
+          "envelope_sha": "24cbf8dc5c66bdbb02987a425489614c9e14f24b23301080b9acd3ca8e2ea27e",
+          "row_sha": "13b42238f5cdf1d3ab4aaedb7e2001f9591b8fa3195a3f247ff1b55b5e2595e0"
+        },
+        {
+          "event_id": "EVT-4B6CE61117C34686D99C49F3",
+          "envelope_sha": "4b6ce61117c34686d99c49f36f7fee1cdb8c4443e37bc7138c8b5db2ad63f27e",
+          "row_sha": "3379e683007c96b36838473f3c0b0a03e08b6356986bd4fa5a0d5cf6cca7a865"
+        },
+        {
+          "event_id": "EVT-4DE5E0C366DDE5D6502E551F",
+          "envelope_sha": "4de5e0c366dde5d6502e551f072ab9cd6ba9dd457b1bddbd20d8c5a22ecb8a61",
+          "row_sha": "05c9de6f24cb6a96dd34e54d3ddc158466eb517fc16bce74f738324004160fbe"
+        },
+        {
+          "event_id": "EVT-6FFF461379E4CAD5E3C6F65F",
+          "envelope_sha": "6fff461379e4cad5e3c6f65f5ab9632f808fb0924e76ff0d1fc41980fa6e4e95",
+          "row_sha": "b518598d5631503e2e370abc0ec3f917396f4e8f0404e1cea6e180e3dc4f56ff"
+        }
+      ],
+      "history": [
+        {
+          "sequence": 1,
+          "finding_id": "DSF-c58fa750170dc0b99fc60af1f33f223af1e3f53a0913e328c59b5d6ce5a189cd",
+          "revision": 1,
+          "previous_state": null,
+          "target_state": "SHADOW_CANDIDATE",
+          "reason": "INITIAL_MATCH",
+          "actor": "SYNTHETIC M33 (synthetic-analyst)",
+          "occurred_at": "2026-10-25T09:03:15.088874Z",
+          "superseded_by": null
+        }
+      ],
+      "history_truncated": false,
+      "historical_continuity": "UNPROVEN",
+      "production_active": false,
+      "scope": "DISPOSABLE_DURABLE_SHADOW",
+      "evidence_retention": "REFERENCES_NOT_AUTOMATIC_PINS",
+      "current_evidence_availability": {
+        "EVT-24CBF8DC5C66BDBB02987A42": "AVAILABLE",
+        "EVT-4B6CE61117C34686D99C49F3": "AVAILABLE",
+        "EVT-4DE5E0C366DDE5D6502E551F": "AVAILABLE",
+        "EVT-6FFF461379E4CAD5E3C6F65F": "AVAILABLE"
+      },
+      "identity_context": "AT_ORIGINAL_EVALUATION_NOT_CURRENT_SOURCE_ATTESTATION"
+    },
+    "workbench": {
+      "target_type": "DURABLE_SHADOW_FINDING",
+      "target_label": "DSF-c58fa750170dc0b99fc60af1f33f223af1e3f53a0913e328c59b5d6ce5a189cd revision 1",
+      "primary_event": {
+        "event_id": "EVT-6FFF461379E4CAD5E3C6F65F",
+        "source_event_id": "SYNTHETIC-M30-0",
+        "event_code": "4625",
+        "timestamp": "2026-10-25T08:43:14Z",
+        "ingested_at": "2026-10-25T09:03:14.749333Z",
+        "source_type": "windows_event",
+        "hostname": "SYNTH-M30-WINDOWS",
+        "agent_id": "930",
+        "agent_name": "SYNTH-M28-ENDPOINT",
+        "operating_system": "windows",
+        "manager_identity": "SYNTH-M28-MANAGER",
+        "event_provider": "Microsoft-Windows-Security-Auditing",
+        "event_channel": "Security",
+        "process_name": "C:\\Synthetic\\example.exe",
+        "process_path": "C:\\Synthetic\\example.exe",
+        "command_line": "example.exe --synthetic",
+        "process_id": "928",
+        "parent_process_name": "C:\\Synthetic\\parent.exe",
+        "parent_process_path": "C:\\Synthetic\\parent.exe",
+        "parent_process_id": "927",
+        "normalization_schema": "wazuh-event-v3",
+        "source_ip": "192.0.2.30",
+        "destination_ip": "198.51.100.28",
+        "username": "SYNTHETIC\\analyst",
+        "event_category": "windows_security",
+        "event_action": "logon",
+        "outcome": "failure",
+        "rule_id": "992800",
+        "severity": 7,
+        "mitre": {
+          "ids": [],
+          "tactics": [],
+          "techniques": []
+        },
+        "message": "SYNTHETIC M28 telemetry",
+        "ingestion_source": "wazuh_archives",
+        "cuse": {
+          "version": "cuse-v1",
+          "adapter_version": "m28-v1",
+          "source_family": "WINDOWS_EVENTCHANNEL",
+          "normalization_status": "NORMALIZED",
+          "provenance_status": "PARTIAL",
+          "historical_continuity": "UNPROVEN",
+          "transport_authenticated": true,
+          "endpoint_identity_verified": false,
+          "source_event_time": "2026-10-25T08:43:14Z",
+          "collector_observation_time": "2026-10-25T08:43:14Z",
+          "timestamp_basis": "SOURCE_EVENT_TIME",
+          "original_event_identity": "0",
+          "source_identity_sha256": "9b8aa1acefc61e70d7b11cde984003a778fe8e6c1ab2969e9b8dc8de00adc5c7",
+          "content_fingerprint": "6fff461379e4cad5e3c6f65f5ab9632f808fb0924e76ff0d1fc41980fa6e4e95",
+          "idempotency_contract": "LEGACY_RAW_ENVELOPE_SHA256",
+          "warnings": [
+            "SOURCE_IDENTITY_CLAIMED"
+          ],
+          "attributes": {
+            "event_record_id": "0",
+            "event_version": "1"
+          }
+        },
+        "structured_payload": {
+          "_cuse": {
+            "adapter_version": "m28-v1",
+            "attributes": {
+              "event_record_id": "0",
+              "event_version": "1"
+            },
+            "collector_observation_time": "2026-10-25T08:43:14Z",
+            "content_fingerprint": "6fff461379e4cad5e3c6f65f5ab9632f808fb0924e76ff0d1fc41980fa6e4e95",
+            "delivery_identity": null,
+            "endpoint_identity_verified": false,
+            "historical_continuity": "UNPROVEN",
+            "idempotency_contract": "LEGACY_RAW_ENVELOPE_SHA256",
+            "normalization_status": "NORMALIZED",
+            "original_event_identity": "0",
+            "provenance_status": "PARTIAL",
+            "source_event_time": "2026-10-25T08:43:14Z",
+            "source_family": "WINDOWS_EVENTCHANNEL",
+            "source_generation": null,
+            "source_identity_sha256": "9b8aa1acefc61e70d7b11cde984003a778fe8e6c1ab2969e9b8dc8de00adc5c7",
+            "timestamp_basis": "SOURCE_EVENT_TIME",
+            "transport_authenticated": true,
+            "version": "cuse-v1",
+            "warnings": [
+              "SOURCE_IDENTITY_CLAIMED"
+            ]
+          },
+          "agent": {
+            "id": "930",
+            "name": "SYNTH-M28-ENDPOINT"
+          },
+          "data": {
+            "win": {
+              "eventdata": {
+                "commandLine": "example.exe --synthetic",
+                "destinationIp": "198.51.100.28",
+                "destinationPort": "443",
+                "eventType": "SetValue",
+                "hashes": "SHA256=aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+                "image": "C:\\Synthetic\\example.exe",
+                "ipAddress": "192.0.2.30",
+                "logonType": "3",
+                "parentImage": "C:\\Synthetic\\parent.exe",
+                "parentProcessGuid": "{00000000-0000-0000-0000-000000000927}",
+                "parentProcessId": "927",
+                "processGuid": "{00000000-0000-0000-0000-000000000930}",
+                "processId": "928",
+                "queryName": "synthetic.example.invalid",
+                "sourceIp": "192.0.2.30",
+                "sourcePort": "50280",
+                "subjectUserName": "SYNTHETIC\\analyst",
+                "targetObject": "HKCU\\Synthetic\\Example",
+                "targetUserName": "SYNTHETIC\\analyst",
+                "user": "SYNTHETIC\\analyst"
+              },
+              "system": {
+                "channel": "Security",
+                "computer": "SYNTH-M30-WINDOWS",
+                "eventID": "4625",
+                "eventRecordID": "0",
+                "providerName": "Microsoft-Windows-Security-Auditing",
+                "systemTime": "2026-10-25T08:43:14+00:00",
+                "version": "1"
+              }
+            }
+          },
+          "decoder": {
+            "name": "windows_eventchannel"
+          },
+          "manager": {
+            "name": "SYNTH-M28-MANAGER"
+          },
+          "rule": {
+            "description": "SYNTHETIC M28 telemetry",
+            "groups": [
+              "synthetic"
+            ],
+            "id": "992800",
+            "level": 7
+          }
+        },
+        "raw_payload": {
+          "agent": {
+            "id": "930",
+            "name": "SYNTH-M28-ENDPOINT"
+          },
+          "data": {
+            "win": {
+              "eventdata": {
+                "commandLine": "example.exe --synthetic",
+                "destinationIp": "198.51.100.28",
+                "destinationPort": "443",
+                "eventType": "SetValue",
+                "hashes": "SHA256=aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+                "image": "C:\\Synthetic\\example.exe",
+                "ipAddress": "192.0.2.30",
+                "logonType": "3",
+                "parentImage": "C:\\Synthetic\\parent.exe",
+                "parentProcessGuid": "{00000000-0000-0000-0000-000000000927}",
+                "parentProcessId": "927",
+                "processGuid": "{00000000-0000-0000-0000-000000000930}",
+                "processId": "928",
+                "queryName": "synthetic.example.invalid",
+                "sourceIp": "192.0.2.30",
+                "sourcePort": "50280",
+                "subjectUserName": "SYNTHETIC\\analyst",
+                "targetObject": "HKCU\\Synthetic\\Example",
+                "targetUserName": "SYNTHETIC\\analyst",
+                "user": "SYNTHETIC\\analyst"
+              },
+              "system": {
+                "channel": "Security",
+                "computer": "SYNTH-M30-WINDOWS",
+                "eventID": "4625",
+                "eventRecordID": "0",
+                "providerName": "Microsoft-Windows-Security-Auditing",
+                "systemTime": "2026-10-25T08:43:14+00:00",
+                "version": "1"
+              }
+            }
+          },
+          "decoder": {
+            "name": "windows_eventchannel"
+          },
+          "id": "SYNTHETIC-M30-0",
+          "manager": {
+            "name": "SYNTH-M28-MANAGER"
+          },
+          "rule": {
+            "description": "SYNTHETIC M28 telemetry",
+            "groups": [
+              "synthetic"
+            ],
+            "id": "992800",
+            "level": 7
+          },
+          "timestamp": "2026-10-25T08:43:14+00:00"
+        },
+        "related_incident_ids": [],
+        "related_case_ids": [],
+        "raw_evidence_ref": "EVT-6FFF461379E4CAD5E3C6F65F"
+      },
+      "summary": {
+        "observations": [
+          "Observed windows event evidence at 2026-10-25T08:43:14+00:00.",
+          "The evidence is stored as event EVT-6FFF461379E4CAD5E3C6F65F with rule 992800.",
+          "Recorded context includes host SYNTH-M30-WINDOWS and account SYNTHETIC\\analyst."
+        ],
+        "interpretations": [
+          "These facts support investigation but do not by themselves establish attacker intent or confirmed compromise."
+        ],
+        "missing_fields": []
+      },
+      "entities": [
+        {
+          "entity_type": "HOSTNAME",
+          "value": "SYNTH-M30-WINDOWS",
+          "label": "Hostname",
+          "sensitive": false,
+          "pivot_supported": true,
+          "evidence_field": "hostname"
+        },
+        {
+          "entity_type": "USERNAME",
+          "value": "SYNTHETIC\\analyst",
+          "label": "Username",
+          "sensitive": true,
+          "pivot_supported": true,
+          "evidence_field": "username"
+        },
+        {
+          "entity_type": "AGENT_ID",
+          "value": "930",
+          "label": "Agent ID",
+          "sensitive": false,
+          "pivot_supported": true,
+          "evidence_field": "agent_id"
+        },
+        {
+          "entity_type": "RULE_ID",
+          "value": "992800",
+          "label": "Rule ID",
+          "sensitive": false,
+          "pivot_supported": true,
+          "evidence_field": "rule_id"
+        },
+        {
+          "entity_type": "PROCESS_NAME",
+          "value": "C:\\Synthetic\\example.exe",
+          "label": "Process name",
+          "sensitive": false,
+          "pivot_supported": true,
+          "evidence_field": "process_name"
+        },
+        {
+          "entity_type": "PROCESS_ID",
+          "value": "928",
+          "label": "Process ID",
+          "sensitive": false,
+          "pivot_supported": true,
+          "evidence_field": "process_id"
+        },
+        {
+          "entity_type": "IPV4",
+          "value": "192.0.2.30",
+          "label": "Source IP",
+          "sensitive": true,
+          "pivot_supported": true,
+          "evidence_field": "source_ip"
+        },
+        {
+          "entity_type": "IPV4",
+          "value": "198.51.100.28",
+          "label": "Destination IP",
+          "sensitive": true,
+          "pivot_supported": true,
+          "evidence_field": "destination_ip"
+        },
+        {
+          "entity_type": "DOMAIN",
+          "value": "example.exe",
+          "label": "Domain",
+          "sensitive": true,
+          "pivot_supported": true,
+          "evidence_field": "structured_payload.data.win.eventdata.commandLine"
+        },
+        {
+          "entity_type": "FILE_HASH",
+          "value": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+          "label": "File hash",
+          "sensitive": true,
+          "pivot_supported": true,
+          "evidence_field": "structured_payload.data.win.eventdata.hashes"
+        },
+        {
+          "entity_type": "DOMAIN",
+          "value": "parent.exe",
+          "label": "Domain",
+          "sensitive": true,
+          "pivot_supported": true,
+          "evidence_field": "structured_payload.data.win.eventdata.parentImage"
+        },
+        {
+          "entity_type": "DOMAIN",
+          "value": "synthetic.example.invalid",
+          "label": "Domain",
+          "sensitive": true,
+          "pivot_supported": true,
+          "evidence_field": "structured_payload.data.win.eventdata.queryName"
+        }
+      ],
+      "related_events": [
+        {
+          "event": {
+            "event_id": "EVT-4B6CE61117C34686D99C49F3",
+            "source_event_id": "SYNTHETIC-M30-3",
+            "event_code": "4624",
+            "timestamp": "2026-10-25T08:43:44Z",
+            "ingested_at": "2026-10-25T09:03:14.807790Z",
+            "source_type": "windows_event",
+            "hostname": "SYNTH-M30-WINDOWS",
+            "agent_id": "930",
+            "agent_name": "SYNTH-M28-ENDPOINT",
+            "operating_system": "windows",
+            "manager_identity": "SYNTH-M28-MANAGER",
+            "event_provider": "Microsoft-Windows-Security-Auditing",
+            "event_channel": "Security",
+            "process_name": "C:\\Synthetic\\example.exe",
+            "process_path": "C:\\Synthetic\\example.exe",
+            "command_line": "example.exe --synthetic",
+            "process_id": "928",
+            "parent_process_name": "C:\\Synthetic\\parent.exe",
+            "parent_process_path": "C:\\Synthetic\\parent.exe",
+            "parent_process_id": "927",
+            "normalization_schema": "wazuh-event-v3",
+            "source_ip": "192.0.2.30",
+            "destination_ip": "198.51.100.28",
+            "username": "SYNTHETIC\\analyst",
+            "event_category": "windows_security",
+            "event_action": "logon",
+            "outcome": "success",
+            "rule_id": "992800",
+            "severity": 7,
+            "mitre": {
+              "ids": [],
+              "tactics": [],
+              "techniques": []
+            },
+            "message": "SYNTHETIC M28 telemetry",
+            "ingestion_source": "wazuh_archives"
+          },
+          "relationship_types": [
+            "SAME_ACCOUNT",
+            "SAME_AGENT",
+            "SAME_DESTINATION_IP",
+            "SAME_HOST",
+            "SAME_PROCESS_ID",
+            "SAME_PROCESS_NAME",
+            "SAME_RULE",
+            "SAME_SOURCE_IP"
+          ]
+        },
+        {
+          "event": {
+            "event_id": "EVT-0610E6112D934580AEAAC5F7",
+            "source_event_id": "SYNTHETIC-M30-SSH-103",
+            "timestamp": "2026-10-25T08:43:44Z",
+            "ingested_at": "2026-10-25T09:03:14.870789Z",
+            "source_type": "authentication",
+            "hostname": "SYNTH-M30-LINUX",
+            "agent_id": "930",
+            "agent_name": "SYNTH-M28-ENDPOINT",
+            "operating_system": "linux",
+            "manager_identity": "SYNTH-M28-MANAGER",
+            "process_name": "sshd",
+            "process_id": "103",
+            "normalization_schema": "wazuh-event-v3",
+            "source_ip": "192.0.2.30",
+            "source_port": 50230,
+            "username": "analyst",
+            "event_category": "linux_ssh",
+            "event_action": "authenticate",
+            "outcome": "success",
+            "rule_id": "992800",
+            "severity": 7,
+            "mitre": {
+              "ids": [],
+              "tactics": [],
+              "techniques": []
+            },
+            "message": "Accepted password for analyst from 192.0.2.30 port 50230 ssh2",
+            "ingestion_source": "wazuh_archives"
+          },
+          "relationship_types": [
+            "SAME_AGENT",
+            "SAME_RULE",
+            "SAME_SOURCE_IP"
+          ]
+        },
+        {
+          "event": {
+            "event_id": "EVT-C50E1882796AE88A315F93E8",
+            "source_event_id": "SYNTHETIC-M30-SSH-102",
+            "timestamp": "2026-10-25T08:43:34Z",
+            "ingested_at": "2026-10-25T09:03:14.853787Z",
+            "source_type": "authentication",
+            "hostname": "SYNTH-M30-LINUX",
+            "agent_id": "930",
+            "agent_name": "SYNTH-M28-ENDPOINT",
+            "operating_system": "linux",
+            "manager_identity": "SYNTH-M28-MANAGER",
+            "process_name": "sshd",
+            "process_id": "102",
+            "normalization_schema": "wazuh-event-v3",
+            "source_ip": "192.0.2.30",
+            "source_port": 50230,
+            "username": "analyst",
+            "event_category": "linux_ssh",
+            "event_action": "authenticate",
+            "outcome": "failure",
+            "rule_id": "992800",
+            "severity": 7,
+            "mitre": {
+              "ids": [],
+              "tactics": [],
+              "techniques": []
+            },
+            "message": "Failed password for analyst from 192.0.2.30 port 50230 ssh2",
+            "ingestion_source": "wazuh_archives"
+          },
+          "relationship_types": [
+            "SAME_AGENT",
+            "SAME_RULE",
+            "SAME_SOURCE_IP"
+          ]
+        },
+        {
+          "event": {
+            "event_id": "EVT-24CBF8DC5C66BDBB02987A42",
+            "source_event_id": "SYNTHETIC-M30-2",
+            "event_code": "4625",
+            "timestamp": "2026-10-25T08:43:34Z",
+            "ingested_at": "2026-10-25T09:03:14.792882Z",
+            "source_type": "windows_event",
+            "hostname": "SYNTH-M30-WINDOWS",
+            "agent_id": "930",
+            "agent_name": "SYNTH-M28-ENDPOINT",
+            "operating_system": "windows",
+            "manager_identity": "SYNTH-M28-MANAGER",
+            "event_provider": "Microsoft-Windows-Security-Auditing",
+            "event_channel": "Security",
+            "process_name": "C:\\Synthetic\\example.exe",
+            "process_path": "C:\\Synthetic\\example.exe",
+            "command_line": "example.exe --synthetic",
+            "process_id": "928",
+            "parent_process_name": "C:\\Synthetic\\parent.exe",
+            "parent_process_path": "C:\\Synthetic\\parent.exe",
+            "parent_process_id": "927",
+            "normalization_schema": "wazuh-event-v3",
+            "source_ip": "192.0.2.30",
+            "destination_ip": "198.51.100.28",
+            "username": "SYNTHETIC\\analyst",
+            "event_category": "windows_security",
+            "event_action": "logon",
+            "outcome": "failure",
+            "rule_id": "992800",
+            "severity": 7,
+            "mitre": {
+              "ids": [],
+              "tactics": [],
+              "techniques": []
+            },
+            "message": "SYNTHETIC M28 telemetry",
+            "ingestion_source": "wazuh_archives"
+          },
+          "relationship_types": [
+            "SAME_ACCOUNT",
+            "SAME_AGENT",
+            "SAME_DESTINATION_IP",
+            "SAME_HOST",
+            "SAME_PROCESS_ID",
+            "SAME_PROCESS_NAME",
+            "SAME_RULE",
+            "SAME_SOURCE_IP"
+          ]
+        },
+        {
+          "event": {
+            "event_id": "EVT-7BD629B810597AF39C55A1E6",
+            "source_event_id": "SYNTHETIC-M30-SSH-101",
+            "timestamp": "2026-10-25T08:43:24Z",
+            "ingested_at": "2026-10-25T09:03:14.837767Z",
+            "source_type": "authentication",
+            "hostname": "SYNTH-M30-LINUX",
+            "agent_id": "930",
+            "agent_name": "SYNTH-M28-ENDPOINT",
+            "operating_system": "linux",
+            "manager_identity": "SYNTH-M28-MANAGER",
+            "process_name": "sshd",
+            "process_id": "101",
+            "normalization_schema": "wazuh-event-v3",
+            "source_ip": "192.0.2.30",
+            "source_port": 50230,
+            "username": "analyst",
+            "event_category": "linux_ssh",
+            "event_action": "authenticate",
+            "outcome": "failure",
+            "rule_id": "992800",
+            "severity": 7,
+            "mitre": {
+              "ids": [],
+              "tactics": [],
+              "techniques": []
+            },
+            "message": "Failed password for analyst from 192.0.2.30 port 50230 ssh2",
+            "ingestion_source": "wazuh_archives"
+          },
+          "relationship_types": [
+            "SAME_AGENT",
+            "SAME_RULE",
+            "SAME_SOURCE_IP"
+          ]
+        },
+        {
+          "event": {
+            "event_id": "EVT-4DE5E0C366DDE5D6502E551F",
+            "source_event_id": "SYNTHETIC-M30-1",
+            "event_code": "4625",
+            "timestamp": "2026-10-25T08:43:24Z",
+            "ingested_at": "2026-10-25T09:03:14.768766Z",
+            "source_type": "windows_event",
+            "hostname": "SYNTH-M30-WINDOWS",
+            "agent_id": "930",
+            "agent_name": "SYNTH-M28-ENDPOINT",
+            "operating_system": "windows",
+            "manager_identity": "SYNTH-M28-MANAGER",
+            "event_provider": "Microsoft-Windows-Security-Auditing",
+            "event_channel": "Security",
+            "process_name": "C:\\Synthetic\\example.exe",
+            "process_path": "C:\\Synthetic\\example.exe",
+            "command_line": "example.exe --synthetic",
+            "process_id": "928",
+            "parent_process_name": "C:\\Synthetic\\parent.exe",
+            "parent_process_path": "C:\\Synthetic\\parent.exe",
+            "parent_process_id": "927",
+            "normalization_schema": "wazuh-event-v3",
+            "source_ip": "192.0.2.30",
+            "destination_ip": "198.51.100.28",
+            "username": "SYNTHETIC\\analyst",
+            "event_category": "windows_security",
+            "event_action": "logon",
+            "outcome": "failure",
+            "rule_id": "992800",
+            "severity": 7,
+            "mitre": {
+              "ids": [],
+              "tactics": [],
+              "techniques": []
+            },
+            "message": "SYNTHETIC M28 telemetry",
+            "ingestion_source": "wazuh_archives"
+          },
+          "relationship_types": [
+            "SAME_ACCOUNT",
+            "SAME_AGENT",
+            "SAME_DESTINATION_IP",
+            "SAME_HOST",
+            "SAME_PROCESS_ID",
+            "SAME_PROCESS_NAME",
+            "SAME_RULE",
+            "SAME_SOURCE_IP"
+          ]
+        },
+        {
+          "event": {
+            "event_id": "EVT-7D5F89F2CB00AFC9E4A5AE31",
+            "source_event_id": "SYNTHETIC-M30-SSH-100",
+            "timestamp": "2026-10-25T08:43:14Z",
+            "ingested_at": "2026-10-25T09:03:14.821784Z",
+            "source_type": "authentication",
+            "hostname": "SYNTH-M30-LINUX",
+            "agent_id": "930",
+            "agent_name": "SYNTH-M28-ENDPOINT",
+            "operating_system": "linux",
+            "manager_identity": "SYNTH-M28-MANAGER",
+            "process_name": "sshd",
+            "process_id": "100",
+            "normalization_schema": "wazuh-event-v3",
+            "source_ip": "192.0.2.30",
+            "source_port": 50230,
+            "username": "analyst",
+            "event_category": "linux_ssh",
+            "event_action": "authenticate",
+            "outcome": "failure",
+            "rule_id": "992800",
+            "severity": 7,
+            "mitre": {
+              "ids": [],
+              "tactics": [],
+              "techniques": []
+            },
+            "message": "Failed password for analyst from 192.0.2.30 port 50230 ssh2",
+            "ingestion_source": "wazuh_archives"
+          },
+          "relationship_types": [
+            "SAME_AGENT",
+            "SAME_RULE",
+            "SAME_SOURCE_IP"
+          ]
+        }
+      ],
+      "links": [],
+      "timeline": [
+        {
+          "item_id": "event:EVT-6FFF461379E4CAD5E3C6F65F",
+          "item_type": "SECURITY_EVENT",
+          "timestamp": "2026-10-25T08:43:14Z",
+          "timestamp_kind": "EVENT_TIME",
+          "timestamp_status": "NORMAL",
+          "title": "SYNTHETIC M28 telemetry",
+          "source_id": "EVT-6FFF461379E4CAD5E3C6F65F",
+          "severity": 7,
+          "relationship_types": [
+            "PRIMARY_EVIDENCE"
+          ],
+          "details": {
+            "source_type": "windows_event",
+            "rule_id": "992800",
+            "event_code": "4625"
+          }
+        },
+        {
+          "item_id": "event:EVT-7D5F89F2CB00AFC9E4A5AE31",
+          "item_type": "SECURITY_EVENT",
+          "timestamp": "2026-10-25T08:43:14Z",
+          "timestamp_kind": "EVENT_TIME",
+          "timestamp_status": "NORMAL",
+          "title": "Failed password for analyst from 192.0.2.30 port 50230 ssh2",
+          "source_id": "EVT-7D5F89F2CB00AFC9E4A5AE31",
+          "severity": 7,
+          "relationship_types": [
+            "SAME_AGENT",
+            "SAME_RULE",
+            "SAME_SOURCE_IP"
+          ],
+          "details": {
+            "source_type": "authentication",
+            "rule_id": "992800",
+            "event_code": null
+          }
+        },
+        {
+          "item_id": "event:EVT-4DE5E0C366DDE5D6502E551F",
+          "item_type": "SECURITY_EVENT",
+          "timestamp": "2026-10-25T08:43:24Z",
+          "timestamp_kind": "EVENT_TIME",
+          "timestamp_status": "NORMAL",
+          "title": "SYNTHETIC M28 telemetry",
+          "source_id": "EVT-4DE5E0C366DDE5D6502E551F",
+          "severity": 7,
+          "relationship_types": [
+            "SAME_ACCOUNT",
+            "SAME_AGENT",
+            "SAME_DESTINATION_IP",
+            "SAME_HOST",
+            "SAME_PROCESS_ID",
+            "SAME_PROCESS_NAME",
+            "SAME_RULE",
+            "SAME_SOURCE_IP"
+          ],
+          "details": {
+            "source_type": "windows_event",
+            "rule_id": "992800",
+            "event_code": "4625"
+          }
+        },
+        {
+          "item_id": "event:EVT-7BD629B810597AF39C55A1E6",
+          "item_type": "SECURITY_EVENT",
+          "timestamp": "2026-10-25T08:43:24Z",
+          "timestamp_kind": "EVENT_TIME",
+          "timestamp_status": "NORMAL",
+          "title": "Failed password for analyst from 192.0.2.30 port 50230 ssh2",
+          "source_id": "EVT-7BD629B810597AF39C55A1E6",
+          "severity": 7,
+          "relationship_types": [
+            "SAME_AGENT",
+            "SAME_RULE",
+            "SAME_SOURCE_IP"
+          ],
+          "details": {
+            "source_type": "authentication",
+            "rule_id": "992800",
+            "event_code": null
+          }
+        },
+        {
+          "item_id": "event:EVT-24CBF8DC5C66BDBB02987A42",
+          "item_type": "SECURITY_EVENT",
+          "timestamp": "2026-10-25T08:43:34Z",
+          "timestamp_kind": "EVENT_TIME",
+          "timestamp_status": "NORMAL",
+          "title": "SYNTHETIC M28 telemetry",
+          "source_id": "EVT-24CBF8DC5C66BDBB02987A42",
+          "severity": 7,
+          "relationship_types": [
+            "SAME_ACCOUNT",
+            "SAME_AGENT",
+            "SAME_DESTINATION_IP",
+            "SAME_HOST",
+            "SAME_PROCESS_ID",
+            "SAME_PROCESS_NAME",
+            "SAME_RULE",
+            "SAME_SOURCE_IP"
+          ],
+          "details": {
+            "source_type": "windows_event",
+            "rule_id": "992800",
+            "event_code": "4625"
+          }
+        },
+        {
+          "item_id": "event:EVT-C50E1882796AE88A315F93E8",
+          "item_type": "SECURITY_EVENT",
+          "timestamp": "2026-10-25T08:43:34Z",
+          "timestamp_kind": "EVENT_TIME",
+          "timestamp_status": "NORMAL",
+          "title": "Failed password for analyst from 192.0.2.30 port 50230 ssh2",
+          "source_id": "EVT-C50E1882796AE88A315F93E8",
+          "severity": 7,
+          "relationship_types": [
+            "SAME_AGENT",
+            "SAME_RULE",
+            "SAME_SOURCE_IP"
+          ],
+          "details": {
+            "source_type": "authentication",
+            "rule_id": "992800",
+            "event_code": null
+          }
+        },
+        {
+          "item_id": "event:EVT-0610E6112D934580AEAAC5F7",
+          "item_type": "SECURITY_EVENT",
+          "timestamp": "2026-10-25T08:43:44Z",
+          "timestamp_kind": "EVENT_TIME",
+          "timestamp_status": "NORMAL",
+          "title": "Accepted password for analyst from 192.0.2.30 port 50230 ssh2",
+          "source_id": "EVT-0610E6112D934580AEAAC5F7",
+          "severity": 7,
+          "relationship_types": [
+            "SAME_AGENT",
+            "SAME_RULE",
+            "SAME_SOURCE_IP"
+          ],
+          "details": {
+            "source_type": "authentication",
+            "rule_id": "992800",
+            "event_code": null
+          }
+        },
+        {
+          "item_id": "event:EVT-4B6CE61117C34686D99C49F3",
+          "item_type": "SECURITY_EVENT",
+          "timestamp": "2026-10-25T08:43:44Z",
+          "timestamp_kind": "EVENT_TIME",
+          "timestamp_status": "NORMAL",
+          "title": "SYNTHETIC M28 telemetry",
+          "source_id": "EVT-4B6CE61117C34686D99C49F3",
+          "severity": 7,
+          "relationship_types": [
+            "SAME_ACCOUNT",
+            "SAME_AGENT",
+            "SAME_DESTINATION_IP",
+            "SAME_HOST",
+            "SAME_PROCESS_ID",
+            "SAME_PROCESS_NAME",
+            "SAME_RULE",
+            "SAME_SOURCE_IP"
+          ],
+          "details": {
+            "source_type": "windows_event",
+            "rule_id": "992800",
+            "event_code": "4624"
+          }
+        }
+      ],
+      "ioc_matches": [],
+      "correlation_groups": [],
+      "durable_shadow_context": {
+        "finding_id": "DSF-c58fa750170dc0b99fc60af1f33f223af1e3f53a0913e328c59b5d6ce5a189cd",
+        "matching_id": "SF-146df460a0ed5ab217443d3838b6624cb80e1ae92612726253c21aaa67d3823e",
+        "rule_version": "0265a87342b65eadc0dce1575a5ca9ae4aa83b10e2ef7b2b44db846af483e5df",
+        "policy_sha": "b2ae98dca860525f1e4d08bbf2006038070b9a969c290e6a3ec69af4907ea88f",
+        "current_revision": 1,
+        "state": "SHADOW_CANDIDATE",
+        "created_at": "2026-10-25T09:03:15.088874Z",
+        "last_observed_at": "2026-10-25T09:03:15.088874Z",
+        "revision": 1,
+        "matching_evidence": {
+          "finding_id": "SF-146df460a0ed5ab217443d3838b6624cb80e1ae92612726253c21aaa67d3823e",
+          "rule_id": "SHADOW-WINDOWS-AUTH",
+          "rule_version": "0265a87342b65eadc0dce1575a5ca9ae4aa83b10e2ef7b2b44db846af483e5df",
+          "evidence_manifest_sha256": "276f7856511882961fc13d7a2a8381b5972b1d0e0d1d204097b02c76b9841934",
+          "rule_snapshot": {
+            "contract": "cdrc-v2",
+            "rule_id": "SHADOW-WINDOWS-AUTH",
+            "title": "Potential suspicious Windows authentication sequence",
+            "description": "Three failures followed by a success in the same claimed endpoint/account/source scope; requires analyst validation.",
+            "author": "CyberQalqon M30",
+            "status": "SHADOW_ONLY",
+            "severity": 8,
+            "confidence": 40,
+            "minimum_confidence": 0,
+            "source_families": [
+              "WINDOWS_EVENTCHANNEL"
+            ],
+            "required_fields": [
+              "host.name",
+              "user.name",
+              "source.ip"
+            ],
+            "steps": [
+              {
+                "query": "event.code = \"4625\" AND event.outcome = \"failure\"",
+                "threshold": 3,
+                "process_basename_equals": null,
+                "parent_basename_equals": null
+              },
+              {
+                "query": "event.code = \"4624\" AND event.outcome = \"success\"",
+                "threshold": 1,
+                "process_basename_equals": null,
+                "parent_basename_equals": null
+              }
+            ],
+            "group_by": [
+              "user.name",
+              "source.ip"
+            ],
+            "window_seconds": 600,
+            "allowed_lateness": 60,
+            "suppression_policy": "EVIDENCE_IDENTITY_ONLY",
+            "account_identity_policy": "SID_WHEN_PRESENT_NO_DOWNGRADE",
+            "source_duplicate_policy": "SOURCE_RECORD_WHEN_AVAILABLE_ELSE_DELIVERY",
+            "mitre_ids": [
+              "T1110.001",
+              "T1078"
+            ],
+            "tags": [
+              "related:DET-002"
+            ],
+            "references": [],
+            "created_at": "2026-10-24T00:00:00Z",
+            "updated_at": "2026-10-24T00:00:00Z"
+          },
+          "evaluation_version": "m30-shadow-v1",
+          "status": "SHADOW_ONLY",
+          "severity": 8,
+          "confidence": 40,
+          "identity_confidence": "CLAIMED_ENDPOINT_SCOPED",
+          "window_start": "2026-10-25T08:43:14Z",
+          "window_end": "2026-10-25T08:43:44Z",
+          "completeness": "UNPROVEN",
+          "group": {
+            "account_identity_basis": "SCOPED_NAME_ONLY_OR_NOT_USED",
+            "source.ip": "192.0.2.30",
+            "user.name": "SYNTHETIC\\analyst"
+          },
+          "explanation": "Observed ordered rule predicates in one claimed endpoint scope. Potential suspicious activity; requires analyst validation.",
+          "uncertainty": [
+            "Endpoint/account ownership is not independently verified.",
+            "No global source watermark; window/historical continuity UNPROVEN.",
+            "Benign retries or approved administration may explain this activity.",
+            "Evidence is not pinned; recheck availability on drill-down."
+          ],
+          "evidence": [
+            {
+              "event_id": "EVT-6FFF461379E4CAD5E3C6F65F",
+              "event_time": "2026-10-25T08:43:14Z",
+              "ingestion_time": "2026-10-25T09:03:14.749333Z",
+              "source_family": "WINDOWS_EVENTCHANNEL",
+              "host": "SYNTH-M30-WINDOWS",
+              "user": "SYNTHETIC\\analyst",
+              "user_sid": null,
+              "process": "C:\\Synthetic\\example.exe",
+              "event_code": "4625",
+              "process_guid": null,
+              "stored_envelope_sha256": "6fff461379e4cad5e3c6f65f5ab9632f808fb0924e76ff0d1fc41980fa6e4e95",
+              "source_identity_sha256": "9b8aa1acefc61e70d7b11cde984003a778fe8e6c1ab2969e9b8dc8de00adc5c7",
+              "source_record_key_sha256": "1ace1321929b51f8ba461e814873da5bbe5e35c3253729adb351419d15cccb9e",
+              "provenance": "PARTIAL"
+            },
+            {
+              "event_id": "EVT-4DE5E0C366DDE5D6502E551F",
+              "event_time": "2026-10-25T08:43:24Z",
+              "ingestion_time": "2026-10-25T09:03:14.768766Z",
+              "source_family": "WINDOWS_EVENTCHANNEL",
+              "host": "SYNTH-M30-WINDOWS",
+              "user": "SYNTHETIC\\analyst",
+              "user_sid": null,
+              "process": "C:\\Synthetic\\example.exe",
+              "event_code": "4625",
+              "process_guid": null,
+              "stored_envelope_sha256": "4de5e0c366dde5d6502e551f072ab9cd6ba9dd457b1bddbd20d8c5a22ecb8a61",
+              "source_identity_sha256": "9b8aa1acefc61e70d7b11cde984003a778fe8e6c1ab2969e9b8dc8de00adc5c7",
+              "source_record_key_sha256": "93d1992a972abcb68de909f644769214eb885ce59003afff100f7c3944e07974",
+              "provenance": "PARTIAL"
+            },
+            {
+              "event_id": "EVT-24CBF8DC5C66BDBB02987A42",
+              "event_time": "2026-10-25T08:43:34Z",
+              "ingestion_time": "2026-10-25T09:03:14.792882Z",
+              "source_family": "WINDOWS_EVENTCHANNEL",
+              "host": "SYNTH-M30-WINDOWS",
+              "user": "SYNTHETIC\\analyst",
+              "user_sid": null,
+              "process": "C:\\Synthetic\\example.exe",
+              "event_code": "4625",
+              "process_guid": null,
+              "stored_envelope_sha256": "24cbf8dc5c66bdbb02987a425489614c9e14f24b23301080b9acd3ca8e2ea27e",
+              "source_identity_sha256": "9b8aa1acefc61e70d7b11cde984003a778fe8e6c1ab2969e9b8dc8de00adc5c7",
+              "source_record_key_sha256": "bb6176bc72c508aac58f9f701b7a11c366b8f14af74e79a6e0cc27167dda7cb0",
+              "provenance": "PARTIAL"
+            },
+            {
+              "event_id": "EVT-4B6CE61117C34686D99C49F3",
+              "event_time": "2026-10-25T08:43:44Z",
+              "ingestion_time": "2026-10-25T09:03:14.807790Z",
+              "source_family": "WINDOWS_EVENTCHANNEL",
+              "host": "SYNTH-M30-WINDOWS",
+              "user": "SYNTHETIC\\analyst",
+              "user_sid": null,
+              "process": "C:\\Synthetic\\example.exe",
+              "event_code": "4624",
+              "process_guid": null,
+              "stored_envelope_sha256": "4b6ce61117c34686d99c49f36f7fee1cdb8c4443e37bc7138c8b5db2ad63f27e",
+              "source_identity_sha256": "9b8aa1acefc61e70d7b11cde984003a778fe8e6c1ab2969e9b8dc8de00adc5c7",
+              "source_record_key_sha256": "0c285e4bf8d68f0980b347024d132d606492361a68383fc1ab12ca0cdb0118fc",
+              "provenance": "PARTIAL"
+            }
+          ],
+          "mitre": [
+            {
+              "technique_id": "T1110.001",
+              "name": "Password Guessing",
+              "tactic": "Credential Access",
+              "evidence_strength": "RULE_TAGGED_TECHNIQUE"
+            },
+            {
+              "technique_id": "T1078",
+              "name": "Valid Accounts",
+              "tactic": "Defense Evasion / Persistence / Privilege Escalation / Initial Access",
+              "evidence_strength": "RULE_TAGGED_TECHNIQUE"
+            }
+          ]
+        },
+        "identity": {
+          "version": "m31-identity-v1",
+          "policy": {
+            "version": "identity-policy-v1",
+            "minimum": "PARTIAL"
+          },
+          "satisfied": true,
+          "entities": [
+            {
+              "kind": "HOST",
+              "status": "PARTIAL",
+              "entity_id": "ENTITY-f1900bb3693f31b7ab189979a909da964a4124cac87e26aa47c04174f0157121",
+              "scope_sha256": "4073cdbb9ff9588f578179e52a890b3a6e8addeeeac30c1a9b8e1d7b32113723",
+              "reason": "CLAIMED_SOURCE_SCOPE_ONLY",
+              "evidence_ids": [
+                "EVT-6FFF461379E4CAD5E3C6F65F",
+                "EVT-4DE5E0C366DDE5D6502E551F",
+                "EVT-24CBF8DC5C66BDBB02987A42",
+                "EVT-4B6CE61117C34686D99C49F3"
+              ],
+              "authority_sha256": null
+            },
+            {
+              "kind": "ACCOUNT",
+              "status": "PARTIAL",
+              "entity_id": "ENTITY-5401337de14f2e26d196dde82991249b25fd81548c192a3e68e12c2b0640b73e",
+              "scope_sha256": "4073cdbb9ff9588f578179e52a890b3a6e8addeeeac30c1a9b8e1d7b32113723",
+              "reason": "CLAIMED_SOURCE_SCOPE_ONLY",
+              "evidence_ids": [
+                "EVT-6FFF461379E4CAD5E3C6F65F",
+                "EVT-4DE5E0C366DDE5D6502E551F",
+                "EVT-24CBF8DC5C66BDBB02987A42",
+                "EVT-4B6CE61117C34686D99C49F3"
+              ],
+              "authority_sha256": null
+            },
+            {
+              "kind": "PROCESS",
+              "status": "UNVERIFIED",
+              "entity_id": null,
+              "scope_sha256": "4073cdbb9ff9588f578179e52a890b3a6e8addeeeac30c1a9b8e1d7b32113723",
+              "reason": "MISSING_IDENTITY",
+              "evidence_ids": [
+                "EVT-6FFF461379E4CAD5E3C6F65F",
+                "EVT-4DE5E0C366DDE5D6502E551F",
+                "EVT-24CBF8DC5C66BDBB02987A42",
+                "EVT-4B6CE61117C34686D99C49F3"
+              ],
+              "authority_sha256": null
+            },
+            {
+              "kind": "NETWORK_ENDPOINT",
+              "status": "UNVERIFIED",
+              "entity_id": null,
+              "scope_sha256": "4073cdbb9ff9588f578179e52a890b3a6e8addeeeac30c1a9b8e1d7b32113723",
+              "reason": "MISSING_IDENTITY",
+              "evidence_ids": [
+                "EVT-6FFF461379E4CAD5E3C6F65F",
+                "EVT-4DE5E0C366DDE5D6502E551F",
+                "EVT-24CBF8DC5C66BDBB02987A42",
+                "EVT-4B6CE61117C34686D99C49F3"
+              ],
+              "authority_sha256": null
+            },
+            {
+              "kind": "SESSION",
+              "status": "UNVERIFIED",
+              "entity_id": null,
+              "scope_sha256": "4073cdbb9ff9588f578179e52a890b3a6e8addeeeac30c1a9b8e1d7b32113723",
+              "reason": "MISSING_IDENTITY",
+              "evidence_ids": [
+                "EVT-6FFF461379E4CAD5E3C6F65F",
+                "EVT-4DE5E0C366DDE5D6502E551F",
+                "EVT-24CBF8DC5C66BDBB02987A42",
+                "EVT-4B6CE61117C34686D99C49F3"
+              ],
+              "authority_sha256": null
+            },
+            {
+              "kind": "AGENT",
+              "status": "PARTIAL",
+              "entity_id": "ENTITY-cf9de1588aff6aa276d98f1e88fe5eb6a2e6d8ece20247238c143dbaca178554",
+              "scope_sha256": "4073cdbb9ff9588f578179e52a890b3a6e8addeeeac30c1a9b8e1d7b32113723",
+              "reason": "CLAIMED_SOURCE_SCOPE_ONLY",
+              "evidence_ids": [
+                "EVT-6FFF461379E4CAD5E3C6F65F",
+                "EVT-4DE5E0C366DDE5D6502E551F",
+                "EVT-24CBF8DC5C66BDBB02987A42",
+                "EVT-4B6CE61117C34686D99C49F3"
+              ],
+              "authority_sha256": null
+            },
+            {
+              "kind": "COLLECTOR",
+              "status": "PARTIAL",
+              "entity_id": "ENTITY-ed9cf83979c0c2f1ef425b8b8d15a5adaf7f3a74071777090f58bd90f514f152",
+              "scope_sha256": "4073cdbb9ff9588f578179e52a890b3a6e8addeeeac30c1a9b8e1d7b32113723",
+              "reason": "CLAIMED_SOURCE_SCOPE_ONLY",
+              "evidence_ids": [
+                "EVT-6FFF461379E4CAD5E3C6F65F",
+                "EVT-4DE5E0C366DDE5D6502E551F",
+                "EVT-24CBF8DC5C66BDBB02987A42",
+                "EVT-4B6CE61117C34686D99C49F3"
+              ],
+              "authority_sha256": null
+            }
+          ],
+          "required_kinds": [
+            "HOST",
+            "ACCOUNT"
+          ],
+          "historical_continuity": "UNPROVEN",
+          "causal_claim": false
+        },
+        "authority_documents": [],
+        "first_observed_at": "2026-10-25T09:03:15.088874Z",
+        "evidence_references": [
+          {
+            "event_id": "EVT-24CBF8DC5C66BDBB02987A42",
+            "envelope_sha": "24cbf8dc5c66bdbb02987a425489614c9e14f24b23301080b9acd3ca8e2ea27e",
+            "row_sha": "13b42238f5cdf1d3ab4aaedb7e2001f9591b8fa3195a3f247ff1b55b5e2595e0"
+          },
+          {
+            "event_id": "EVT-4B6CE61117C34686D99C49F3",
+            "envelope_sha": "4b6ce61117c34686d99c49f36f7fee1cdb8c4443e37bc7138c8b5db2ad63f27e",
+            "row_sha": "3379e683007c96b36838473f3c0b0a03e08b6356986bd4fa5a0d5cf6cca7a865"
+          },
+          {
+            "event_id": "EVT-4DE5E0C366DDE5D6502E551F",
+            "envelope_sha": "4de5e0c366dde5d6502e551f072ab9cd6ba9dd457b1bddbd20d8c5a22ecb8a61",
+            "row_sha": "05c9de6f24cb6a96dd34e54d3ddc158466eb517fc16bce74f738324004160fbe"
+          },
+          {
+            "event_id": "EVT-6FFF461379E4CAD5E3C6F65F",
+            "envelope_sha": "6fff461379e4cad5e3c6f65f5ab9632f808fb0924e76ff0d1fc41980fa6e4e95",
+            "row_sha": "b518598d5631503e2e370abc0ec3f917396f4e8f0404e1cea6e180e3dc4f56ff"
+          }
+        ],
+        "history": [
+          {
+            "sequence": 1,
+            "finding_id": "DSF-c58fa750170dc0b99fc60af1f33f223af1e3f53a0913e328c59b5d6ce5a189cd",
+            "revision": 1,
+            "previous_state": null,
+            "target_state": "SHADOW_CANDIDATE",
+            "reason": "INITIAL_MATCH",
+            "actor": "SYNTHETIC M33 (synthetic-analyst)",
+            "occurred_at": "2026-10-25T09:03:15.088874Z",
+            "superseded_by": null
+          }
+        ],
+        "history_truncated": false,
+        "historical_continuity": "UNPROVEN",
+        "production_active": false,
+        "scope": "DISPOSABLE_DURABLE_SHADOW",
+        "evidence_retention": "REFERENCES_NOT_AUTOMATIC_PINS",
+        "current_evidence_availability": {
+          "EVT-24CBF8DC5C66BDBB02987A42": "AVAILABLE",
+          "EVT-4B6CE61117C34686D99C49F3": "AVAILABLE",
+          "EVT-4DE5E0C366DDE5D6502E551F": "AVAILABLE",
+          "EVT-6FFF461379E4CAD5E3C6F65F": "AVAILABLE"
+        },
+        "identity_context": "AT_ORIGINAL_EVALUATION_NOT_CURRENT_SOURCE_ATTESTATION"
+      },
+      "query": {
+        "start_time": "2026-10-25T08:43:13Z",
+        "end_time": "2026-10-25T08:44:14Z",
+        "related_limit": 25,
+        "timeline_limit": 100,
+        "sort": "oldest",
+        "execution_ms": 8.865,
+        "related_truncated": false,
+        "schema_version": 17,
+        "unavailable_relationships": []
+      }
+    },
+    "case": {
+      "case_id": "CASE-BFA1967F0F204C8DBE2A8ABC5B4C0419",
+      "title": "SYNTHETIC M33 investigation",
+      "description": "DSF-c58fa750170dc0b99fc60af1f33f223af1e3f53a0913e328c59b5d6ce5a189cd",
+      "severity": "HIGH",
+      "priority": "HIGH",
+      "status": "TRIAGING",
+      "owner": null,
+      "source_type": "MANUAL",
+      "source_id": null,
+      "created_by_display": "SYNTHETIC M33 (synthetic-analyst)",
+      "created_at": "2026-10-25T09:03:15.521876Z",
+      "updated_at": "2026-10-25T09:03:15.639881Z",
+      "resolved_at": null,
+      "closed_at": null,
+      "version": 5,
+      "alert_count": 0,
+      "incident_count": 0,
+      "event_count": 1,
+      "evidence_count": 1,
+      "comment_count": 1,
+      "sla": {
+        "policy": "LOCAL_CASE_SLA_V1",
+        "response_due_at": "2026-10-25T09:33:15.521876Z",
+        "resolution_due_at": "2026-10-25T17:03:15.521876Z",
+        "first_response_at": "2026-10-25T09:03:15.639881Z",
+        "response_state": "MET",
+        "resolution_state": "PENDING",
+        "escalation_state": "NONE"
+      },
+      "resolution": "",
+      "closure_reason": "",
+      "alert_ids": [],
+      "incident_ids": [],
+      "event_ids": [
+        "EVT-6FFF461379E4CAD5E3C6F65F"
+      ],
+      "comments": [
+        {
+          "comment_id": "CCM-C95A9EB2D53F4BAAAECFA25CD0FEF4F6",
+          "comment_type": "COMMENT",
+          "body": "Synthetic matched pattern; continuity UNPROVEN.",
+          "author_display": "SYNTHETIC M33 (synthetic-analyst)",
+          "from_owner_id": null,
+          "to_owner_id": null,
+          "created_at": "2026-10-25T09:03:15.587867Z"
+        }
+      ],
+      "evidence": [
+        {
+          "evidence_ref_id": "EVD-31DDDFDD549D484FA2B300BB984BE54B",
+          "reference_type": "EVENT",
+          "reference_id": "EVT-6FFF461379E4CAD5E3C6F65F",
+          "source_label": "Security event EVT-6FFF461379E4CAD5E3C6F65F",
+          "source_timestamp": "2026-10-25T08:43:14Z",
+          "acquisition_method": "DATABASE_REFERENCE",
+          "digest_algorithm": "SHA-256",
+          "digest": "0fa58dc7d6dd48bfa0a962a1152976a7b472520323970bba3bd52cdb26a154cf",
+          "integrity_status": "VERIFIED",
+          "acquired_by_display": "SYNTHETIC M33 (synthetic-analyst)",
+          "acquired_at": "2026-10-25T09:03:15.609815Z",
+          "last_verified_at": "2026-10-25T09:03:15.609815Z",
+          "annotation": "DSF-c58fa750170dc0b99fc60af1f33f223af1e3f53a0913e328c59b5d6ce5a189cd",
+          "version": 1,
+          "custody": [
+            {
+              "custody_event_id": "CUST-744F214205CF4886A37A13925F77CAC4",
+              "event_type": "ACQUIRED",
+              "actor_display": "SYNTHETIC M33 (synthetic-analyst)",
+              "occurred_at": "2026-10-25T09:03:15.609815Z",
+              "details": {
+                "digest": "0fa58dc7d6dd48bfa0a962a1152976a7b472520323970bba3bd52cdb26a154cf",
+                "digest_algorithm": "SHA-256",
+                "reference_id": "EVT-6FFF461379E4CAD5E3C6F65F",
+                "reference_type": "EVENT"
+              }
+            }
+          ]
+        }
+      ],
+      "activity": [
+        {
+          "activity_id": "CACT-D589711E482B43819B3FB065DC55F89E",
+          "activity_type": "CASE_CREATED",
+          "actor_display": "SYNTHETIC M33 (synthetic-analyst)",
+          "entity_type": "case",
+          "entity_id": "CASE-BFA1967F0F204C8DBE2A8ABC5B4C0419",
+          "occurred_at": "2026-10-25T09:03:15.521876Z",
+          "details": {
+            "owner_id": null,
+            "priority": "HIGH",
+            "severity": "HIGH",
+            "source_id": null,
+            "source_type": "MANUAL"
+          }
+        },
+        {
+          "activity_id": "CACT-236937B28AB74B7B8EE1DBC8F7FFFD43",
+          "activity_type": "REFERENCE_LINKED",
+          "actor_display": "SYNTHETIC M33 (synthetic-analyst)",
+          "entity_type": "event",
+          "entity_id": "EVT-6FFF461379E4CAD5E3C6F65F",
+          "occurred_at": "2026-10-25T09:03:15.551878Z",
+          "details": {
+            "reference_id": "EVT-6FFF461379E4CAD5E3C6F65F",
+            "reference_type": "EVENT"
+          }
+        },
+        {
+          "activity_id": "CACT-9042BD5B16AA4B92977A8DF16208CA11",
+          "activity_type": "COMMENT_ADDED",
+          "actor_display": "SYNTHETIC M33 (synthetic-analyst)",
+          "entity_type": "comment",
+          "entity_id": "CCM-C95A9EB2D53F4BAAAECFA25CD0FEF4F6",
+          "occurred_at": "2026-10-25T09:03:15.587867Z",
+          "details": {
+            "length": 47
+          }
+        },
+        {
+          "activity_id": "CACT-0CC6213F393C40078A868F42CF58491F",
+          "activity_type": "EVIDENCE_ACQUIRED",
+          "actor_display": "SYNTHETIC M33 (synthetic-analyst)",
+          "entity_type": "evidence",
+          "entity_id": "EVD-31DDDFDD549D484FA2B300BB984BE54B",
+          "occurred_at": "2026-10-25T09:03:15.609815Z",
+          "details": {
+            "digest": "0fa58dc7d6dd48bfa0a962a1152976a7b472520323970bba3bd52cdb26a154cf",
+            "digest_algorithm": "SHA-256",
+            "reference_id": "EVT-6FFF461379E4CAD5E3C6F65F",
+            "reference_type": "EVENT"
+          }
+        },
+        {
+          "activity_id": "CACT-610C178BB4744A33810B6F93D17C70E3",
+          "activity_type": "STATUS_CHANGED",
+          "actor_display": "SYNTHETIC M33 (synthetic-analyst)",
+          "entity_type": "case",
+          "entity_id": "CASE-BFA1967F0F204C8DBE2A8ABC5B4C0419",
+          "occurred_at": "2026-10-25T09:03:15.639881Z",
+          "details": {
+            "from": "OPEN",
+            "to": "TRIAGING"
+          }
+        }
+      ],
+      "playbooks": [],
+      "report_history": []
+    },
+    "operations": {
+      "generated_at": "2026-10-25T09:03:15.676878Z",
+      "measurement": {
+        "state": "FRESH",
+        "measured_at": "2026-10-25T09:03:15.676878Z",
+        "age_seconds": 0.0,
+        "duration_ms": 16.0,
+        "cache_ttl_seconds": 2.0,
+        "stale_ttl_seconds": 30.0,
+        "query_deadline_seconds": 2.0,
+        "reason_code": "COMPUTED",
+        "cache_hits": 0,
+        "cache_misses": 1,
+        "singleflight_joins": 0,
+        "stale_served": 0,
+        "inflight_queries": 1,
+        "pending_waiters": 0,
+        "execution_model": "BOUNDED_THREADPOOL"
+      },
+      "snapshot_collected_at": null,
+      "snapshot_age_seconds": null,
+      "components": [],
+      "recent_events": [],
+      "data_quality": {
+        "total_events": 8,
+        "total_events_scope": "CURRENT_RETAINED_DATABASE",
+        "total_events_measurement": "EXACT",
+        "raw_evidence_records": null,
+        "missing_hostname": null,
+        "missing_username": null,
+        "missing_rule_id": null,
+        "field_completeness_measurement": "UNKNOWN",
+        "field_completeness_reason": "NOT_MATERIALIZED_SCHEMA17",
+        "duplicate_events": null,
+        "duplicate_events_scope": "UNKNOWN",
+        "malformed_events": null,
+        "oversized_events": null,
+        "delivery_rejected": null,
+        "shipper_counters_scope": "UNKNOWN",
+        "evidence": "APPLICATION_DATABASE_AND_DURABLE_SHIPPER_STATE"
+      },
+      "storage_retention": {
+        "schema_version": 17,
+        "state": "WITHIN_LIMIT",
+        "retention_days": 30,
+        "max_records": 100000,
+        "retained_records": 8,
+        "protected_records": 0,
+        "protected_records_measurement": "NOT_MEASURED",
+        "over_limit_records": 0,
+        "usage_percent": 0.008,
+        "database_size_bytes": 901120,
+        "wal_size_bytes": 292552,
+        "last_run_at": "2026-10-25T09:03:14.749333Z",
+        "last_deleted_count": 0,
+        "oldest_event_at": "2026-10-25T08:43:14Z",
+        "newest_event_at": "2026-10-25T08:43:44Z",
+        "last_ingested_at": "2026-10-25T09:03:14.870789Z"
+      },
+      "archive_backlog": {
+        "state": "UNAVAILABLE",
+        "generation_state": "UNAVAILABLE",
+        "historical_replay_state": "NOT_CONFIGURED",
+        "archive_size_bytes": null,
+        "cursor_bytes": null,
+        "current_lag_bytes": null,
+        "current_eligible_records": null,
+        "current_filtered_records": null,
+        "current_malformed_records": null,
+        "rotated_archive_count": null,
+        "historical_eligible_records": null,
+        "recovery_readiness": "NOT_AUDITED"
+      },
+      "forward_ingestion": {
+        "legacy_checkpoint_state": "UNKNOWN",
+        "legacy_continuity": "UNKNOWN",
+        "forward_state": "UNKNOWN",
+        "historical_replay_state": "NOT_STARTED",
+        "approval_state": "UNKNOWN",
+        "approval_validation_basis": "UNKNOWN",
+        "approval_expires_at": null,
+        "approval_remaining_seconds": null,
+        "generation_id": null,
+        "source_device": null,
+        "source_inode": null,
+        "source_size_bytes": null,
+        "start_offset_bytes": null,
+        "cursor_bytes": null,
+        "lag_bytes": null,
+        "unique_insertions": null,
+        "duplicate_acknowledgements": null,
+        "filtered_records": null,
+        "malformed_records": null,
+        "retry_attempts": null,
+        "protocol_errors": null,
+        "delivery_rejected": null,
+        "source_identity_matches": null,
+        "legacy_state_unchanged": null,
+        "service_active": false,
+        "archive_growth_bytes_per_second": null,
+        "cursor_progress_bytes_per_second": null,
+        "net_lag_bytes_per_second": null,
+        "net_backlog_trend": "UNKNOWN",
+        "rate_measurement_state": "UNKNOWN",
+        "unreconciled_historical_records": null,
+        "retention_pressure": "WITHIN_LIMIT",
+        "last_successful_delivery": null,
+        "checkpoint_updated_at": null,
+        "historical_gap_warning": "UNPROVEN_HISTORY_NOT_REPLAYED"
+      },
+      "wazuh_inventory": {
+        "state": "UNAVAILABLE",
+        "authority": "WAZUH_API",
+        "reason": "Read-only Wazuh API credentials or trusted CA are not configured; agent states remain UNKNOWN.",
+        "manager_identity": null,
+        "agent_count": null
+      },
+      "ingestion_performance": {
+        "normalization_counts": {
+          "received": 16,
+          "recognized": 16,
+          "normalized": 16,
+          "partial": 0,
+          "unsupported": 0,
+          "rejected": 0,
+          "malformed": 0,
+          "invalid_timestamp": 0,
+          "invalid_identity": 0,
+          "oversized": 0,
+          "WINDOWS_EVENTCHANNEL": 8,
+          "SYSMON": 0,
+          "LINUX_AUTH": 8,
+          "SYSLOG": 0,
+          "JOURNALD": 0,
+          "WAZUH_GENERIC": 0
+        },
+        "measurement_scope": "POST_PROCESS_START_ONLY",
+        "started_at": "2026-10-25T09:03:14.266231Z",
+        "captured_at": "2026-10-25T09:03:15.678869Z",
+        "measurement_window_seconds": 1.422,
+        "request_latency_sample_size": 16,
+        "active_request_mode": "single-event",
+        "execution_model": "bounded-threadpool",
+        "ingress_protocol_version": "m18-batch-v1",
+        "configured_mode": "batch-available-disabled-by-default",
+        "batch_endpoint_enabled": false,
+        "configured_batch_limit": 100,
+        "requests": 16,
+        "single_requests": 16,
+        "batch_requests": 0,
+        "events": 16,
+        "inserted": 8,
+        "duplicates": 8,
+        "retryable_failures": 0,
+        "permanent_failures": 0,
+        "requests_per_second": 11.251758,
+        "events_per_second": 11.251758,
+        "inserts_per_second": 5.625879,
+        "duplicates_per_second": 5.625879,
+        "events_per_request": 1.0,
+        "request_latency_p50_ms": 15.0,
+        "request_latency_p95_ms": 31.0,
+        "database_latency_p50_ms": 0.0,
+        "database_latency_p95_ms": 31.0,
+        "transaction_latency_p50_ms": null,
+        "transaction_latency_p95_ms": null,
+        "retention_latency_p50_ms": null,
+        "retention_latency_p95_ms": null,
+        "lock_wait_latency_p50_ms": null,
+        "lock_wait_latency_p95_ms": null,
+        "commit_latency_p50_ms": null,
+        "commit_latency_p95_ms": null,
+        "retention_candidate_latency_p95_ms": null,
+        "protected_check_latency_p95_ms": null,
+        "timeout_count": 0,
+        "pre_commit_deadline_violations": 0,
+        "sqlite_busy_errors": 0,
+        "last_failure_stage": null,
+        "last_failure_timing_ms": null,
+        "last_successful_acknowledgement": "2026-10-25T09:03:14.977768Z",
+        "last_successful_acknowledgement_age_seconds": 0.701,
+        "last_error": null,
+        "historical_unique_insertions": null,
+        "historical_duplicate_acknowledgements": null
+      }
+    }
+  }
+}

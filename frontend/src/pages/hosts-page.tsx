@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 
 import { CopyButton } from "../components/copy-button";
+import { SourceCoverage } from "../components/source-coverage";
 import { StatePanel } from "../components/state-panel";
 import { TimeValue } from "../components/time-value";
 import type { AgentConnectionStatus, AgentDetail, AgentHealthResponse, AgentListResponse, AgentSummary, WazuhIntegrationStatus } from "../types/agents";
@@ -21,7 +22,7 @@ function selectedFromUrl(): string | null {
   return new URLSearchParams(window.location.search).get("agent");
 }
 
-export function HostsPage({ api }: { api: BackendApi }) {
+export function HostsPage({ api, onOpenEvent }: { api: BackendApi; onOpenEvent?(id:string):void }) {
   const [agents, setAgents] = useState<AgentListResponse | null>(null);
   const [sources, setSources] = useState<LogSourceSummary[] | null>(null);
   const [integration, setIntegration] = useState<WazuhIntegrationStatus | null>(null);
@@ -92,6 +93,7 @@ export function HostsPage({ api }: { api: BackendApi }) {
   const total = agents?.page.total ?? 0;
   return <div className="page-grid">
     <section className="page-column">
+      <SourceCoverage api={api} onOpenEvent={onOpenEvent}/>
       <header className="page-header"><div><span className="eyebrow">Enterprise inventory</span><h1>Agent management</h1><p>Authoritative Wazuh connectivity, observed telemetry freshness, and pipeline state remain separate.</p></div><div className="page-header__actions"><button className="button button--ghost" type="button" onClick={() => setRevision((value) => value + 1)}>Refresh</button></div></header>
       {integration && <div className="inventory-explanation" role="note"><strong>Wazuh API: {integration.state}</strong><span>{integration.reason} Authority: WAZUH_API · TLS: {humanize(integration.tls_verification)} · observed <TimeValue value={integration.observed_at} relative />{integration.cache_stale ? " · cache stale" : ""}.</span></div>}
       <section className="panel inventory-filters" aria-label="Agent filters">

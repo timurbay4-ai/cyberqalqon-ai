@@ -52,11 +52,34 @@ export interface SecurityEventSummary {
 }
 
 export interface SecurityEventDetail extends SecurityEventSummary {
+  cuse?: CUSEMetadata | null;
   structured_payload: Record<string, unknown>;
   raw_payload: Record<string, unknown>;
   related_incident_ids: string[];
   related_case_ids: string[];
   raw_evidence_ref: string;
+}
+
+export interface CUSEMetadata {
+  version: "cuse-v1";
+  adapter_version: "m28-v1" | "m34-network-v1";
+  source_family: "WINDOWS_EVENTCHANNEL" | "SYSMON" | "LINUX_AUTH" | "SYSLOG" | "JOURNALD" | "WAZUH_GENERIC" | "ZEEK" | "SURICATA";
+  normalization_status: "NORMALIZED" | "PARTIAL" | "UNSUPPORTED_SOURCE";
+  provenance_status: "PARTIAL" | "UNKNOWN" | "UNPROVEN";
+  historical_continuity: "UNPROVEN";
+  transport_authenticated: boolean;
+  endpoint_identity_verified: false;
+  source_event_time: string | null;
+  collector_observation_time: string;
+  timestamp_basis: "SOURCE_EVENT_TIME" | "COLLECTOR_OBSERVATION_TIME";
+  original_event_identity: string | null;
+  source_identity_sha256: string;
+  content_fingerprint: string;
+  idempotency_contract: "LEGACY_RAW_ENVELOPE_SHA256" | "REGISTERED_SOURCE_RECORD_SHA256";
+  delivery_identity: string | null;
+  source_generation: string | null;
+  warnings: string[];
+  attributes: Record<string, string | number>;
 }
 
 export interface EventQuery {
@@ -150,6 +173,7 @@ export interface SavedEventSearchQuery extends Omit<EventQuery, "cursor" | "limi
   relativeMinutes?: 15 | 60 | 1440 | 10080 | 43200;
   startTime?: string;
   endTime?: string;
+  cqql?: string;
 }
 
 export interface SavedEventSearch {
@@ -163,4 +187,100 @@ export interface SavedEventSearch {
 export interface SavedEventSearchCreate {
   name: string;
   query: SavedEventSearchQuery;
+}
+
+export interface CQQLSearchRequest {
+  query: string;
+  start_time: string;
+  end_time: string;
+  sort?: EventSort;
+  limit?: number;
+  cursor?: string;
+}
+
+export interface CQQLSearchResponse {
+  items: SecurityEventSummary[];
+  page: {
+    limit: number;
+    next_cursor: string | null;
+    total: null;
+    count_mode: "UNKNOWN";
+    sort: EventSort;
+  };
+  metadata: {
+    version: "cqql-v1";
+    execution_ms: number;
+    query_status: "COMPLETE";
+    warnings: string[];
+    truncated: boolean;
+    data_freshness: string | null;
+    clause_count: number;
+    ast_depth: number;
+    fts_used: boolean;
+    cost_class: "LOW" | "MODERATE" | "HIGH";
+    plan_class: "INDEX_FRIENDLY" | "BOOLEAN_COMPLEX" | "FTS_SELECTIVITY_UNKNOWN" | "RESOURCE_LIMITED" | "UNKNOWN_COST";
+    planner_strategy: "DEFAULT" | "TIME_ORDERED_OR" | "TIME_ORDERED_BOOLEAN";
+    diagnostic_reasons: Array<"INDEXED_EQUALITY" | "RANGE_COMPARISON" | "BOOLEAN_OR" | "NEGATION_SCAN" | "DERIVED_FIELD" | "UNINDEXED_FIELD" | "FTS_CANDIDATE_MATERIALIZATION" | "TIME_ORDERED_OR" | "TIME_ORDERED_BOOLEAN">;
+  };
+}
+
+export type CQQLGroupField = "event.provider" | "host.name" | "source.ip" | "event.severity" | "event.code" | "event.category" | "event.source_type" | "event.outcome" | "rule.id";
+
+export interface CQQLAnalyticsRequest {
+  query: string;
+  start_time: string;
+  end_time: string;
+  group_by: CQQLGroupField[];
+  top_n?: number;
+  interval?: "hour" | "day";
+}
+
+export interface CQQLAnalyticsResponse {
+  version: "cqql-v1";
+  query_status: "COMPLETE";
+  execution_ms: number;
+  completeness: "EXACT_WITHIN_BOUNDED_RANGE";
+  sparse_time_series: true;
+  matching_events: number;
+  groups: Array<{ field: CQQLGroupField; buckets: NamedCount[]; truncated: boolean }>;
+  time_series: TimeSeriesPoint[];
+  clause_count: number;
+  fts_used: boolean;
+}
+
+export type CQQLExportField = "timestamp" | "event_id" | "event_code" | "severity" | "source_type" | "hostname" | "source_ip" | "destination_ip" | "username" | "rule_id" | "event_category" | "outcome" | "message";
+
+export interface CQQLExportRequest {
+  query: string;
+  start_time: string;
+  end_time: string;
+  sort?: EventSort;
+  limit?: number;
+  fields?: CQQLExportField[];
+}
+
+export interface CQQLFieldDescriptor {
+  name: string;
+  data_type: "string" | "integer" | "ip" | "mitre" | "text" | "timestamp";
+  operators: string[];
+  indexed: boolean;
+  sensitivity: "standard" | "identity" | "network" | "evidence";
+  source: string;
+  derived: boolean;
+  searchable: boolean;
+}
+
+export interface CQQLFieldCatalog {
+  version: "cqql-v1";
+  fields: CQQLFieldDescriptor[];
+  limits: {
+    maximum_query_length: number;
+    maximum_tokens: number;
+    maximum_ast_depth: number;
+    maximum_boolean_clauses: number;
+    maximum_page_size: number;
+    maximum_time_range_days: number;
+    execution_deadline_ms: number;
+    maximum_concurrent_queries: number;
+  };
 }

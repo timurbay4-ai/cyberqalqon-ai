@@ -1,0 +1,29 @@
+title: SYNTHETIC repeated DNS question on one sensor
+id: 00000000-0000-4000-8000-000000003401
+name: synthetic_dns
+date: 2026-10-27
+status: test
+logsource:
+  product: zeek
+  service: dns
+detection:
+  selection:
+    query: synthetic.example.test
+  condition: selection
+falsepositives:
+  - Routine DNS retries and application polling are common.
+level: low
+---
+title: SYNTHETIC repeated DNS review candidate
+id: 00000000-0000-4000-8000-000000003402
+date: 2026-10-27
+correlation:
+  type: event_count
+  rules: [synthetic_dns]
+  group-by: [Computer, SourceIp]
+  timespan: 5m
+  condition:
+    gte: 3
+level: low
+falsepositives:
+  - This is a pattern review candidate, not evidence of malicious DNS.

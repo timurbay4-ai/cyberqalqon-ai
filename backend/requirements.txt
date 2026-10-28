@@ -4,7 +4,8 @@
 # Runtime dependencies for the FastAPI ingestion service.
 
 # --- Web Framework ---
-fastapi==0.115.12
+fastapi==0.162.0
+starlette==1.10.0
 
 # --- ASGI Server ---
 uvicorn[standard]==0.34.3
@@ -20,6 +21,10 @@ httpx==0.28.1
 
 # --- Bounded case-report PDF export ---
 reportlab==4.4.3
+
+# --- Bounded, entity-disabled local diagnostic XML ---
+defusedxml==0.7.1
+PyYAML==6.0.3
 
 # --- Future (not installed) ---
 # sqlalchemy==2.x          # ORM (only when SQLite access outgrows stdlib sqlite3)

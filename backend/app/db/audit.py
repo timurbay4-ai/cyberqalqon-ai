@@ -4,6 +4,8 @@ from __future__ import annotations
 
 import json
 import sqlite3
+import time
+from contextlib import closing
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Literal
@@ -39,6 +41,7 @@ class AuditRepository:
         outcome: AuditOutcome = "SUCCESS",
         details: dict[str, Any] | None = None,
         occurred_at: datetime | None = None,
+        budget_ms: int | None = None,
     ) -> SecurityAuditEvent:
         now = (occurred_at or datetime.now(timezone.utc)).astimezone(timezone.utc)
         event = SecurityAuditEvent(
@@ -55,7 +58,13 @@ class AuditRepository:
         details_json = canonical_json(event.details)
         if len(details_json.encode("utf-8")) > 8192:
             raise ValueError("audit details exceed 8192 bytes")
-        with self._connect() as connection:
+        if budget_ms is not None and (type(budget_ms) is not int or not 1 <= budget_ms <= 1000):
+            raise ValueError('invalid bounded audit budget')
+        with closing(self._connect()) as connection, connection:
+            if budget_ms is not None:
+                deadline = time.perf_counter()+budget_ms/1000
+                connection.execute(f'PRAGMA busy_timeout={budget_ms}')
+                connection.set_progress_handler(lambda: int(time.perf_counter() >= deadline),1000)
             connection.execute("BEGIN IMMEDIATE")
             connection.execute(
                 """

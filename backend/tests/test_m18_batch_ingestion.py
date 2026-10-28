@@ -14,6 +14,7 @@ from app.db.events import (
     BatchItemConflictError,
     BatchProcessingTimeoutError,
     EventRepository,
+    RetentionCapacityError,
 )
 from app.main import create_app
 from app.services.event_normalizer import normalize_wazuh_event
@@ -321,12 +322,15 @@ def test_batch_retention_preserves_alert_evidence_and_reports_pressure(
                 (alert_id,),
             ).fetchone()[0]
         )
+        audit_before = connection.execute(
+            "SELECT details_json FROM security_audit_events WHERE action='SECURITY_EVENT_RETENTION' ORDER BY occurred_at DESC LIMIT 1"
+        ).fetchone()
 
     repository = EventRepository(database_path, retention_days=30, max_records=1)
-    result = repository.ingest_batch(
-        [normalize_wazuh_event(event(10)), normalize_wazuh_event(event(11))]
-    )
-    assert result.inserted == 2
+    with pytest.raises(RetentionCapacityError):
+        repository.ingest_batch(
+            [normalize_wazuh_event(event(10)), normalize_wazuh_event(event(11))]
+        )
     with sqlite3.connect(database_path) as connection:
         event_ids = {
             str(row[0])
@@ -336,13 +340,14 @@ def test_batch_retention_preserves_alert_evidence_and_reports_pressure(
             "SELECT details_json FROM security_audit_events "
             "WHERE action='SECURITY_EVENT_RETENTION' ORDER BY occurred_at DESC LIMIT 1"
         ).fetchone()
-    assert protected_event_id in event_ids
-    assert {item.event_id for item in result.items}.issubset(event_ids)
-    assert audit is not None
-    details = json.loads(str(audit[0]))
-    assert details["decision"] == "PROTECTED_OVER_LIMIT"
-    assert details["protected_records"] >= 1
-    assert details["protected_records_measurement"] == "LOWER_BOUND"
+    assert event_ids == {protected_event_id}
+    assert audit == audit_before
+    batch_client.app.state.event_repository.max_records = 1
+    rejected = batch_client.post('/api/v1/events/ingest-batch', headers=auth_headers,
+                                 json=envelope(event(10), event(11)))
+    assert rejected.status_code == 503
+    assert rejected.json()['detail']['code'] == 'retention_capacity_exhausted'
+    assert batch_client.app.state.ingestion_metrics.snapshot()['inserted'] == 0
 
 
 def test_operations_report_uses_bounded_in_memory_batch_metrics(

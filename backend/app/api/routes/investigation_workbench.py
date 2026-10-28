@@ -19,6 +19,8 @@ from app.schemas.auth import AnalystPrincipal
 from app.schemas.detection_engineering import AdvancedRuleDryRunRequest
 from app.schemas.investigation_workbench import InvestigationWorkbench, WorkbenchRequest
 from app.services.advanced_detection import AdvancedDetectionEvaluationLimitError
+from app.api.routes.shadow_history import execute as execute_shadow, service as history_service
+from app.schemas.shadow_history import FindingDetail
 
 
 router = APIRouter(prefix="/api/v1/investigations", tags=["Investigation Workbench"])
@@ -49,6 +51,19 @@ async def investigation_workbench(
     evaluated_event_count = 0
     detection_source = "HISTORICAL_DRY_RUN"
     shadow_run_id = None
+    durable = None
+    if payload.target_type == "DURABLE_SHADOW_FINDING":
+        value = await execute_shadow(request, history_service(request).detail, str(payload.target_id), payload.shadow_revision)
+        durable = FindingDetail.model_validate(value)
+        # "Latest" is resolved once. Bind its actual revision into pagination so
+        # a later latest revision cannot reuse an earlier evidence-page cursor.
+        payload = payload.model_copy(update={'shadow_revision': durable.revision})
+        if not durable.current_evidence_availability or any(
+            state != "AVAILABLE" for state in durable.current_evidence_availability.values()
+        ):
+            raise HTTPException(409, detail=_error(
+                "durable_evidence_unavailable", "Open durable history for missing, changed or unknown evidence."
+            ))
     if payload.target_type == "M11_FINDING":
         try:
             result = request.app.state.advanced_detection_engine.evaluate(
@@ -113,6 +128,7 @@ async def investigation_workbench(
             payload, start=start, end=end, detection_rule=rule,
             detection_finding=finding, evaluated_event_count=evaluated_event_count,
             detection_source=detection_source, shadow_run_id=shadow_run_id,
+            durable_shadow_context=durable,
         )
     except WorkbenchTargetNotFoundError as exc:
         raise HTTPException(

@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 
 import { CopyButton } from "../components/copy-button";
+import { EventSourceContext } from "../components/event-source-context";
 import { MitreTags } from "../components/mitre-tags";
 import { SeverityBadge } from "../components/severity-badge";
 import { StatePanel } from "../components/state-panel";
@@ -190,6 +191,15 @@ export function InvestigationWorkbenchPage(props: Props) {
   if (!data) return null;
   const incidentLinks = data.links.filter((item) => item.target_type === "INCIDENT");
   return <div className="investigation-workbench">
+    {data.durable_shadow_context && <section className="panel investigation-section" aria-label="Durable shadow evidence">
+      <h2>Durable finding revision {data.durable_shadow_context.revision}</h2>
+      <p>{data.durable_shadow_context.finding_id} · rule SHA {data.durable_shadow_context.rule_version}</p>
+      <p>{data.durable_shadow_context.matching_evidence.explanation}</p>
+      <p>Historical continuity UNPROVEN. Identity assessed at evaluation time. Rule tags are not confirmed compromise.</p>
+      <p>MITRE: {data.durable_shadow_context.matching_evidence.mitre.map(item=>item.technique_id).join(', ')}</p>
+      <ul>{data.durable_shadow_context.matching_evidence.evidence.map(item=><li key={item.event_id}><button type="button" onClick={()=>props.onOpenEvent(item.event_id)}>Open finding evidence {item.event_id}</button> · <TimeValue value={item.event_time}/></li>)}</ul>
+      <p>Availability was checked at request time across separate databases; this is not a shared atomic snapshot.</p>
+    </section>}
     <header className="page-header investigation-header">
       <div><span className="eyebrow">Analyst Investigation Workbench</span><h1 ref={heading} tabIndex={-1}>{data.target_label}</h1><p>Evidence-backed context only. Observations and analyst interpretations are labelled separately.</p></div>
       <div className="page-actions"><button className="button button--secondary" type="button" onClick={props.onReturn}>← Return to results</button><button className="button button--ghost" type="button" onClick={() => setRevision((value) => value + 1)}>Refresh</button></div>
@@ -206,6 +216,7 @@ export function InvestigationWorkbenchPage(props: Props) {
         <dl className="metadata-grid"><div><dt>Event ID</dt><dd className="mono wrap-anywhere">{data.primary_event.event_id}</dd></div><div><dt>Ingested</dt><dd><TimeValue value={data.primary_event.ingested_at} /></dd></div><div><dt>Host</dt><dd>{data.primary_event.hostname ?? "Unavailable"}</dd></div><div><dt>Account</dt><dd>{data.primary_event.username ?? "Unavailable"}</dd></div><div><dt>Rule</dt><dd>{data.primary_event.rule_id ?? "Unavailable"}</dd></div><div><dt>Source</dt><dd className="mono">{data.primary_event.source_ip ?? "Unavailable"}</dd></div></dl>
         <div className="copy-actions"><CopyButton value={data.primary_event.event_id} label="Copy event ID" />{data.primary_event.rule_id && <CopyButton value={data.primary_event.rule_id} label="Copy rule ID" />}<CopyButton value={JSON.stringify(data.primary_event.raw_payload, null, 2)} label="Copy redacted JSON" /><button className="button button--secondary" type="button" onClick={() => props.onOpenEvent(data.primary_event.event_id)}>Open event detail</button></div>
         {props.canMutate && incidentLinks.map((link) => <button className="button button--secondary" key={link.target_id} type="button" onClick={() => void pinToIncident(link.target_id)}>Pin to {link.target_id}</button>)}
+        <EventSourceContext event={data.primary_event} />
         <details className="json-evidence"><summary>Normalized fields</summary><pre>{JSON.stringify(data.primary_event.structured_payload, null, 2)}</pre></details>
         <details className="json-evidence"><summary>Redacted raw evidence</summary><pre>{JSON.stringify(data.primary_event.raw_payload, null, 2)}</pre></details>
       </section>

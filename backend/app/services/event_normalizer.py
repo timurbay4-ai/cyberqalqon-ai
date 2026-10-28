@@ -29,15 +29,18 @@ SENSITIVE_KEY_FRAGMENTS = (
     "token",
 )
 SENSITIVE_ASSIGNMENT = re.compile(
-    r"(?i)\b(password|passwd|token|secret|api[_-]?key|authorization|cookie)\s*([=:])\s*([^\s&;,]+)"
+    r"(?i)\b(password|passwd|token|secret|api[_-]?key|authorization|cookie)\s*([=:])\s*"
+    r"(\"[^\"\r\n]*\"|'[^'\r\n]*'|[^\s&;,]+)"
 )
+BEARER_CREDENTIAL = re.compile(r"(?i)\bBearer\s+[A-Za-z0-9._~+/-]+={0,2}")
 
 
 class EventNormalizationError(ValueError):
-    def __init__(self, message: str, *, field: str | None = None) -> None:
+    def __init__(self, message: str, *, field: str | None = None, code: str = "MALFORMED") -> None:
         super().__init__(message)
         self.message = message
         self.field = field
+        self.code = code
 
 
 def _mapping(value: Any) -> Mapping[str, Any]:
@@ -85,6 +88,7 @@ def _port(value: Any, field: str) -> int | None:
 
 
 def _redact_string(value: str) -> str:
+    value = BEARER_CREDENTIAL.sub("Bearer [REDACTED]", value)
     return SENSITIVE_ASSIGNMENT.sub(lambda match: f"{match.group(1)}{match.group(2)}[REDACTED]", value)
 
 
@@ -211,7 +215,7 @@ def _mitre_context(raw: Mapping[str, Any]) -> MitreContext:
     invalid = next((item for item in ids if not MITRE_ID_PATTERN.fullmatch(item)), None)
     if invalid is not None:
         raise EventNormalizationError(
-            f"contains invalid MITRE ATT&CK technique ID: {invalid}",
+            "contains invalid MITRE ATT&CK technique ID",
             field="rule.mitre.id",
         )
     return MitreContext(
@@ -305,7 +309,7 @@ def _message(raw: Mapping[str, Any], redacted: Mapping[str, Any]) -> str:
     return (result or "Wazuh archive event")[:4096]
 
 
-def normalize_wazuh_event(
+def _normalize_legacy_wazuh_event(
     raw_event: dict[str, Any],
     *,
     ingestion_source: str = "wazuh_archives",
@@ -512,3 +516,16 @@ def normalize_wazuh_event(
 
 def encoded_event_size(raw_event: dict[str, Any]) -> int:
     return len(json.dumps(raw_event, ensure_ascii=False, separators=(",", ":")).encode("utf-8"))
+
+
+def normalize_wazuh_event(
+    raw_event: dict[str, Any],
+    *,
+    ingestion_source: str = "wazuh_archives",
+    context=None,
+) -> NormalizedSecurityEvent:
+    """Normalize through explicit M28 adapters while preserving legacy identity."""
+
+    from app.services.source_adapters import normalize_source_event
+
+    return normalize_source_event(raw_event, ingestion_source=ingestion_source, context=context)

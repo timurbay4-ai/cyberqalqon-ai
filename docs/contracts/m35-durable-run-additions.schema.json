@@ -1,0 +1,282 @@
+{
+  "$defs": {
+    "ChainEdge": {
+      "additionalProperties": false,
+      "properties": {
+        "source": {
+          "title": "Source",
+          "type": "string"
+        },
+        "target": {
+          "title": "Target",
+          "type": "string"
+        },
+        "relationship": {
+          "enum": [
+            "FINDING_SUPPORTED_BY_EVENT",
+            "OBSERVED_BEFORE",
+            "OBSERVED_SHARED_PROCESS_GUID"
+          ],
+          "title": "Relationship",
+          "type": "string"
+        },
+        "causal_claim": {
+          "const": false,
+          "default": false,
+          "title": "Causal Claim",
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "source",
+        "target",
+        "relationship"
+      ],
+      "title": "ChainEdge",
+      "type": "object"
+    },
+    "EvaluationSummary": {
+      "additionalProperties": false,
+      "properties": {
+        "finding_ids": {
+          "items": {
+            "type": "string"
+          },
+          "maxItems": 100,
+          "title": "Finding Ids",
+          "type": "array"
+        },
+        "diagnostics": {
+          "additionalProperties": {
+            "type": "integer"
+          },
+          "title": "Diagnostics",
+          "type": "object"
+        },
+        "coverage": {
+          "enum": [
+            "PARTIAL",
+            "BOUNDED_CANDIDATE_SLICE"
+          ],
+          "title": "Coverage",
+          "type": "string"
+        },
+        "identity_rejected": {
+          "maximum": 100,
+          "minimum": 0,
+          "title": "Identity Rejected",
+          "type": "integer"
+        },
+        "candidate_count": {
+          "maximum": 100,
+          "minimum": 0,
+          "title": "Candidate Count",
+          "type": "integer"
+        },
+        "historical_continuity": {
+          "const": "UNPROVEN",
+          "default": "UNPROVEN",
+          "title": "Historical Continuity",
+          "type": "string"
+        },
+        "window_completeness": {
+          "const": "UNPROVEN",
+          "default": "UNPROVEN",
+          "title": "Window Completeness",
+          "type": "string"
+        },
+        "evaluation_version": {
+          "const": "m31-shadow-v1",
+          "default": "m31-shadow-v1",
+          "title": "Evaluation Version",
+          "type": "string"
+        },
+        "graph_edges": {
+          "items": {
+            "$ref": "#/$defs/ChainEdge"
+          },
+          "maxItems": 256,
+          "title": "Graph Edges",
+          "type": "array"
+        }
+      },
+      "required": [
+        "finding_ids",
+        "diagnostics",
+        "coverage",
+        "identity_rejected",
+        "candidate_count",
+        "graph_edges"
+      ],
+      "title": "EvaluationSummary",
+      "type": "object"
+    },
+    "RecoveryIntentView": {
+      "additionalProperties": false,
+      "properties": {
+        "version": {
+          "const": "m35-bounded-snapshot-intent-v1",
+          "title": "Version",
+          "type": "string"
+        },
+        "manifest_sha256": {
+          "pattern": "^[a-f0-9]{64}$",
+          "title": "Manifest Sha256",
+          "type": "string"
+        },
+        "candidate_rows": {
+          "maximum": 1000,
+          "minimum": 0,
+          "title": "Candidate Rows",
+          "type": "integer"
+        },
+        "candidate_truncated": {
+          "title": "Candidate Truncated",
+          "type": "boolean"
+        },
+        "scope": {
+          "const": "BOUNDED_CANDIDATES_NOT_GLOBAL_COMPLETENESS",
+          "title": "Scope",
+          "type": "string"
+        },
+        "verification": {
+          "enum": [
+            "RECHECK_REQUIRED",
+            "SEALED"
+          ],
+          "title": "Verification",
+          "type": "string"
+        }
+      },
+      "required": [
+        "version",
+        "manifest_sha256",
+        "candidate_rows",
+        "candidate_truncated",
+        "scope",
+        "verification"
+      ],
+      "title": "RecoveryIntentView",
+      "type": "object"
+    }
+  },
+  "additionalProperties": false,
+  "properties": {
+    "run_id": {
+      "pattern": "^RUN-[a-f0-9]{32}$",
+      "title": "Run Id",
+      "type": "string"
+    },
+    "status": {
+      "enum": [
+        "RUNNING",
+        "COMPLETED",
+        "FAILED",
+        "CANCELLED"
+      ],
+      "title": "Status",
+      "type": "string"
+    },
+    "attempts": {
+      "maximum": 3,
+      "minimum": 1,
+      "title": "Attempts",
+      "type": "integer"
+    },
+    "error_code": {
+      "anyOf": [
+        {
+          "maxLength": 128,
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "title": "Error Code"
+    },
+    "checkpoint": {
+      "enum": [
+        "SEALED",
+        "UNSEALED"
+      ],
+      "title": "Checkpoint",
+      "type": "string"
+    },
+    "snapshot_sha256": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "title": "Snapshot Sha256"
+    },
+    "result": {
+      "anyOf": [
+        {
+          "$ref": "#/$defs/EvaluationSummary"
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "recovery_state": {
+      "enum": [
+        "NOT_REQUIRED",
+        "IN_PROGRESS",
+        "EXPLICIT_RESUME_REQUIRED",
+        "UNSEALED_BLOCKED",
+        "UNSEALED_VERIFICATION_REQUIRED",
+        "ATTEMPTS_EXHAUSTED"
+      ],
+      "title": "Recovery State",
+      "type": "string"
+    },
+    "recovery_intent": {
+      "anyOf": [
+        {
+          "$ref": "#/$defs/RecoveryIntentView"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null
+    },
+    "production_active": {
+      "const": false,
+      "default": false,
+      "title": "Production Active",
+      "type": "boolean"
+    },
+    "scope": {
+      "const": "DISPOSABLE_DURABLE_SHADOW",
+      "default": "DISPOSABLE_DURABLE_SHADOW",
+      "title": "Scope",
+      "type": "string"
+    },
+    "historical_continuity": {
+      "const": "UNPROVEN",
+      "default": "UNPROVEN",
+      "title": "Historical Continuity",
+      "type": "string"
+    }
+  },
+  "required": [
+    "run_id",
+    "status",
+    "attempts",
+    "error_code",
+    "checkpoint",
+    "snapshot_sha256",
+    "result",
+    "recovery_state"
+  ],
+  "title": "DurableRun",
+  "type": "object",
+  "$schema": "https://json-schema.org/draft/2020-12/schema"
+}

@@ -628,7 +628,8 @@ class ForwardIngestionWorker:
                     )
                     processed += 1
                     continue
-                assert line is not None
+                if not (line is not None):
+                    raise RuntimeError("Internal forward_ingestion invariant failed")
                 try:
                     payload = json.loads(line.decode("utf-8"))
                 except (UnicodeDecodeError, json.JSONDecodeError):
@@ -872,7 +873,8 @@ def dry_run_forward_records(
                 counts["malformed"] += 1
                 counts["oversized"] += 1
                 continue
-            assert line is not None
+            if not (line is not None):
+                raise RuntimeError("Internal forward_ingestion invariant failed")
             try:
                 payload = json.loads(line.decode("utf-8"))
             except (UnicodeDecodeError, json.JSONDecodeError):

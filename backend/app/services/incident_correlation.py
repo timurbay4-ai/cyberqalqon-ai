@@ -200,7 +200,8 @@ def build_correlation_plan(
     )
     if chain and any(item.alert_id == pivot_alert_id for item in chain):
         identity = _same_recon_identity(chain)
-        assert identity is not None
+        if not (identity is not None):
+            raise RuntimeError("Internal incident_correlation invariant failed")
         source_identity, target_identity = identity
         return CorrelationPlan(
             rule_id="CORR-001",
@@ -227,7 +228,8 @@ def build_correlation_plan(
     )
     if escalation and any(item.alert_id == pivot_alert_id for item in escalation):
         identity = _same_recon_identity(escalation)
-        assert identity is not None
+        if not (identity is not None):
+            raise RuntimeError("Internal incident_correlation invariant failed")
         source_identity, target_identity = identity
         return CorrelationPlan(
             rule_id="CORR-003",

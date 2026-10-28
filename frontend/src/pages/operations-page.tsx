@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 
 import { CopyButton } from "../components/copy-button";
+import { SourceCoverage } from "../components/source-coverage";
 import { StatePanel } from "../components/state-panel";
 import { TimeValue } from "../components/time-value";
 import { ApiError, BackendUnavailableError } from "../api/client";
@@ -36,7 +37,7 @@ function operationalErrorMessage(reason: unknown): string {
   return reason instanceof Error ? reason.message : "Operational diagnostics are unavailable.";
 }
 
-export function OperationsPage({ api, onNavigate }: { api: BackendApi; onNavigate(page: PageId): void }) {
+export function OperationsPage({ api, onNavigate, onOpenEvent }: { api: BackendApi; onNavigate(page: PageId): void; onOpenEvent?(id:string):void }) {
   const [overview, setOverview] = useState<OperationalOverview | null>(null);
   const [selected, setSelected] = useState<OperationalComponent | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -73,6 +74,7 @@ export function OperationsPage({ api, onNavigate }: { api: BackendApi; onNavigat
   return <div className="page-grid">
     <section className="page-column">
       <header className="page-header"><div><span className="eyebrow">Reliability engineering</span><h1>Operational health</h1><p>Bounded diagnostics from durable sender/shipper state, service managers, SQLite, and the read-only Wazuh API.</p></div><div className="page-header__actions"><button className="button button--ghost" type="button" onClick={() => setRevision((value) => value + 1)}>Refresh</button></div></header>
+      <SourceCoverage api={api} onOpenEvent={onOpenEvent}/>
       {!overview && !error && <StatePanel kind="loading" title="Loading operational evidence" message="Reading the latest persisted collector snapshot…" />}
       {error && <StatePanel kind="unavailable" title={overview ? "Operational refresh failed" : "Operational health unavailable"} message={overview ? `${error} The last bounded snapshot remains visible below.` : error} actionLabel="Retry" onAction={() => setRevision((value) => value + 1)} />}
       {overview && <>

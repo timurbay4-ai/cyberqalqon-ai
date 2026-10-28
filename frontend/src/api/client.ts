@@ -1,3 +1,10 @@
+import {parseShadowCatalog,parseShadowValidation,parseShadowResult} from "./shadow-contracts";
+import {parseDurableStatus,parseDurableRun,parseFindingPage,parseFindingDetail} from './shadow-history-contracts';
+import {parseReconciliationPage} from './evidence-consistency-contract';
+import {parseSourceCoverage} from './collection-contract';
+import {parseSigmaPreview} from './sigma-contract';
+import type {DurableRequest,FindingTransition} from '../types/shadow-history';
+import type {ShadowRule,ShadowSimulationRequest} from "../types/shadow-detection";
 import {
     parseAlertList,
     parseAdvancedDetectionRules,
@@ -18,6 +25,9 @@ import {
     parseNormalizedAlert,
     parseSecurityEvent,
     parseSecurityEventList,
+    parseCQQLFieldCatalog,
+    parseCQQLAnalyticsResponse,
+    parseCQQLSearchResponse,
     parseSavedEventSearch,
     parseSavedEventSearches,
     parseSecurityOverview,
@@ -77,7 +87,7 @@ import type {
     AlertWorkflowQuery,
     AlertWorkflowStatus,
 } from "../types/alerts";
-import type { EventQuery, SavedEventSearchCreate } from "../types/events";
+import type { CQQLAnalyticsRequest, CQQLExportRequest, CQQLSearchRequest, EventQuery, SavedEventSearchCreate } from "../types/events";
 import type { LoginCredentials, PasswordChange } from "../types/auth";
 import type { AIAnalysisRequest } from "../types/ai";
 import type { BackendApi } from "../types/api";
@@ -135,6 +145,9 @@ export class ApiError extends Error {
         readonly status: number,
         readonly code: string,
         readonly field?: string,
+        readonly runId?: string,
+        readonly requestId?: string,
+        readonly retryable?: boolean,
     ) {
         super(message);
         this.name = "ApiError";
@@ -187,6 +200,7 @@ function savedSearchBody(payload: SavedEventSearchCreate): string {
             severity_max: query.severityMax,
             source_type: query.sourceType,
             search: query.search,
+            cqql: query.cqql,
             sort: query.sort ?? "newest",
         },
     });
@@ -206,6 +220,7 @@ function huntEntries(
         ["rule_id", query.ruleId],
         ["mitre_id", query.mitreId],
         ["search", query.search],
+        ["cqql", query.cqql],
         ["sort", query.sort],
         ["limit", query.limit],
         ["cursor", query.cursor],
@@ -224,6 +239,7 @@ function savedHuntQuery(query: ThreatHuntQuery): Record<string, unknown> {
         rule_id: query.ruleId,
         mitre_id: query.mitreId,
         search: query.search,
+        cqql: query.cqql,
         sort: query.sort ?? "newest",
     };
 }
@@ -242,6 +258,9 @@ function errorFrom(value: unknown, status: number): ApiError {
                     status,
                     body.code,
                     typeof body.field === "string" ? body.field : undefined,
+                    typeof body.run_id==='string'&&/^RUN-[a-f0-9]{32}$/.test(body.run_id)?body.run_id:undefined,
+                    typeof body.request_id==='string'&&/^[a-f0-9]{32}$/.test(body.request_id)?body.request_id:undefined,
+                    typeof body.retryable==='boolean'?body.retryable:undefined,
                 );
             }
         }
@@ -367,12 +386,17 @@ export class HttpBackendApi implements BackendApi {
         fallback: string,
         accept: string,
         signal?: AbortSignal,
+        init: RequestInit = {},
     ) {
         let response: Response;
+        const configured = init.method && init.method !== "GET" ? this.mutation(init) : init;
+        const headers = new Headers(configured.headers);
+        headers.set("Accept", accept);
         try {
             response = await this.fetcher(`${this.baseUrl}${path}`, {
+                ...configured,
                 credentials: "include",
-                headers: { Accept: accept },
+                headers,
                 signal,
             });
         } catch (error) {
@@ -660,6 +684,43 @@ export class HttpBackendApi implements BackendApi {
         );
     }
 
+    searchCQQL(query: CQQLSearchRequest, signal?: AbortSignal) {
+        return this.request(
+            "/api/v1/siem/search",
+            parseCQQLSearchResponse,
+            { method: "POST", body: JSON.stringify(query) },
+            signal,
+        );
+    }
+
+    getCQQLAnalytics(query: CQQLAnalyticsRequest, signal?: AbortSignal) {
+        return this.request(
+            "/api/v1/siem/search/analytics",
+            parseCQQLAnalyticsResponse,
+            { method: "POST", body: JSON.stringify(query) },
+            signal,
+        );
+    }
+
+    downloadCQQL(query: CQQLExportRequest, signal?: AbortSignal) {
+        return this.download(
+            "/api/v1/siem/search/export.csv",
+            "cyberqalqon-cqql.csv",
+            "text/csv",
+            signal,
+            { method: "POST", body: JSON.stringify(query) },
+        );
+    }
+
+    getCQQLFields(signal?: AbortSignal) {
+        return this.request(
+            "/api/v1/siem/search/fields",
+            parseCQQLFieldCatalog,
+            {},
+            signal,
+        );
+    }
+
     getEvent(eventId: string, signal?: AbortSignal) {
         return this.request(
             `/api/v1/events/${encodeURIComponent(eventId)}`,
@@ -785,6 +846,15 @@ export class HttpBackendApi implements BackendApi {
         );
     }
 
+    previewSigma(source:string,signal?:AbortSignal) {
+        return this.request('/api/v1/detection-engineering/sigma/preview',parseSigmaPreview,
+            {method:'POST',body:JSON.stringify({yaml:source,profile:'CQ_ENDPOINT_SHADOW_V1'})},signal);
+    }
+
+    getSourceCoverage(signal?: AbortSignal) {
+        return this.request('/api/v1/collection/sources',parseSourceCoverage,{},signal);
+    }
+
     getOperationalOverview(signal?: AbortSignal) {
         return this.request(
             "/api/v1/operations/overview",
@@ -814,6 +884,26 @@ export class HttpBackendApi implements BackendApi {
             {},
             signal,
         );
+    }
+
+    getShadowCatalog(signal?:AbortSignal) {
+        return this.request('/api/v1/detection-engineering/shadow-v2/catalog',parseShadowCatalog,{},signal);
+    }
+    getDurableShadowStatus(signal?:AbortSignal){return this.request('/api/v1/detection-engineering/shadow-v2/history-status',parseDurableStatus,{},signal);}
+    reconcileShadowEvidence(cursor?:string|null,signal?:AbortSignal){return this.request('/api/v1/detection-engineering/shadow-v2/reconciliation'+(cursor?'?cursor='+encodeURIComponent(cursor):''),parseReconciliationPage,{},signal);}
+    createDurableShadowRun(payload:DurableRequest,signal?:AbortSignal){return this.request('/api/v1/detection-engineering/shadow-v2/runs',parseDurableRun,this.mutation({method:'POST',body:JSON.stringify(payload)}),signal);}
+    getDurableShadowRun(id:string,signal?:AbortSignal){return this.request('/api/v1/detection-engineering/shadow-v2/runs/'+encodeURIComponent(id),parseDurableRun,{},signal);}
+    resumeDurableShadowRun(id:string,signal?:AbortSignal){return this.request('/api/v1/detection-engineering/shadow-v2/runs/'+encodeURIComponent(id)+'/resume',parseDurableRun,this.mutation({method:'POST'}),signal);}
+    listDurableShadowFindings(cursor?:string|null,signal?:AbortSignal){return this.request('/api/v1/detection-engineering/shadow-v2/findings'+(cursor?'?cursor='+encodeURIComponent(cursor):''),parseFindingPage,{},signal);}
+    getDurableShadowFinding(id:string,revision?:number,signal?:AbortSignal){return this.request('/api/v1/detection-engineering/shadow-v2/findings/'+encodeURIComponent(id)+(revision?'?revision='+revision:''),parseFindingDetail,{},signal);}
+    transitionDurableShadowFinding(id:string,change:FindingTransition,signal?:AbortSignal){return this.request('/api/v1/detection-engineering/shadow-v2/findings/'+encodeURIComponent(id)+'/transitions',parseFindingDetail,this.mutation({method:'POST',body:JSON.stringify(change)}),signal);}
+    validateShadowRule(rule:ShadowRule,signal?:AbortSignal) {
+        return this.request('/api/v1/detection-engineering/shadow-v2/validate',parseShadowValidation,
+            this.mutation({method:'POST',body:JSON.stringify(rule)}),signal);
+    }
+    simulateShadowRule(payload:ShadowSimulationRequest,signal?:AbortSignal) {
+        return this.request('/api/v1/detection-engineering/shadow-v2/simulate',parseShadowResult,
+            this.mutation({method:'POST',body:JSON.stringify(payload)}),signal);
     }
 
     dryRunAdvancedDetectionRule(

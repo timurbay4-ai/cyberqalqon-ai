@@ -33,6 +33,7 @@ from app.schemas.events import (
     TimeSeriesPoint,
 )
 from app.services.wazuh_normalizer import canonical_json
+from app.schemas.cuse import CUSEMetadata
 
 
 class EventIdConflictError(RuntimeError):
@@ -57,6 +58,10 @@ class SavedSearchLimitError(RuntimeError):
 
 class EventOutsideRetentionError(ValueError):
     pass
+
+
+class RetentionCapacityError(RuntimeError):
+    """Protected evidence leaves no capacity for a new acknowledged event."""
 
 
 class BatchProcessingTimeoutError(TimeoutError):
@@ -439,8 +444,8 @@ class EventRepository:
             if after_occurred is None:
                 parameters = (page_size,)
             else:
-                where = "WHERE (e.occurred_at > ? OR (e.occurred_at = ? AND e.event_id > ?))"
-                parameters = (after_occurred, after_occurred, after_event_id, page_size)
+                where = "WHERE (e.occurred_at, e.event_id) > (?, ?)"
+                parameters = (after_occurred, after_event_id, page_size)
             started = time.monotonic()
             rows = connection.execute(
                 "SELECT e.event_id, e.occurred_at, e.related_alert_id, e.source_event_id "
@@ -660,17 +665,13 @@ class EventRepository:
         else:
             deleted_by_limit = 0
         retained = max(0, count - max(0, deleted_by_limit))
+        if retained > self.max_records:
+            # Roll back the whole insert/cleanup, not protected evidence. An
+            # over-cap insert must never be reported as durably accepted.
+            raise RetentionCapacityError("Protected evidence exhausts event retention capacity")
         protected_count_ms = 0.0
         protected_records: int | None = None
         protected_measurement: str | None = None
-        if retained > self.max_records:
-            # The transaction already proved that at least this many of the
-            # oldest rows are protected. Preserve that honest lower bound. An
-            # exact global count is intentionally excluded from the write path:
-            # on the representative 100k backup it scanned the wide event table
-            # and exceeded the entire pre-commit budget by itself.
-            protected_records = protected_skips
-            protected_measurement = "LOWER_BOUND"
         stage_started = time.monotonic()
         if full_age_sweep_due:
             connection.execute(
@@ -821,7 +822,7 @@ class EventRepository:
     ) -> StoredEvent:
         ingested_at = (now or datetime.now(timezone.utc)).astimezone(timezone.utc)
         occurred_at = self._validate_retention_time(event, ingested_at)
-        with self._connect() as connection:
+        with closing(self._connect()) as connection, connection:
             connection.execute("BEGIN IMMEDIATE")
             existing = connection.execute(
                 "SELECT event_id, deduplication_id FROM security_events "
@@ -1350,9 +1351,13 @@ class EventRepository:
                  row["related_alert_id"], row["source_event_id"]),
             ).fetchall()
         summary = self._summary(row)
+        structured = json.loads(row["structured_json"])
         return SecurityEventDetail(
             **summary.model_dump(),
-            structured_payload=json.loads(row["structured_json"]),
+            cuse=CUSEMetadata.model_validate(structured["_cuse"])
+            if summary.normalization_schema in {"wazuh-event-v3", "collection-event-v1"} and isinstance(structured.get("_cuse"), dict)
+            else None,
+            structured_payload=structured,
             raw_payload=json.loads(row["raw_event_json"]),
             related_incident_ids=[str(item[0]) for item in incident_rows],
             related_case_ids=[str(item[0]) for item in case_rows],

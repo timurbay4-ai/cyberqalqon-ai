@@ -17,6 +17,8 @@ RUN groupadd --gid 10001 cyberqalqon \
     && chown -R cyberqalqon:cyberqalqon /var/lib/cyberqalqon /var/backups/cyberqalqon
 
 COPY requirements.txt ./requirements.txt
+COPY requirements-build.txt ./requirements-build.txt
+RUN python -m pip install --no-cache-dir --requirement requirements-build.txt
 RUN python -m pip install --no-cache-dir --requirement requirements.txt
 
 COPY --chown=cyberqalqon:cyberqalqon app ./app

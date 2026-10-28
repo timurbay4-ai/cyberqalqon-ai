@@ -1,3 +1,4 @@
+import {parseFindingDetail} from './shadow-history-contracts';
 import {
     ALERT_WORKFLOW_STATUSES,
     type AlertAssignee,
@@ -12,6 +13,10 @@ import {
 } from "../types/alerts";
 import {
     EVENT_SOURCE_TYPES,
+    type CQQLAnalyticsResponse,
+    type CUSEMetadata,
+    type CQQLFieldCatalog,
+    type CQQLSearchResponse,
     type EventSourceType,
     type SavedEventSearch,
     type SecurityEventDetail,
@@ -781,6 +786,67 @@ function eventSummaryAt(value: unknown, path: string): SecurityEventSummary {
     };
 }
 
+export function parseCUSEMetadata(value: unknown, path = "cuse"): CUSEMetadata | null {
+    if (value == null) return null;
+    const cuse = objectAt(value, path);
+    const oneOf = (key: string, allowed: readonly string[]) => {
+        const result = stringAt(cuse[key], `${path}.${key}`);
+        if (!allowed.includes(result)) throw new ContractError(`${path}.${key}`);
+        return result;
+    };
+    const hash = (key: string) => {
+        const result = stringAt(cuse[key], `${path}.${key}`);
+        if (!/^[a-f0-9]{64}$/.test(result)) throw new ContractError(`${path}.${key}`);
+        return result;
+    };
+    const adapterVersion = oneOf("adapter_version", ["m28-v1", "m34-network-v1"]) as CUSEMetadata["adapter_version"];
+    const family = oneOf("source_family", ["WINDOWS_EVENTCHANNEL", "SYSMON", "LINUX_AUTH", "SYSLOG", "JOURNALD", "WAZUH_GENERIC", "ZEEK", "SURICATA"]) as CUSEMetadata["source_family"];
+    const identityContract = oneOf("idempotency_contract", ["LEGACY_RAW_ENVELOPE_SHA256", "REGISTERED_SOURCE_RECORD_SHA256"]) as CUSEMetadata["idempotency_contract"];
+    const deliveryIdentity = nullableStringAt(cuse.delivery_identity, `${path}.delivery_identity`);
+    const generation = nullableStringAt(cuse.source_generation, `${path}.source_generation`);
+    const registered = identityContract === "REGISTERED_SOURCE_RECORD_SHA256";
+    const identifier = /^[A-Za-z0-9][A-Za-z0-9_.:-]{0,127}$/;
+    if (cuse.endpoint_identity_verified !== false ||
+        (registered ? adapterVersion !== "m34-network-v1" || !["ZEEK", "SURICATA"].includes(family) ||
+            !deliveryIdentity || !generation || !identifier.test(deliveryIdentity) || !identifier.test(generation)
+          : adapterVersion !== "m28-v1" || ["ZEEK", "SURICATA"].includes(family) || generation !== null || deliveryIdentity !== null))
+        throw new ContractError(`${path}.identity`);
+    const attrs = objectAt(cuse.attributes, `${path}.attributes`);
+    if (Object.keys(attrs).length > 32) throw new ContractError(`${path}.attributes`);
+    const attributes: Record<string, string | number> = {};
+    for (const [key, item] of Object.entries(attrs)) {
+        if (typeof item !== "string" && !(typeof item === "number" && Number.isSafeInteger(item)))
+            throw new ContractError(`${path}.attributes.${key}`);
+        attributes[key] = item as string | number;
+    }
+    const sourceTime = nullableStringAt(cuse.source_event_time, `${path}.source_event_time`);
+    if (sourceTime !== null && (Number.isNaN(Date.parse(sourceTime)) || !/(Z|[+-]\d{2}:\d{2})$/.test(sourceTime)))
+        throw new ContractError(`${path}.source_event_time`);
+    const timestampBasis = oneOf("timestamp_basis", ["SOURCE_EVENT_TIME", "COLLECTOR_OBSERVATION_TIME"]) as CUSEMetadata["timestamp_basis"];
+    if ((sourceTime !== null) !== (timestampBasis === "SOURCE_EVENT_TIME"))
+        throw new ContractError(`${path}.timestamp_basis`);
+    const warnings = stringsAt(cuse.warnings, `${path}.warnings`);
+    if (warnings.length > 8) throw new ContractError(`${path}.warnings`);
+    return {
+        version: oneOf("version", ["cuse-v1"]) as "cuse-v1",
+        adapter_version: adapterVersion,
+        source_family: family,
+        normalization_status: oneOf("normalization_status", ["NORMALIZED", "PARTIAL", "UNSUPPORTED_SOURCE"]) as CUSEMetadata["normalization_status"],
+        provenance_status: oneOf("provenance_status", ["PARTIAL", "UNKNOWN", "UNPROVEN"]) as CUSEMetadata["provenance_status"],
+        historical_continuity: oneOf("historical_continuity", ["UNPROVEN"]) as "UNPROVEN",
+        transport_authenticated: booleanAt(cuse.transport_authenticated, `${path}.transport_authenticated`),
+        endpoint_identity_verified: false,
+        source_event_time: sourceTime,
+        collector_observation_time: dateAt(cuse.collector_observation_time, `${path}.collector_observation_time`),
+        timestamp_basis: timestampBasis,
+        original_event_identity: nullableStringAt(cuse.original_event_identity, `${path}.original_event_identity`),
+        source_identity_sha256: hash("source_identity_sha256"),
+        content_fingerprint: hash("content_fingerprint"),
+        idempotency_contract: identityContract,
+        delivery_identity: deliveryIdentity, source_generation: generation, warnings, attributes,
+    };
+}
+
 export function parseSecurityEvent(
     value: unknown,
     path = "event",
@@ -788,6 +854,7 @@ export function parseSecurityEvent(
     const event = objectAt(value, path);
     return {
         ...eventSummaryAt(event, path),
+        cuse: parseCUSEMetadata(event.cuse, `${path}.cuse`),
         structured_payload: objectAt(
             event.structured_payload,
             `${path}.structured_payload`,
@@ -820,6 +887,154 @@ export function parseSecurityEventList(
             eventSummaryAt(item, `response.items[${index}]`),
         ),
         page: { ...pageAt(response.page, "response.page"), sort },
+    };
+}
+
+export function parseCQQLSearchResponse(value: unknown): CQQLSearchResponse {
+    const response = objectAt(value, "response");
+    if (!Array.isArray(response.items)) throw new ContractError("response.items");
+    const page = objectAt(response.page, "response.page");
+    const metadata = objectAt(response.metadata, "response.metadata");
+    const sort = stringAt(page.sort, "response.page.sort");
+    if (sort !== "newest" && sort !== "oldest") throw new ContractError("response.page.sort");
+    const nextCursor = page.next_cursor === undefined ? null : nullableStringAt(page.next_cursor, "response.page.next_cursor");
+    if (page.total !== undefined && page.total !== null) throw new ContractError("response.page.total");
+    if (stringAt(page.count_mode, "response.page.count_mode") !== "UNKNOWN")
+        throw new ContractError("response.page.count_mode");
+    if (stringAt(metadata.version, "response.metadata.version") !== "cqql-v1")
+        throw new ContractError("response.metadata.version");
+    if (stringAt(metadata.query_status, "response.metadata.query_status") !== "COMPLETE")
+        throw new ContractError("response.metadata.query_status");
+    const costClass = stringAt(metadata.cost_class, "response.metadata.cost_class");
+    if (!(["LOW", "MODERATE", "HIGH"] as const).includes(costClass as "LOW"))
+        throw new ContractError("response.metadata.cost_class");
+    const planClass = stringAt(metadata.plan_class, "response.metadata.plan_class");
+    if (!(["INDEX_FRIENDLY", "BOOLEAN_COMPLEX", "FTS_SELECTIVITY_UNKNOWN", "RESOURCE_LIMITED", "UNKNOWN_COST"] as const).includes(planClass as "INDEX_FRIENDLY"))
+        throw new ContractError("response.metadata.plan_class");
+    const plannerStrategy = stringAt(metadata.planner_strategy, "response.metadata.planner_strategy");
+    if (!(["DEFAULT", "TIME_ORDERED_OR", "TIME_ORDERED_BOOLEAN"] as const).includes(plannerStrategy as "DEFAULT"))
+        throw new ContractError("response.metadata.planner_strategy");
+    const diagnosticReasons = stringsAt(metadata.diagnostic_reasons, "response.metadata.diagnostic_reasons");
+    const allowedDiagnosticReasons = ["INDEXED_EQUALITY", "RANGE_COMPARISON", "BOOLEAN_OR", "NEGATION_SCAN", "DERIVED_FIELD", "UNINDEXED_FIELD", "FTS_CANDIDATE_MATERIALIZATION", "TIME_ORDERED_OR", "TIME_ORDERED_BOOLEAN"];
+    if (diagnosticReasons.some((reason) => !allowedDiagnosticReasons.includes(reason)))
+        throw new ContractError("response.metadata.diagnostic_reasons");
+    const freshness = metadata.data_freshness === undefined
+        ? null
+        : nullableStringAt(metadata.data_freshness, "response.metadata.data_freshness");
+    if (freshness !== null && Number.isNaN(Date.parse(freshness)))
+        throw new ContractError("response.metadata.data_freshness");
+    return {
+        items: response.items.map((item, index) => eventSummaryAt(item, `response.items[${index}]`)),
+        page: {
+            limit: integerAt(page.limit, "response.page.limit", 1),
+            next_cursor: nextCursor,
+            total: null,
+            count_mode: "UNKNOWN",
+            sort,
+        },
+        metadata: {
+            version: "cqql-v1",
+            execution_ms: nonnegativeNumberAt(metadata.execution_ms, "response.metadata.execution_ms"),
+            query_status: "COMPLETE",
+            warnings: stringsAt(metadata.warnings, "response.metadata.warnings"),
+            truncated: booleanAt(metadata.truncated, "response.metadata.truncated"),
+            data_freshness: freshness,
+            clause_count: integerAt(metadata.clause_count, "response.metadata.clause_count", 1),
+            ast_depth: integerAt(metadata.ast_depth, "response.metadata.ast_depth", 1),
+            fts_used: booleanAt(metadata.fts_used, "response.metadata.fts_used"),
+            cost_class: costClass as CQQLSearchResponse["metadata"]["cost_class"],
+            plan_class: planClass as CQQLSearchResponse["metadata"]["plan_class"],
+            planner_strategy: plannerStrategy as CQQLSearchResponse["metadata"]["planner_strategy"],
+            diagnostic_reasons: diagnosticReasons as CQQLSearchResponse["metadata"]["diagnostic_reasons"],
+        },
+    };
+}
+
+export function parseCQQLAnalyticsResponse(value: unknown): CQQLAnalyticsResponse {
+    const response = objectAt(value, "response");
+    if (stringAt(response.version, "response.version") !== "cqql-v1")
+        throw new ContractError("response.version");
+    if (stringAt(response.query_status, "response.query_status") !== "COMPLETE")
+        throw new ContractError("response.query_status");
+    if (stringAt(response.completeness, "response.completeness") !== "EXACT_WITHIN_BOUNDED_RANGE")
+        throw new ContractError("response.completeness");
+    if (response.sparse_time_series !== true) throw new ContractError("response.sparse_time_series");
+    const allowedGroups = ["event.provider", "host.name", "source.ip", "event.severity", "event.code", "event.category", "event.source_type", "event.outcome", "rule.id"] as const;
+    if (!Array.isArray(response.groups)) throw new ContractError("response.groups");
+    const groups = response.groups.map((entry: unknown, index: number) => {
+        const group = objectAt(entry, `response.groups[${index}]`);
+        const field = stringAt(group.field, `response.groups[${index}].field`);
+        if (!(allowedGroups as readonly string[]).includes(field))
+            throw new ContractError(`response.groups[${index}].field`);
+        return {
+            field: field as CQQLAnalyticsResponse["groups"][number]["field"],
+            buckets: (() => {
+                if (!Array.isArray(group.buckets)) throw new ContractError(`response.groups[${index}].buckets`);
+                return group.buckets.map((bucket: unknown, bucketIndex: number) => {
+                const item = objectAt(bucket, `response.groups[${index}].buckets[${bucketIndex}]`);
+                return { name: stringAt(item.name, `response.groups[${index}].buckets[${bucketIndex}].name`), count: integerAt(item.count, `response.groups[${index}].buckets[${bucketIndex}].count`) };
+                });
+            })(),
+            truncated: booleanAt(group.truncated, `response.groups[${index}].truncated`),
+        };
+    });
+    if (!Array.isArray(response.time_series)) throw new ContractError("response.time_series");
+    const timeSeries = response.time_series.map((entry: unknown, index: number) => {
+        const point = objectAt(entry, `response.time_series[${index}]`);
+        return { timestamp: dateAt(point.timestamp, `response.time_series[${index}].timestamp`), count: integerAt(point.count, `response.time_series[${index}].count`) };
+    });
+    return {
+        version: "cqql-v1",
+        query_status: "COMPLETE",
+        execution_ms: nonnegativeNumberAt(response.execution_ms, "response.execution_ms"),
+        completeness: "EXACT_WITHIN_BOUNDED_RANGE",
+        sparse_time_series: true,
+        matching_events: integerAt(response.matching_events, "response.matching_events"),
+        groups,
+        time_series: timeSeries,
+        clause_count: integerAt(response.clause_count, "response.clause_count", 1),
+        fts_used: booleanAt(response.fts_used, "response.fts_used"),
+    };
+}
+
+export function parseCQQLFieldCatalog(value: unknown): CQQLFieldCatalog {
+    const response = objectAt(value, "response");
+    if (stringAt(response.version, "response.version") !== "cqql-v1")
+        throw new ContractError("response.version");
+    if (!Array.isArray(response.fields)) throw new ContractError("response.fields");
+    const fields = response.fields.map((item, index) => {
+        const field = objectAt(item, `response.fields[${index}]`);
+        const dataType = stringAt(field.data_type, `response.fields[${index}].data_type`);
+        const sensitivity = stringAt(field.sensitivity, `response.fields[${index}].sensitivity`);
+        if (!["string", "integer", "ip", "mitre", "text", "timestamp"].includes(dataType))
+            throw new ContractError(`response.fields[${index}].data_type`);
+        if (!["standard", "identity", "network", "evidence"].includes(sensitivity))
+            throw new ContractError(`response.fields[${index}].sensitivity`);
+        return {
+            name: stringAt(field.name, `response.fields[${index}].name`),
+            data_type: dataType as CQQLFieldCatalog["fields"][number]["data_type"],
+            operators: stringsAt(field.operators, `response.fields[${index}].operators`),
+            indexed: booleanAt(field.indexed, `response.fields[${index}].indexed`),
+            sensitivity: sensitivity as CQQLFieldCatalog["fields"][number]["sensitivity"],
+            source: stringAt(field.source, `response.fields[${index}].source`),
+            derived: booleanAt(field.derived, `response.fields[${index}].derived`),
+            searchable: booleanAt(field.searchable, `response.fields[${index}].searchable`),
+        };
+    });
+    const limits = objectAt(response.limits, "response.limits");
+    return {
+        version: "cqql-v1",
+        fields,
+        limits: {
+            maximum_query_length: integerAt(limits.maximum_query_length, "response.limits.maximum_query_length", 1),
+            maximum_tokens: integerAt(limits.maximum_tokens, "response.limits.maximum_tokens", 1),
+            maximum_ast_depth: integerAt(limits.maximum_ast_depth, "response.limits.maximum_ast_depth", 1),
+            maximum_boolean_clauses: integerAt(limits.maximum_boolean_clauses, "response.limits.maximum_boolean_clauses", 1),
+            maximum_page_size: integerAt(limits.maximum_page_size, "response.limits.maximum_page_size", 1),
+            maximum_time_range_days: integerAt(limits.maximum_time_range_days, "response.limits.maximum_time_range_days", 1),
+            execution_deadline_ms: integerAt(limits.execution_deadline_ms, "response.limits.execution_deadline_ms", 1),
+            maximum_concurrent_queries: integerAt(limits.maximum_concurrent_queries, "response.limits.maximum_concurrent_queries", 1),
+        },
     };
 }
 
@@ -945,6 +1160,10 @@ export function parseSavedEventSearch(
                 query.search == null
                     ? undefined
                     : stringAt(query.search, `${path}.query.search`),
+            cqql:
+                query.cqql == null
+                    ? undefined
+                    : stringAt(query.cqql, `${path}.query.cqql`),
             sort,
         },
     };
@@ -3119,6 +3338,7 @@ function huntQueryAt(value: unknown, path: string): ThreatHuntQuery {
         mitreId:
             nullableStringAt(row.mitre_id, `${path}.mitre_id`) ?? undefined,
         search: nullableStringAt(row.search, `${path}.search`) ?? undefined,
+        cqql: nullableStringAt(row.cqql, `${path}.cqql`) ?? undefined,
         sort: enumAt(row.sort, ["newest", "oldest"] as const, `${path}.sort`),
     };
 }
@@ -3932,7 +4152,7 @@ export function parseAIAnalysisHistory(value: unknown): AIAnalysisHistory {
     };
 }
 
-const WORKBENCH_TARGETS = ["EVENT", "ALERT", "INCIDENT", "CASE", "CORRELATION_GROUP", "M11_FINDING", "SHADOW_FINDING", "ENTITY"] as const;
+const WORKBENCH_TARGETS = ["EVENT", "ALERT", "INCIDENT", "CASE", "CORRELATION_GROUP", "M11_FINDING", "SHADOW_FINDING", "DURABLE_SHADOW_FINDING", "ENTITY"] as const;
 const WORKBENCH_ENTITIES = ["IPV4", "IPV6", "HOSTNAME", "USERNAME", "AGENT_ID", "RULE_ID", "PROCESS_NAME", "PROCESS_ID", "FILE_HASH", "DOMAIN"] as const;
 const TIMELINE_TYPES = ["SECURITY_EVENT", "ALERT", "DETECTION_FINDING", "INCIDENT_ACTIVITY", "ANALYST_NOTE", "CASE_ACTIVITY", "CASE_COMMENT", "EVIDENCE_ACTION"] as const;
 
@@ -3991,10 +4211,18 @@ export function parseInvestigationWorkbench(value: unknown): InvestigationWorkbe
             side_effects: false as const,
         };
     })();
+    const durable = item.durable_shadow_context == null ? undefined : parseFindingDetail(item.durable_shadow_context);
+    const targetType = enumAt(item.target_type, WORKBENCH_TARGETS, "workbench.target_type") as WorkbenchTargetType;
+    const primary = parseSecurityEvent(item.primary_event, "workbench.primary_event");
+    if ((targetType === 'DURABLE_SHADOW_FINDING') !== (durable !== undefined)
+        || durable && (!durable.matching_evidence.evidence.some(row=>row.event_id===primary.event_id)
+            || Object.values(durable.current_evidence_availability).some(state=>state!=='AVAILABLE'))) {
+        throw new ContractError('workbench.durable_shadow_context');
+    }
     return {
-        target_type: enumAt(item.target_type, WORKBENCH_TARGETS, "workbench.target_type") as WorkbenchTargetType,
+        target_type: targetType,
         target_label: boundedStringAt(item.target_label, "workbench.target_label", 320),
-        primary_event: parseSecurityEvent(item.primary_event, "workbench.primary_event"),
+        primary_event: primary,
         summary: {
             observations: boundedStringsAt(summary.observations, "workbench.summary.observations", 20, 1024),
             interpretations: boundedStringsAt(summary.interpretations, "workbench.summary.interpretations", 10, 1024),
@@ -4058,6 +4286,7 @@ export function parseInvestigationWorkbench(value: unknown): InvestigationWorkbe
             };
         }),
         detection_context: detection,
+        durable_shadow_context: durable,
         query: {
             start_time: dateAt(query.start_time, "workbench.query.start_time"),
             end_time: dateAt(query.end_time, "workbench.query.end_time"),

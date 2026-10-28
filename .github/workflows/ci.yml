@@ -1,5 +1,5 @@
-﻿# ============================================================
-# CyberQalqon AI — CI Workflow
+# ============================================================
+# CyberQalqon AI вЂ” CI Workflow
 # ============================================================
 # Runs backend tests and validates shared JSON syntax.
 
@@ -21,12 +21,12 @@ jobs:
 
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
 
       - name: Set up Node.js
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
         with:
-          node-version: "24"
+          node-version: "24.15.0"
           cache: npm
           cache-dependency-path: frontend/package-lock.json
 
@@ -53,20 +53,30 @@ jobs:
   backend-tests:
     name: Backend Tests
     runs-on: ubuntu-latest
+    env:
+      PYTHONPATH: ${{ github.workspace }}:${{ github.workspace }}/backend:${{ github.workspace }}/scripts
 
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
 
       - name: Set up Python
-        uses: actions/setup-python@v5
+        uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5
         with:
           python-version: "3.11"
+
+      - name: Set up collector toolchain for real TCP integration
+        uses: actions/setup-go@924ae3a1cded613372ab5595356fb5720e22ba16 # v6
+        with:
+          go-version: "1.27.0"
+          cache: false
 
       - name: Install backend dependencies
         run: |
           cd backend
+          python -m pip install -r requirements-build.txt
           pip install -r requirements-dev.txt
+          pip install -e ../wazuh
 
       - name: Check installed dependencies
         run: |
@@ -79,9 +89,10 @@ jobs:
           python -m compileall -q app tests
 
       - name: Run backend tests
-        run: |
-          cd backend
-          pytest -q
+        run: python -m pytest -q backend/tests
+
+      - name: Run isolated full SOC release demo
+        run: python -m app.cli.rc_demo --output m33-isolated-demo.json
 
       - name: Run fake-Ollama real HTTP E2E
         run: pytest -q tests/e2e/test_ai_analyst.py
@@ -89,13 +100,15 @@ jobs:
   wazuh-sender-tests:
     name: Wazuh Sender Tests
     runs-on: ubuntu-latest
+    env:
+      PYTHONPATH: ${{ github.workspace }}:${{ github.workspace }}/backend:${{ github.workspace }}/scripts
 
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
 
       - name: Set up Python
-        uses: actions/setup-python@v5
+        uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5
         with:
           python-version: "3.11"
 
@@ -113,6 +126,9 @@ jobs:
       - name: Run sender unit tests
         run: pytest -q wazuh/tests
 
+      - name: Run complete root regression (including source-review gates)
+        run: python -m pytest -q tests
+
       - name: Run live HTTP delivery E2E
         run: pytest -q tests/e2e/test_wazuh_sender_delivery.py
 
@@ -122,14 +138,126 @@ jobs:
 
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
 
       - name: Validate JSON syntax
         run: |
-          for f in $(find shared/ -name "*.json"); do
-            echo "Validating $f"
-            python3 -m json.tool "$f" > /dev/null && echo "  OK: $f"
-          done
+          mkdir -p artifacts/runtime/m36-ci
+          python3 -m scripts.source_release --output artifacts/runtime/m36-ci/source-manifest.json --materialize artifacts/runtime/m36-ci/source
+      - name: Reject tracked private or runtime artifacts from the exact Git tree
+        run: |
+          python3 -c "import json,sys; m=json.load(open('artifacts/runtime/m36-ci/source-manifest.json')); blocked=[r['path'] for r in m['excluded']]; print(json.dumps({'forbidden_git_paths':blocked})); sys.exit(1 if blocked else 0)"
+
+      - name: Verify the complete approved source tree and content hashes
+        run: |
+          python3 - <<'PY'
+          import json, subprocess, sys
+          from pathlib import Path
+          from scripts.source_release import validate_manifest, digest
+          identity = 'docs/release/PUBLICATION_SOURCE_MANIFEST.json'
+          manifest = json.loads(Path(identity).read_text(encoding='utf-8'))
+          validate_manifest(manifest)
+          expected = {row['path'] for row in manifest['files']} | {identity}
+          actual = set(filter(None, subprocess.check_output(['git','ls-files','-z']).decode('utf-8').split('\0')))
+          missing = sorted(expected - actual)
+          unexpected = sorted(actual - expected)
+          changed = [row['path'] for row in manifest['files'] if not Path(row['path']).is_file() or digest(Path(row['path'])) != row['sha256']]
+          print(json.dumps({'missing_paths':missing,'unexpected_paths':unexpected,'changed_paths':changed}))
+          sys.exit(1 if missing or unexpected or changed else 0)
+          PY
+
+  go-collector:
+    name: Go collector tests and race detector (synthetic only)
+    runs-on: ubuntu-latest
+    env:
+      GOTOOLCHAIN: local
+      GOTELEMETRY: 'off'
+      GOPROXY: 'off'
+      GOMAXPROCS: '2'
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+      - uses: actions/setup-go@924ae3a1cded613372ab5595356fb5720e22ba16 # v6
+        with:
+          go-version: "1.27.0"
+          cache: false
+      - name: Formatting, vet and ordinary build
+        run: |
+          test -z "$(gofmt -l collector)"
+          go -C collector vet ./...
+          go -C collector test -count=1 -p 1 ./...
+          mkdir -p artifacts/runtime/m36-ci
+          CGO_ENABLED=0 go -C collector build -trimpath -buildvcs=false -o ../artifacts/runtime/m36-ci/cq-collector ./cmd/cq-collector
+          artifacts/runtime/m36-ci/cq-collector --help
+      - name: Real race instrumentation
+        env:
+          CGO_ENABLED: '1'
+          GORACE: 'halt_on_error=1 exitcode=66'
+        run: go -C collector test -race -count=1 -p 1 ./...
+
+  go-collector-windows-race:
+    name: Windows Go race (checksum-pinned portable compiler)
+    runs-on: windows-latest
+    env:
+      GOTOOLCHAIN: local
+      GOTELEMETRY: 'off'
+      GOPROXY: 'off'
+      GOMAXPROCS: '2'
+      CGO_ENABLED: '1'
+      GORACE: 'halt_on_error=1 exitcode=66'
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+      - uses: actions/setup-go@924ae3a1cded613372ab5595356fb5720e22ba16 # v6
+        with:
+          go-version: "1.27.0"
+          cache: false
+      - name: Verify portable compiler before unpacking or execution
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $compilerRoot = Join-Path $env:RUNNER_TEMP 'cq-m36-verified-compiler'
+          $archivePath = Join-Path $env:RUNNER_TEMP 'cq-m36-compiler.zip'
+          if ((Test-Path $compilerRoot) -or (Test-Path $archivePath)) { throw 'New compiler paths required' }
+          Invoke-WebRequest 'https://github.com/brechtsanders/winlibs_mingw/releases/download/16.2.0posix-23.1.3-14.0.0-ucrt-r3/winlibs-x86_64-posix-seh-gcc-16.2.0-mingw-w64ucrt-14.0.0-r3.zip' -OutFile $archivePath
+          if ((Get-FileHash -LiteralPath $archivePath -Algorithm SHA256).Hash.ToLowerInvariant() -ne '3c69305081e4a647144339a936244fcf7d3d9e558319e1ad7be2cd2886d4b6a1') { throw 'Compiler archive checksum mismatch' }
+          Expand-Archive -LiteralPath $archivePath -DestinationPath $compilerRoot
+          $gcc = Join-Path $compilerRoot 'mingw64/bin/gcc.exe'
+          if ((Get-FileHash -LiteralPath $gcc -Algorithm SHA256).Hash.ToLowerInvariant() -ne '7e7ed95e0333c76afa593cbb732a4f22c37a9420b091a66b0ebb27077bf3a9b4') { throw 'Compiler executable checksum mismatch' }
+          if ((& $gcc -dumpmachine).Trim() -ne 'x86_64-w64-mingw32') { throw 'Compiler target mismatch' }
+          "CC=$gcc" | Out-File -FilePath $env:GITHUB_ENV -Append -Encoding utf8
+          (Split-Path -Parent $gcc) | Out-File -FilePath $env:GITHUB_PATH -Append -Encoding utf8
+      - name: Test the actual collector with race instrumentation
+        run: go -C collector test -race -count=1 -p 1 ./...
+
+  security-review:
+    name: Release security gates (no suppression of findings)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+      - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5
+        with:
+          python-version: "3.11"
+      - name: Prepare isolated audit target and tools
+        run: |
+          python -m pip install -r backend/requirements-build.txt
+          python -m pip install -r tests/requirements-e2e.txt -e wazuh
+          python -m venv artifacts/runtime/m33-ci-tools
+          artifacts/runtime/m33-ci-tools/bin/python -m pip install -r tests/requirements-security.txt
+          mkdir -p artifacts/runtime/m33-ci
+          python scripts/release_inventory.py --output artifacts/runtime/m33-ci/inventory.json --resolved-requirements artifacts/runtime/m33-ci/requirements.txt
+      - name: Dependency vulnerability gate
+        run: artifacts/runtime/m33-ci-tools/bin/python -m pip_audit --disable-pip --no-deps -r artifacts/runtime/m33-ci/requirements.txt --format json --output artifacts/runtime/m33-ci/dependencies.json
+      - name: SBOM (actual audit target, not the scanner venv)
+        if: always()
+        run: artifacts/runtime/m33-ci-tools/bin/python -m pip_audit --disable-pip --no-deps -r artifacts/runtime/m33-ci/requirements.txt --format cyclonedx-json --output artifacts/runtime/m33-ci/sbom.json
+      - name: Static security gate (medium severity and confidence or higher)
+        if: always()
+        run: artifacts/runtime/m33-ci-tools/bin/python -m bandit -r backend/app wazuh/cyberqalqon_sender -ll -ii -f json -o artifacts/runtime/m33-ci/bandit.json
+      - name: Retain security evidence even on a failed gate
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: m33-security-evidence
+          path: artifacts/runtime/m33-ci/
 
   deployment-checks:
     name: Production Deployment Checks
@@ -137,10 +265,10 @@ jobs:
 
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
 
       - name: Set up Python
-        uses: actions/setup-python@v5
+        uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5
         with:
           python-version: "3.11"
 

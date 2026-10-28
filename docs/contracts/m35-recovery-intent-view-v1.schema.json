@@ -1,0 +1,49 @@
+{
+  "additionalProperties": false,
+  "properties": {
+    "version": {
+      "const": "m35-bounded-snapshot-intent-v1",
+      "title": "Version",
+      "type": "string"
+    },
+    "manifest_sha256": {
+      "pattern": "^[a-f0-9]{64}$",
+      "title": "Manifest Sha256",
+      "type": "string"
+    },
+    "candidate_rows": {
+      "maximum": 1000,
+      "minimum": 0,
+      "title": "Candidate Rows",
+      "type": "integer"
+    },
+    "candidate_truncated": {
+      "title": "Candidate Truncated",
+      "type": "boolean"
+    },
+    "scope": {
+      "const": "BOUNDED_CANDIDATES_NOT_GLOBAL_COMPLETENESS",
+      "title": "Scope",
+      "type": "string"
+    },
+    "verification": {
+      "enum": [
+        "RECHECK_REQUIRED",
+        "SEALED"
+      ],
+      "title": "Verification",
+      "type": "string"
+    }
+  },
+  "required": [
+    "version",
+    "manifest_sha256",
+    "candidate_rows",
+    "candidate_truncated",
+    "scope",
+    "verification"
+  ],
+  "title": "RecoveryIntentView",
+  "type": "object",
+  "$schema": "https://json-schema.org/draft/2020-12/schema"
+}
