@@ -92,10 +92,14 @@ def test_release_rejects_invalid_manifest(tmp_path,mutation):
     with pytest.raises(release.ReleaseError):release.validate_manifest(manifest)
 
 
-def test_release_rejects_case_aliases(tmp_path):
+def test_release_rejects_case_aliases(tmp_path, monkeypatch):
     root=tree(tmp_path)
-    with pytest.raises(release.ReleaseError,match='CASE_ALIAS'):
-        release.build_manifest(root,['main.py','MAIN.py'])
+    def unexpected_read(*args):
+        pytest.fail('An ambiguous source namespace must be rejected before file access')
+    monkeypatch.setattr(release, 'source_file', unexpected_read)
+    for names in [['main.py','MAIN.py'], ['MAIN.py','main.py']]:
+        with pytest.raises(release.ReleaseError,match='CASE_ALIAS'):
+            release.build_manifest(root,names)
 
 
 def test_release_proves_local_dependency_closure(tmp_path):

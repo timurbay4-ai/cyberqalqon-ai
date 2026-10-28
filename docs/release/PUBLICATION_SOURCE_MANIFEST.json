@@ -46,8 +46,8 @@
     },
     {
       "path": ".github/workflows/ci.yml",
-      "sha256": "fcef24abd4f02ede6e42ebdea5656fc114e6dea429967c1b4346bc95ddd8c499",
-      "bytes": 15936,
+      "sha256": "ee91236659075e9845c095b3eb50ea962b15bfde55a9a69ebfe15abfba4efdfa",
+      "bytes": 16061,
       "mode": 420,
       "kind": "SOURCE_OR_AUTHORED_METADATA"
     },
@@ -1523,8 +1523,8 @@
     },
     {
       "path": "backend/tests/test_m36_source_release.py",
-      "sha256": "5499ba1e299f83f7b6f4737ddeeb9fdf8f02f37683a4ab2aaf6da34e3fad0b47",
-      "bytes": 4992,
+      "sha256": "ac948ccdc27bbe56c1beacf8d579766d01be5097c37f64ab047cea642ca2fd81",
+      "bytes": 5248,
       "mode": 420,
       "kind": "TEST_OR_FIXTURE"
     },
@@ -3742,8 +3742,8 @@
     },
     {
       "path": "scripts/source_release.py",
-      "sha256": "3dce21638a9fe8e4c15dffc1c8e6723cd43aa650c7441e7dd617e746767e8894",
-      "bytes": 15296,
+      "sha256": "bbf986a6ebbcf20f40ddc20c3a3462ec0f0e1c5d93b6f86ccc46f3b6da6876d9",
+      "bytes": 15511,
       "mode": 420,
       "kind": "SOURCE_OR_AUTHORED_METADATA"
     },
@@ -4435,7 +4435,7 @@
     }
   ],
   "excluded": [],
-  "source_tree_sha256": "aa999b38dcf6ae862369b041c4edf68421abfe9b0a8a459b791e2cf35bff1425",
+  "source_tree_sha256": "c7397f65e5579acf6ea2a7aef7c5f35c6b9bb35595bc7eed57c582acdc434265",
   "dependency_graph": {
     "edges": [
       {

@@ -177,10 +177,15 @@ def dependency_graph(root: Path, names: set[str]) -> dict:
 
 def build_manifest(root: Path, paths: list[str] | None=None) -> dict:
     root=root.resolve();files=[];omitted=[];secrets=[];seen=set()
+    names=[]
+    # Validate the entire namespace before touching files. On case-sensitive
+    # hosts a differently cased alias may sort before the existing source.
     for value in sorted(paths if paths is not None else git_names(root)):
         name=relative_name(value);key=name.casefold()
         if key in seen:raise ReleaseError('CASE_ALIAS_OR_DUPLICATE_PATH')
         seen.add(key)
+        names.append(name)
+    for name in names:
         reason=excluded(name)
         if reason:omitted.append({'path':name,'reason':reason});continue
         path=source_file(root,name);body=path.read_bytes()
