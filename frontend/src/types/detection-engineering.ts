@@ -340,6 +340,7 @@ export interface ThreatHuntQuery {
     ruleId?: string;
     mitreId?: string;
     search?: string;
+    cqql?: string;
     sort?: "newest" | "oldest";
     limit?: number;
     cursor?: string;

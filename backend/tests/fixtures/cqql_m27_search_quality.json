@@ -1,0 +1,25 @@
+{
+  "dataset": "CYBERQALQON_M27_SYNTHETIC_SEARCH_QUALITY",
+  "synthetic_only": true,
+  "base_time": "2026-10-22T08:00:00+00:00",
+  "events": [
+    {"label":"windows_failed_auth","offset":0,"agent":"WIN-ENDPOINT-01","agent_id":"101","rule_id":"5710","level":10,"description":"Windows failed authentication","groups":["windows","authentication_failed"],"mitre":["T1110"],"decoder":"windows_eventchannel","source_ip":"192.0.2.10","full_log":"synthetic windows failed authentication security logon"},
+    {"label":"windows_success_auth","offset":1,"agent":"WIN-ENDPOINT-01","agent_id":"101","rule_id":"5501","level":3,"description":"Windows successful authentication","groups":["windows","authentication_success"],"mitre":[],"decoder":"windows_eventchannel","source_ip":"192.0.2.10","full_log":"synthetic windows successful authentication security logon"},
+    {"label":"powershell_execution","offset":2,"agent":"WIN-ENDPOINT-01","agent_id":"101","rule_id":"92001","level":9,"description":"PowerShell execution metadata","groups":["windows","powershell"],"mitre":["T1059.001"],"decoder":"windows_eventchannel","source_ip":"192.0.2.10","full_log":"synthetic powershell execution encoded command metadata"},
+    {"label":"suspicious_process","offset":3,"agent":"WIN-ENDPOINT-02","agent_id":"102","rule_id":"92002","level":12,"description":"Suspicious process context","groups":["windows","process"],"mitre":["T1055"],"decoder":"windows_eventchannel","source_ip":"192.0.2.11","full_log":"synthetic suspicious parent process child context"},
+    {"label":"linux_failed_auth","offset":4,"agent":"LINUX-SRV-01","agent_id":"201","rule_id":"5712","level":8,"description":"Linux SSH authentication failure","groups":["linux","sshd","authentication_failed"],"mitre":["T1110"],"decoder":"sshd","source_ip":"198.51.100.40","full_log":"synthetic linux ssh authentication failure"},
+    {"label":"network_connection","offset":5,"agent":"NET-SENSOR-01","agent_id":"301","rule_id":"100111","level":10,"description":"Network connection telemetry rareiocomega","groups":["network","connection"],"mitre":["T1046"],"decoder":"json","source_ip":"203.0.113.77","full_log":"synthetic network connection rareiocomega destination telemetry"},
+    {"label":"wazuh_alert","offset":6,"agent":"WEB-SRV-01","agent_id":"401","rule_id":"100120","level":8,"description":"Wazuh sensitive path alert","groups":["wazuh","web"],"mitre":["T1190"],"decoder":"nginx-accesslog","source_ip":"203.0.113.10","full_log":"synthetic wazuh alert sensitive path probe"},
+    {"label":"mitre_process","offset":7,"agent":"WIN-ENDPOINT-02","agent_id":"102","rule_id":"92003","level":7,"description":"MITRE-associated process event","groups":["windows","process"],"mitre":["T1059"],"decoder":"windows_eventchannel","source_ip":"192.0.2.11","full_log":"synthetic mitre associated process telemetry"},
+    {"label":"host_specific_dns","offset":8,"agent":"DNS-SRV-01","agent_id":"501","rule_id":"93001","level":5,"description":"Host-specific DNS telemetry","groups":["dns","network"],"mitre":[],"decoder":"json","source_ip":"198.51.100.53","full_log":"synthetic host specific dns common telemetry"},
+    {"label":"broad_common_event","offset":9,"agent":"LINUX-SRV-02","agent_id":"202","rule_id":"93002","level":4,"description":"Common system activity","groups":["linux","system"],"mitre":[],"decoder":"syslog","source_ip":"198.51.100.41","full_log":"synthetic common telemetry routine system activity"}
+  ],
+  "queries": [
+    {"name":"windows_high_severity","cqql":"host.name = \"WIN-ENDPOINT-01\" AND event.severity >= 8","expected_labels":["windows_failed_auth","powershell_execution"]},
+    {"name":"nested_auth_rules","cqql":"(rule.id = \"5710\" OR rule.id = \"5712\") AND event.severity >= 8","expected_labels":["windows_failed_auth","linux_failed_auth"]},
+    {"name":"rare_ioc","cqql":"text CONTAINS \"rareiocomega\"","expected_labels":["network_connection"]},
+    {"name":"mitre_bruteforce","cqql":"mitre.id = \"T1110\"","expected_labels":["windows_failed_auth","linux_failed_auth"]},
+    {"name":"specific_network_source","cqql":"source.ip = \"203.0.113.77\"","expected_labels":["network_connection"]},
+    {"name":"empty_result","cqql":"text CONTAINS \"m27-no-such-search-token\"","expected_labels":[]}
+  ]
+}

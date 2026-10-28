@@ -9,6 +9,7 @@ from typing import Annotated, Any, Literal
 
 from fastapi import APIRouter, Depends, HTTPException, Path, Query, Request, Response, status
 from pydantic import ValidationError
+from starlette.concurrency import run_in_threadpool
 
 from app.api.dependencies.auth import require_alert_mutation, require_soc_reader
 from app.api.routes.siem import _safe_cell
@@ -18,6 +19,9 @@ from app.db.detection_engineering import (
     DetectionEngineeringLimitError,
     DetectionEngineeringNotFoundError,
     InvalidHuntCursorError,
+    ThreatHuntQueryBusyError,
+    ThreatHuntQueryExecutionError,
+    ThreatHuntQueryTimeoutError,
 )
 from app.schemas.auth import AnalystPrincipal
 from app.schemas.detection_engineering import (
@@ -89,6 +93,7 @@ def _hunt_query(
     rule_id: str | None,
     mitre_id: str | None,
     search: str | None,
+    cqql: str | None,
     sort: Literal["newest", "oldest"],
 ) -> ThreatHuntQuery:
     try:
@@ -103,6 +108,7 @@ def _hunt_query(
             rule_id=rule_id,
             mitre_id=mitre_id,
             search=search,
+            cqql=cqql,
             sort=sort,
         )
     except ValidationError as exc:
@@ -415,6 +421,7 @@ async def run_threat_hunt(
     rule_id: Annotated[str | None, Query(max_length=128)] = None,
     mitre_id: Annotated[str | None, Query(max_length=16)] = None,
     search: Annotated[str | None, Query(max_length=200)] = None,
+    cqql: Annotated[str | None, Query(max_length=2_000)] = None,
     sort: Literal["newest", "oldest"] = "newest",
     limit: Annotated[int, Query(ge=1, le=100)] = 50,
     cursor: Annotated[str | None, Query(min_length=1, max_length=256)] = None,
@@ -422,14 +429,21 @@ async def run_threat_hunt(
     query = _hunt_query(
         relative_minutes=relative_minutes, start_time=start_time, end_time=end_time,
         ip=ip, hostname=hostname, username=username, event_category=event_category,
-        rule_id=rule_id, mitre_id=mitre_id, search=search, sort=sort,
+        rule_id=rule_id, mitre_id=mitre_id, search=search, cqql=cqql, sort=sort,
     )
     try:
-        return request.app.state.detection_engineering_repository.hunt(
+        return await run_in_threadpool(
+            request.app.state.detection_engineering_repository.hunt,
             query, limit=limit, cursor=cursor
         )
     except InvalidHuntCursorError as exc:
         raise HTTPException(422, detail=_error("invalid_cursor", str(exc), "cursor")) from exc
+    except ThreatHuntQueryTimeoutError as exc:
+        raise HTTPException(408, detail=_error("query_timeout", str(exc), "cqql")) from exc
+    except ThreatHuntQueryBusyError as exc:
+        raise HTTPException(429, detail=_error("query_capacity_exceeded", str(exc))) from exc
+    except ThreatHuntQueryExecutionError as exc:
+        raise HTTPException(503, detail=_error("query_unavailable", str(exc))) from exc
 
 
 @router.get("/threat-hunts/saved", response_model=list[SavedHunt])
@@ -487,24 +501,32 @@ async def export_threat_hunt_csv(
     rule_id: Annotated[str | None, Query(max_length=128)] = None,
     mitre_id: Annotated[str | None, Query(max_length=16)] = None,
     search: Annotated[str | None, Query(max_length=200)] = None,
+    cqql: Annotated[str | None, Query(max_length=2_000)] = None,
     sort: Literal["newest", "oldest"] = "newest",
 ) -> Response:
     query = _hunt_export_query(
         relative_minutes=relative_minutes, start_time=start_time, end_time=end_time,
         ip=ip, hostname=hostname, username=username, event_category=event_category,
-        rule_id=rule_id, mitre_id=mitre_id, search=search, sort=sort,
+        rule_id=rule_id, mitre_id=mitre_id, search=search, cqql=cqql, sort=sort,
     )
     repository = request.app.state.detection_engineering_repository
     rows = []
     cursor: str | None = None
     total = 0
-    while len(rows) < 1000:
-        page = repository.hunt(query, limit=100, cursor=cursor)
-        total = page.total
-        rows.extend(page.items)
-        cursor = page.next_cursor
-        if not cursor:
-            break
+    try:
+        while len(rows) < 1000:
+            page = await run_in_threadpool(repository.hunt, query, limit=100, cursor=cursor)
+            total = page.total
+            rows.extend(page.items)
+            cursor = page.next_cursor
+            if not cursor:
+                break
+    except ThreatHuntQueryTimeoutError as exc:
+        raise HTTPException(408, detail=_error("query_timeout", str(exc), "cqql")) from exc
+    except ThreatHuntQueryBusyError as exc:
+        raise HTTPException(429, detail=_error("query_capacity_exceeded", str(exc))) from exc
+    except ThreatHuntQueryExecutionError as exc:
+        raise HTTPException(503, detail=_error("query_unavailable", str(exc))) from exc
     rows = rows[:1000]
     output = io.StringIO(newline="")
     writer = csv.writer(output, lineterminator="\r\n")

@@ -1,0 +1,304 @@
+[
+  {
+    "rule_version": "0265a87342b65eadc0dce1575a5ca9ae4aa83b10e2ef7b2b44db846af483e5df",
+    "definition": {
+      "contract": "cdrc-v2",
+      "rule_id": "SHADOW-WINDOWS-AUTH",
+      "title": "Potential suspicious Windows authentication sequence",
+      "description": "Three failures followed by a success in the same claimed endpoint/account/source scope; requires analyst validation.",
+      "author": "CyberQalqon M30",
+      "status": "SHADOW_ONLY",
+      "severity": 8,
+      "confidence": 40,
+      "minimum_confidence": 0,
+      "source_families": [
+        "WINDOWS_EVENTCHANNEL"
+      ],
+      "required_fields": [
+        "host.name",
+        "user.name",
+        "source.ip"
+      ],
+      "steps": [
+        {
+          "query": "event.code = \"4625\" AND event.outcome = \"failure\"",
+          "threshold": 3,
+          "process_basename_equals": null,
+          "parent_basename_equals": null
+        },
+        {
+          "query": "event.code = \"4624\" AND event.outcome = \"success\"",
+          "threshold": 1,
+          "process_basename_equals": null,
+          "parent_basename_equals": null
+        }
+      ],
+      "group_by": [
+        "user.name",
+        "source.ip"
+      ],
+      "window_seconds": 600,
+      "allowed_lateness": 60,
+      "suppression_policy": "EVIDENCE_IDENTITY_ONLY",
+      "account_identity_policy": "SID_WHEN_PRESENT_NO_DOWNGRADE",
+      "source_duplicate_policy": "SOURCE_RECORD_WHEN_AVAILABLE_ELSE_DELIVERY",
+      "mitre_ids": [
+        "T1110.001",
+        "T1078"
+      ],
+      "tags": [
+        "related:DET-002"
+      ],
+      "references": [],
+      "created_at": "2026-10-24T00:00:00Z",
+      "updated_at": "2026-10-24T00:00:00Z"
+    }
+  },
+  {
+    "rule_version": "3761f4e3d050cb1a6415761b464476f23e9d0cb598db954c2a6a3c7f6b4303c6",
+    "definition": {
+      "contract": "cdrc-v2",
+      "rule_id": "SHADOW-SSH-AUTH",
+      "title": "Potential suspicious SSH authentication sequence",
+      "description": "Three SSH failures followed by success; NAT and legitimate retries remain alternative explanations.",
+      "author": "CyberQalqon M30",
+      "status": "SHADOW_ONLY",
+      "severity": 8,
+      "confidence": 40,
+      "minimum_confidence": 0,
+      "source_families": [
+        "LINUX_AUTH"
+      ],
+      "required_fields": [
+        "host.name",
+        "user.name",
+        "source.ip"
+      ],
+      "steps": [
+        {
+          "query": "event.category = \"linux_ssh\" AND event.outcome = \"failure\"",
+          "threshold": 3,
+          "process_basename_equals": null,
+          "parent_basename_equals": null
+        },
+        {
+          "query": "event.category = \"linux_ssh\" AND event.outcome = \"success\"",
+          "threshold": 1,
+          "process_basename_equals": null,
+          "parent_basename_equals": null
+        }
+      ],
+      "group_by": [
+        "user.name",
+        "source.ip"
+      ],
+      "window_seconds": 600,
+      "allowed_lateness": 60,
+      "suppression_policy": "EVIDENCE_IDENTITY_ONLY",
+      "account_identity_policy": "SID_WHEN_PRESENT_NO_DOWNGRADE",
+      "source_duplicate_policy": "SOURCE_RECORD_WHEN_AVAILABLE_ELSE_DELIVERY",
+      "mitre_ids": [
+        "T1110.001",
+        "T1078"
+      ],
+      "tags": [
+        "related:DET-007"
+      ],
+      "references": [],
+      "created_at": "2026-10-24T00:00:00Z",
+      "updated_at": "2026-10-24T00:00:00Z"
+    }
+  },
+  {
+    "rule_version": "188406fd50fe6b6ede72f1eb86103088747fb39dda10980a5e14f813c39c4f5b",
+    "definition": {
+      "contract": "cdrc-v2",
+      "rule_id": "SHADOW-OFFICE-SCRIPT",
+      "title": "Office parent with script interpreter",
+      "description": "Recorded parent/child executable names, not proof of malicious payload or verified process ancestry.",
+      "author": "CyberQalqon M30",
+      "status": "SHADOW_ONLY",
+      "severity": 8,
+      "confidence": 40,
+      "minimum_confidence": 0,
+      "source_families": [
+        "SYSMON"
+      ],
+      "required_fields": [
+        "host.name",
+        "process.name",
+        "process.parent.name"
+      ],
+      "steps": [
+        {
+          "query": "event.code = \"1\"",
+          "threshold": 1,
+          "process_basename_equals": "powershell.exe",
+          "parent_basename_equals": "WINWORD.EXE"
+        }
+      ],
+      "group_by": [
+        "host.name"
+      ],
+      "window_seconds": 600,
+      "allowed_lateness": 60,
+      "suppression_policy": "EVIDENCE_IDENTITY_ONLY",
+      "account_identity_policy": "SID_WHEN_PRESENT_NO_DOWNGRADE",
+      "source_duplicate_policy": "SOURCE_RECORD_WHEN_AVAILABLE_ELSE_DELIVERY",
+      "mitre_ids": [
+        "T1059.001"
+      ],
+      "tags": [],
+      "references": [],
+      "created_at": "2026-10-24T00:00:00Z",
+      "updated_at": "2026-10-24T00:00:00Z"
+    }
+  },
+  {
+    "rule_version": "6e9f779cb384bdf7688e80df3100ac163dc0af9ac968b0b947044ab24fee53ee",
+    "definition": {
+      "contract": "cdrc-v2",
+      "rule_id": "SHADOW-PROCESS-NETWORK",
+      "title": "Observed process/network sequence",
+      "description": "Process creation then connection sharing a real source ProcessGuid, scoped to one claimed endpoint. Not exfiltration evidence.",
+      "author": "CyberQalqon M30",
+      "status": "SHADOW_ONLY",
+      "severity": 8,
+      "confidence": 40,
+      "minimum_confidence": 0,
+      "source_families": [
+        "SYSMON"
+      ],
+      "required_fields": [
+        "host.name",
+        "process.guid"
+      ],
+      "steps": [
+        {
+          "query": "event.code = \"1\"",
+          "threshold": 1,
+          "process_basename_equals": null,
+          "parent_basename_equals": null
+        },
+        {
+          "query": "event.code = \"3\"",
+          "threshold": 1,
+          "process_basename_equals": null,
+          "parent_basename_equals": null
+        }
+      ],
+      "group_by": [
+        "process.guid"
+      ],
+      "window_seconds": 600,
+      "allowed_lateness": 60,
+      "suppression_policy": "EVIDENCE_IDENTITY_ONLY",
+      "account_identity_policy": "SID_WHEN_PRESENT_NO_DOWNGRADE",
+      "source_duplicate_policy": "SOURCE_RECORD_WHEN_AVAILABLE_ELSE_DELIVERY",
+      "mitre_ids": [],
+      "tags": [],
+      "references": [],
+      "created_at": "2026-10-24T00:00:00Z",
+      "updated_at": "2026-10-24T00:00:00Z"
+    }
+  },
+  {
+    "rule_version": "95a146c76a7333e2ff45c37b719566d7c4e67f771e81164ff49790b5fbd9fe6a",
+    "definition": {
+      "contract": "cdrc-v2",
+      "rule_id": "SHADOW-ACCOUNT-PRIVILEGE",
+      "title": "Account creation followed by privilege context",
+      "description": "Same scoped account name and host, not a proven privilege transition or globally verified SID identity.",
+      "author": "CyberQalqon M30",
+      "status": "SHADOW_ONLY",
+      "severity": 8,
+      "confidence": 40,
+      "minimum_confidence": 0,
+      "source_families": [
+        "WINDOWS_EVENTCHANNEL"
+      ],
+      "required_fields": [
+        "host.name",
+        "user.name"
+      ],
+      "steps": [
+        {
+          "query": "event.code = \"4720\"",
+          "threshold": 1,
+          "process_basename_equals": null,
+          "parent_basename_equals": null
+        },
+        {
+          "query": "event.code = \"4672\"",
+          "threshold": 1,
+          "process_basename_equals": null,
+          "parent_basename_equals": null
+        }
+      ],
+      "group_by": [
+        "user.name"
+      ],
+      "window_seconds": 600,
+      "allowed_lateness": 60,
+      "suppression_policy": "EVIDENCE_IDENTITY_ONLY",
+      "account_identity_policy": "SID_WHEN_PRESENT_NO_DOWNGRADE",
+      "source_duplicate_policy": "SOURCE_RECORD_WHEN_AVAILABLE_ELSE_DELIVERY",
+      "mitre_ids": [
+        "T1136"
+      ],
+      "tags": [],
+      "references": [],
+      "created_at": "2026-10-24T00:00:00Z",
+      "updated_at": "2026-10-24T00:00:00Z"
+    }
+  },
+  {
+    "rule_version": "44fbf60451e0c8ff0cf95526d68e014a02cfb700214acb32b4698dc398dc92bb",
+    "definition": {
+      "contract": "cdrc-v2",
+      "rule_id": "SHADOW-HOST-CONTEXT",
+      "title": "Cross-source logon/process context hypothesis",
+      "description": "Two source families in the same claimed endpoint/account-name scope. Temporal context only: no verified SID/logon-ID or causal process ownership claim.",
+      "author": "CyberQalqon M30",
+      "status": "SHADOW_ONLY",
+      "severity": 8,
+      "confidence": 20,
+      "minimum_confidence": 0,
+      "source_families": [
+        "WINDOWS_EVENTCHANNEL",
+        "SYSMON"
+      ],
+      "required_fields": [
+        "host.name",
+        "user.name"
+      ],
+      "steps": [
+        {
+          "query": "event.code = \"4624\"",
+          "threshold": 1,
+          "process_basename_equals": null,
+          "parent_basename_equals": null
+        },
+        {
+          "query": "event.code = \"1\"",
+          "threshold": 1,
+          "process_basename_equals": null,
+          "parent_basename_equals": null
+        }
+      ],
+      "group_by": [
+        "user.name"
+      ],
+      "window_seconds": 600,
+      "allowed_lateness": 60,
+      "suppression_policy": "EVIDENCE_IDENTITY_ONLY",
+      "account_identity_policy": "SID_WHEN_PRESENT_NO_DOWNGRADE",
+      "source_duplicate_policy": "SOURCE_RECORD_WHEN_AVAILABLE_ELSE_DELIVERY",
+      "mitre_ids": [],
+      "tags": [],
+      "references": [],
+      "created_at": "2026-10-24T00:00:00Z",
+      "updated_at": "2026-10-24T00:00:00Z"
+    }
+  }
+]

@@ -747,7 +747,8 @@ class AlertWorkflowRepository:
                             if request.action is AlertBulkAction.ACKNOWLEDGE
                             else request.status
                         )
-                        assert target is not None
+                        if not (target is not None):
+                            raise RuntimeError("Internal alert_workflows invariant failed")
                         previous = AlertWorkflowStatus(row["status"])
                         if target not in ALLOWED_STATUS_TRANSITIONS[previous]:
                             failures.append(
@@ -778,7 +779,8 @@ class AlertWorkflowRepository:
                         if request.action is AlertBulkAction.ACKNOWLEDGE
                         else request.status
                     )
-                    assert target is not None
+                    if not (target is not None):
+                        raise RuntimeError("Internal alert_workflows invariant failed")
                     previous = AlertWorkflowStatus(row["status"])
                     connection.execute(
                         """

@@ -355,6 +355,18 @@ p { color: var(--muted); line-height: 1.6; }
 .active-filters button { display: inline-flex; gap: 7px; align-items: center; min-height: 30px; padding: 5px 8px; border: 1px solid var(--line); border-radius: 999px; color: #9fb0c3; background: rgba(255,255,255,0.02); cursor: pointer; }
 .active-filters button:hover, .active-filters button:focus-visible { border-color: var(--teal); }
 .active-filters .active-filters__clear { margin-left: auto; border-color: transparent; color: var(--teal); background: transparent; }
+.cqql-analytics { margin-bottom: 14px; padding: 16px; }
+.cqql-analytics > header { display: flex; align-items: end; justify-content: space-between; gap: 16px; margin-bottom: 14px; }
+.cqql-analytics > header h2, .cqql-chart h3 { margin: 3px 0 0; }
+.cqql-analytics__grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(230px, 1fr)); gap: 12px; }
+.cqql-chart { min-width: 0; padding: 12px; border: 1px solid var(--line-soft); border-radius: 8px; background: rgba(11,23,39,0.5); }
+.cqql-chart h3 { margin-bottom: 10px; font-size: 0.82rem; }
+.cqql-chart__bars { display: grid; gap: 7px; }
+.cqql-chart__bars > div { display: grid; grid-template-columns: minmax(70px, 0.9fr) minmax(70px, 1.6fr) auto; align-items: center; gap: 7px; min-width: 0; font-size: 0.68rem; }
+.cqql-chart__bars span { overflow: hidden; color: var(--muted); text-overflow: ellipsis; white-space: nowrap; }
+.cqql-chart__bars i { display: block; height: 7px; border-radius: 999px; background: var(--teal); }
+.cqql-chart__bars strong { color: var(--text); font-variant-numeric: tabular-nums; }
+.cqql-analytics details { margin-top: 14px; }
 .table-frame, .table-wrap { min-width: 0; overflow: auto; border: 1px solid var(--line-soft); border-radius: 10px; background: rgba(11,23,39,0.68); }
 .events-table { min-width: 1120px; }
 .events-table tbody tr { cursor: pointer; }

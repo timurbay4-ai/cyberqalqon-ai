@@ -23,6 +23,7 @@ from app.db.events import (
     EventFilters,
     EventIdConflictError,
     EventOutsideRetentionError,
+    RetentionCapacityError,
     EventRepository,
     InvalidEventCursorError,
     DuplicateSavedSearchError,
@@ -54,6 +55,8 @@ from app.services.event_normalizer import (
     encoded_event_size,
     normalize_wazuh_event,
 )
+from app.services.source_adapters import SourceContext
+from app.services.request_tracing import span, traced_threadpool
 
 
 router = APIRouter(prefix="/api/v1/events", tags=["Security Events"])
@@ -126,8 +129,13 @@ async def ingest_event(
 ) -> SecurityEventIngestResponse:
     request_started = time.monotonic()
     maximum = request.app.state.settings.max_event_ingest_bytes
-    payload = await _read_json_object(request, maximum)
-    size = encoded_event_size(payload)
+    with span("INGEST_BODY_VALIDATION"):
+        payload = await _read_json_object(request, maximum)
+    try:
+        with span("INGEST_ENCODING_VALIDATION"):
+            size = encoded_event_size(payload)
+    except (UnicodeError, RecursionError, ValueError) as exc:
+        raise HTTPException(422, detail=_error("invalid_security_event", "Payload encoding is invalid")) from exc
     if size > maximum:
         raise HTTPException(
             status_code=413,
@@ -137,8 +145,13 @@ async def ingest_event(
             ),
         )
     try:
-        normalized = normalize_wazuh_event(payload)
+        request.app.state.ingestion_metrics.record_normalization("RECEIVED")
+        with span("INGEST_NORMALIZATION"):
+            normalized = normalize_wazuh_event(
+                payload, context=SourceContext(transport_authenticated=True)
+            )
     except EventNormalizationError as exc:
+        request.app.state.ingestion_metrics.record_normalization(exc.code)
         request.app.state.ingestion_metrics.record_failure(
             retryable=False, code="invalid_security_event"
         )
@@ -146,6 +159,10 @@ async def ingest_event(
             status_code=422,
             detail=_error("invalid_security_event", exc.message, field=exc.field),
         ) from exc
+    cuse = normalized.structured_payload["_cuse"]
+    request.app.state.ingestion_metrics.record_normalization(
+        cuse["normalization_status"], cuse["source_family"]
+    )
     repository: EventRepository = request.app.state.event_repository
     database_started = time.monotonic()
     try:
@@ -153,7 +170,7 @@ async def ingest_event(
         # queue even the dependency-free /health endpoint behind retention and
         # commit latency. Each repository call owns its SQLite connection, so
         # the bounded Starlette worker thread preserves transaction semantics.
-        stored = await run_in_threadpool(repository.ingest, normalized)
+        stored = await traced_threadpool(repository.ingest, normalized)
     except EventOutsideRetentionError as exc:
         request.app.state.ingestion_metrics.record_failure(
             retryable=False, code="outside_retention_window"
@@ -170,6 +187,20 @@ async def ingest_event(
             status_code=409,
             detail=_error("event_id_conflict", str(exc), field="event_id"),
         ) from exc
+    except RetentionCapacityError as exc:
+        request.app.state.ingestion_metrics.record_failure(
+            retryable=True, code="retention_capacity_exhausted"
+        )
+        raise HTTPException(503, detail=_error(
+            "retention_capacity_exhausted", "Protected evidence exhausts event retention capacity"
+        ), headers={"Retry-After": "5"}) from exc
+    except (sqlite3.OperationalError, sqlite3.IntegrityError) as exc:
+        request.app.state.ingestion_metrics.record_failure(
+            retryable=True, code="database_temporarily_unavailable"
+        )
+        raise HTTPException(503, detail=_error(
+            "database_temporarily_unavailable", "Event storage is temporarily unavailable"
+        )) from exc
     database_ms = (time.monotonic() - database_started) * 1000
     request.app.state.ingestion_metrics.record_success(
         mode="single",
@@ -427,6 +458,14 @@ async def ingest_event_batch(
                 field="event_id",
             ),
         ) from exc
+    except RetentionCapacityError as exc:
+        metrics.record_failure(retryable=True, code="retention_capacity_exhausted")
+        raise HTTPException(503, detail=_batch_failure_detail(
+            code="retention_capacity_exhausted",
+            message="Protected evidence exhausts event retention capacity",
+            batch_id=envelope.batch_id, item_count=len(envelope.events),
+            outcome="RETRYABLE_FAILURE",
+        ), headers={"Retry-After": "5"}) from exc
     except BatchProcessingTimeoutError as exc:
         metrics.record_failure(
             retryable=True,

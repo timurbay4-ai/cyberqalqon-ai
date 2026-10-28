@@ -100,6 +100,7 @@ class DeploymentArtifactsTest(unittest.TestCase):
         self.assertNotIn("ports", services["ollama"])
         targets = {int(port["target"]) for port in services["web"]["ports"]}
         self.assertEqual(targets, {8080, 8443})
+        self.assertEqual({port['host_ip'] for port in services['web']['ports']}, {'127.0.0.1'})
         self.assertTrue(self.config["networks"]["private"]["internal"])
         self.assertEqual(set(services["backend"]["networks"]), {"private"})
         self.assertEqual(set(services["ollama"]["networks"]), {"private"})
@@ -110,6 +111,9 @@ class DeploymentArtifactsTest(unittest.TestCase):
         environment = backend["environment"]
         self.assertEqual(environment["APP_ENV"], "production")
         self.assertEqual(environment["SESSION_COOKIE_SECURE"], "true")
+        self.assertEqual(environment['CORRELATION_ENABLED'], 'false')
+        self.assertEqual(environment['EVENT_BATCH_INGEST_ENABLED'], 'false')
+        self.assertEqual(environment['AI_ENABLED'], 'false')
         self.assertNotEqual(environment["CORS_ORIGINS"], "*")
         self.assertEqual(environment["WAZUH_INGEST_API_KEY_FILE"], "/run/secrets/wazuh_ingest_api_key")
         self.assertEqual(environment["WAZUH_API_URL"], "https://127.0.0.1:55000")

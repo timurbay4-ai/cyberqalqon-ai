@@ -5,7 +5,7 @@ import { Pagination } from "../components/pagination";
 import { SeverityBadge } from "../components/severity-badge";
 import { StatePanel } from "../components/state-panel";
 import type { BackendApi, SecurityEventListResponse } from "../types/api";
-import { EVENT_SOURCE_TYPES, type EventQuery, type SavedEventSearch, type SavedEventSearchQuery, type SecurityEventDetail, type SecurityEventSummary } from "../types/events";
+import { EVENT_SOURCE_TYPES, type CQQLAnalyticsResponse, type CQQLSearchResponse, type EventQuery, type SavedEventSearch, type SavedEventSearchQuery, type SecurityEventDetail, type SecurityEventSummary } from "../types/events";
 import { formatTimestamp, humanize } from "../utils/format";
 import { DEFAULT_PREFERENCES, DISCOVER_COLUMNS, type AnalystPreferences, type DiscoverColumn } from "../types/preferences";
 
@@ -16,6 +16,7 @@ interface FilterValues {
   startTime: string;
   endTime: string;
   search: string;
+  cqql: string;
   sourceIp: string;
   destinationIp: string;
   hostname: string;
@@ -42,7 +43,7 @@ interface DiscoverHistoryState {
 }
 
 const EMPTY_FILTERS: FilterValues = {
-  preset: "24h", startTime: "", endTime: "", search: "", sourceIp: "", destinationIp: "",
+  preset: "24h", startTime: "", endTime: "", search: "", cqql: "", sourceIp: "", destinationIp: "",
   hostname: "", username: "", operatingSystem: "", eventProvider: "", eventChannel: "",
   processName: "", eventId: "", ruleId: "", sourceType: "", severityMin: "",
   eventCategory: "", eventAction: "", outcome: "", severityMax: "", sort: "newest",
@@ -78,6 +79,12 @@ function filtersFromUrl(): FilterValues {
   };
 }
 
+function historySafeValues(values: FilterValues): FilterValues {
+  // Free-form search text may contain sensitive investigation details. Keep it
+  // in component state (or an explicitly saved search), never browser history.
+  return { ...values, search: "", cqql: "" };
+}
+
 function updateDiscoverHistory(values: FilterValues): void {
   const url = new URL(window.location.href);
   URL_FILTER_KEYS.forEach((key) => url.searchParams.delete(key));
@@ -100,7 +107,7 @@ function updateDiscoverHistory(values: FilterValues): void {
   if (values.severityMin) url.searchParams.set("severity_min", values.severityMin);
   if (values.severityMax) url.searchParams.set("severity_max", values.severityMax);
   if (values.sort !== "newest") url.searchParams.set("sort", values.sort);
-  window.history.pushState({ cyberqalqonDiscover: values, cyberqalqonDiscoverCursorStack: [] }, "", url);
+  window.history.pushState({ cyberqalqonDiscover: historySafeValues(values), cyberqalqonDiscoverCursorStack: [] }, "", url);
 }
 
 function discoverHistoryState(): DiscoverHistoryState {
@@ -114,7 +121,7 @@ function paginationHistory(
   mode: "push" | "replace" = "push",
 ): void {
   const state: DiscoverHistoryState = {
-    cyberqalqonDiscover: values,
+    cyberqalqonDiscover: historySafeValues(values),
     cyberqalqonDiscoverCursor: cursor,
     cyberqalqonDiscoverCursorStack: cursorStack,
   };
@@ -165,8 +172,10 @@ function eventQuery(values: FilterValues): EventQuery {
 function savedQuery(values: FilterValues): SavedEventSearchQuery {
   const query = eventQuery(values);
   const { startTime, endTime, limit: _limit, ...filters } = query;
-  if (values.preset === "custom") return { ...filters, startTime, endTime };
-  return { ...filters, relativeMinutes: PRESET_MINUTES[values.preset] };
+  const cqql = values.cqql.trim() || undefined;
+  const savedFilters = cqql ? { cqql, sort: values.sort } : filters;
+  if (values.preset === "custom") return { ...savedFilters, startTime, endTime };
+  return { ...savedFilters, relativeMinutes: PRESET_MINUTES[values.preset] };
 }
 
 function savedValues(saved: SavedEventSearch): FilterValues {
@@ -177,7 +186,7 @@ function savedValues(saved: SavedEventSearch): FilterValues {
   return {
     preset,
     startTime: localValue(query.startTime), endTime: localValue(query.endTime),
-    search: query.search ?? "", sourceIp: query.sourceIp ?? "", destinationIp: query.destinationIp ?? "",
+    search: query.search ?? "", cqql: query.cqql ?? "", sourceIp: query.sourceIp ?? "", destinationIp: query.destinationIp ?? "",
     hostname: query.hostname ?? "", username: query.username ?? "", eventId: query.eventId ?? "",
     operatingSystem: query.operatingSystem ?? "", eventProvider: query.eventProvider ?? "",
     eventChannel: query.eventChannel ?? "", processName: query.processName ?? "",
@@ -210,6 +219,32 @@ function EventsTable({ events, selectedId, onSelect, columns, compact }: { event
   );
 }
 
+const ANALYTICS_LABELS: Record<string, string> = {
+  "event.severity": "Severity", "source.ip": "Source IP", "host.name": "Host",
+  "event.category": "Category", "event.source_type": "Source type", "event.provider": "Provider",
+};
+
+function AnalyticsBars({ title, buckets }: { title: string; buckets: Array<{ name: string; count: number }> }) {
+  const maximum = Math.max(1, ...buckets.map((bucket) => bucket.count));
+  return <article className="cqql-chart"><h3>{title}</h3>{buckets.length === 0
+    ? <p className="muted-copy">No values in this range.</p>
+    : <div className="cqql-chart__bars" role="img" aria-label={`${title} distribution`}>{buckets.map((bucket) => <div key={bucket.name}><span title={bucket.name}>{bucket.name}</span><i style={{ width: `${Math.max(2, bucket.count / maximum * 100)}%` }} /><strong>{bucket.count}</strong></div>)}</div>}</article>;
+}
+
+function CQQLAnalyticsPanel({ analytics }: { analytics: CQQLAnalyticsResponse }) {
+  return <section className="panel cqql-analytics" aria-labelledby="cqql-analytics-title">
+    <header><div><span className="eyebrow">CQQL analytics</span><h2 id="cqql-analytics-title">Search distribution</h2><p>Exact within the selected bounded range; empty time buckets are omitted.</p></div><div><strong>{analytics.matching_events}</strong><span> exact matches</span></div></header>
+    <div className="cqql-analytics__grid">
+      <AnalyticsBars title="Events over time" buckets={analytics.time_series.map((point) => ({ name: formatTimestamp(point.timestamp), count: point.count }))} />
+      {analytics.groups.map((group) => <AnalyticsBars key={group.field} title={`${ANALYTICS_LABELS[group.field] ?? humanize(group.field)}${group.truncated ? " (top values; truncated)" : ""}`} buckets={group.buckets} />)}
+    </div>
+    <details><summary>View exact analytics table</summary><div className="table-frame"><table className="data-table"><thead><tr><th scope="col">Dimension</th><th scope="col">Value</th><th scope="col">Count</th></tr></thead><tbody>
+      {analytics.time_series.map((point) => <tr key={`time-${point.timestamp}`}><td>Time</td><td>{formatTimestamp(point.timestamp)}</td><td>{point.count}</td></tr>)}
+      {analytics.groups.flatMap((group) => group.buckets.map((bucket) => <tr key={`${group.field}-${bucket.name}`}><td>{ANALYTICS_LABELS[group.field] ?? group.field}</td><td>{bucket.name}</td><td>{bucket.count}</td></tr>))}
+    </tbody></table></div></details>
+  </section>;
+}
+
 export function DiscoverPage({ api, preferences = DEFAULT_PREFERENCES, onPreferencesChange = () => undefined, openEventId, onOpenAlert, onOpenIncident, onOpenCase = () => undefined, onInvestigate = () => undefined }: { api: BackendApi; preferences?: AnalystPreferences; onPreferencesChange?(preferences: AnalystPreferences): void; openEventId?: string | null; onOpenAlert(id: string): void; onOpenIncident(id: string): void; onOpenCase?(id: string): void; onInvestigate?(id: string): void }) {
   const initialHistory = discoverHistoryState();
   const initialFilters = initialHistory.cyberqalqonDiscover ?? filtersFromUrl();
@@ -218,7 +253,13 @@ export function DiscoverPage({ api, preferences = DEFAULT_PREFERENCES, onPrefere
   const [pageSize, setPageSize] = useState(preferences.discover_page_size);
   const [cursor, setCursor] = useState<string | undefined>(initialHistory.cyberqalqonDiscoverCursor);
   const [cursorStack, setCursorStack] = useState<Array<string | undefined>>(initialHistory.cyberqalqonDiscoverCursorStack ?? []);
-  const [data, setData] = useState<SecurityEventListResponse | null>(null);
+  const [data, setData] = useState<SecurityEventListResponse | CQQLSearchResponse | null>(null);
+  const [cqqlMetadata, setCqqlMetadata] = useState<CQQLSearchResponse["metadata"] | null>(null);
+  const [cqqlAnalytics, setCqqlAnalytics] = useState<CQQLAnalyticsResponse | null>(null);
+  const [analyticsLoading, setAnalyticsLoading] = useState(false);
+  const [analyticsError, setAnalyticsError] = useState<string | null>(null);
+  const [exportBusy, setExportBusy] = useState(false);
+  const [exportMessage, setExportMessage] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [revision, setRevision] = useState(0);
@@ -233,6 +274,33 @@ export function DiscoverPage({ api, preferences = DEFAULT_PREFERENCES, onPrefere
   const [savedBusy, setSavedBusy] = useState(false);
   const [preferenceError, setPreferenceError] = useState<string | null>(null);
   const query = useMemo(() => ({ ...eventQuery(applied), limit: pageSize, cursor }), [applied, cursor, pageSize]);
+  const cqqlRequest = useMemo(() => {
+    const cqql = applied.cqql.trim();
+    if (!cqql) return null;
+    const range = applied.preset === "custom"
+      ? { startTime: customTimestamp(applied.startTime), endTime: customTimestamp(applied.endTime) }
+      : presetRange(applied.preset);
+    if (!range.startTime || !range.endTime) return null;
+    return {
+      query: cqql,
+      start_time: range.startTime,
+      end_time: range.endTime,
+      sort: applied.sort,
+      limit: pageSize,
+      cursor,
+    };
+  }, [applied, cursor, pageSize]);
+  const cqqlAnalyticsRequest = useMemo(() => {
+    if (!cqqlRequest) return null;
+    const duration = Date.parse(cqqlRequest.end_time) - Date.parse(cqqlRequest.start_time);
+    return {
+      query: cqqlRequest.query,
+      start_time: cqqlRequest.start_time,
+      end_time: cqqlRequest.end_time,
+      top_n: 8,
+      interval: (duration <= 7 * 24 * 60 * 60_000 ? "hour" : "day") as "hour" | "day",
+    };
+  }, [cqqlRequest?.query, cqqlRequest?.start_time, cqqlRequest?.end_time]);
 
   useEffect(() => { setSelectedId(openEventId ?? null); }, [openEventId]);
   useEffect(() => setPageSize(preferences.discover_page_size), [preferences.discover_page_size]);
@@ -268,15 +336,49 @@ export function DiscoverPage({ api, preferences = DEFAULT_PREFERENCES, onPrefere
     const controller = new AbortController();
     let active = true;
     setLoading(true); setError(null);
-    api.listEvents(query, controller.signal)
-      .then((response) => { if (active) setData(response); })
-      .catch((reason: unknown) => {
+    if (applied.cqql.trim() && !cqqlRequest) {
+      setError("CQQL requires a valid bounded time range.");
+      setCqqlMetadata(null);
+      setLoading(false);
+      return () => controller.abort();
+    }
+    void (async () => {
+      try {
+        const response = cqqlRequest
+          ? await api.searchCQQL(cqqlRequest, controller.signal)
+          : await api.listEvents(query, controller.signal);
+        if (active) {
+          setData(response);
+          setCqqlMetadata("metadata" in response ? response.metadata : null);
+        }
+      } catch (reason) {
         if (!active || (reason instanceof DOMException && reason.name === "AbortError")) return;
         setError(reason instanceof Error ? reason.message : "Security events could not be loaded.");
-      })
-      .finally(() => { if (active) setLoading(false); });
+      } finally {
+        if (active) setLoading(false);
+      }
+    })();
     return () => { active = false; controller.abort(); };
-  }, [api, query, revision]);
+  }, [api, applied.cqql, cqqlRequest, query, revision]);
+
+  useEffect(() => {
+    if (!cqqlAnalyticsRequest) { setCqqlAnalytics(null); setAnalyticsError(null); setAnalyticsLoading(false); return; }
+    const controller = new AbortController();
+    let active = true;
+    setAnalyticsLoading(true); setAnalyticsError(null);
+    void Promise.all([
+      api.getCQQLAnalytics({ ...cqqlAnalyticsRequest, group_by: ["event.severity", "source.ip", "host.name"] }, controller.signal),
+      api.getCQQLAnalytics({ ...cqqlAnalyticsRequest, group_by: ["event.category", "event.source_type"] }, controller.signal),
+    ]).then(([primary, secondary]) => {
+      if (active) {
+        const groups = [...primary.groups, ...secondary.groups].filter((group, index, all) => all.findIndex((candidate) => candidate.field === group.field) === index);
+        setCqqlAnalytics({ ...primary, execution_ms: primary.execution_ms + secondary.execution_ms, groups });
+      }
+    }).catch((reason: unknown) => {
+      if (active && !(reason instanceof DOMException && reason.name === "AbortError")) setAnalyticsError(reason instanceof Error ? reason.message : "CQQL analytics unavailable.");
+    }).finally(() => { if (active) setAnalyticsLoading(false); });
+    return () => { active = false; controller.abort(); };
+  }, [api, cqqlAnalyticsRequest]);
 
   useEffect(() => {
     if (!selectedId) { setDetail(null); setDetailError(null); return; }
@@ -295,7 +397,7 @@ export function DiscoverPage({ api, preferences = DEFAULT_PREFERENCES, onPrefere
   };
   const field = (name: keyof FilterValues) => ({
     value: draft[name],
-    onChange: (event: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => setDraft((current) => ({ ...current, [name]: event.target.value })),
+    onChange: (event: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => setDraft((current) => ({ ...current, [name]: event.target.value })),
   });
   const loadSaved = (savedSearchId: string) => {
     setSelectedSavedId(savedSearchId);
@@ -331,6 +433,10 @@ export function DiscoverPage({ api, preferences = DEFAULT_PREFERENCES, onPrefere
   };
 
   const activeFilters = Object.entries(applied).filter(([key, value]) => {
+    if (
+      applied.cqql.trim()
+      && !["preset", "startTime", "endTime", "cqql", "sort"].includes(key)
+    ) return false;
     if (key === "preset") return value !== "24h";
     if (key === "sort") return value !== "newest";
     return value !== "";
@@ -343,13 +449,24 @@ export function DiscoverPage({ api, preferences = DEFAULT_PREFERENCES, onPrefere
   const clearFilters = () => {
     setDraft(EMPTY_FILTERS); setApplied(EMPTY_FILTERS); setCursor(undefined); setCursorStack([]); updateDiscoverHistory(EMPTY_FILTERS);
   };
+  const exportCQQL = async () => {
+    if (!cqqlAnalyticsRequest) return;
+    setExportBusy(true); setExportMessage(null);
+    try {
+      const result = await api.downloadCQQL({ query: cqqlAnalyticsRequest.query, start_time: cqqlAnalyticsRequest.start_time, end_time: cqqlAnalyticsRequest.end_time, sort: applied.sort, limit: 1000 });
+      const href = URL.createObjectURL(result.blob);
+      const anchor = document.createElement("a"); anchor.href = href; anchor.download = result.filename; anchor.click(); URL.revokeObjectURL(href);
+      setExportMessage(`${result.filename} downloaded.`);
+    } catch (reason) { setExportMessage(reason instanceof Error ? reason.message : "CQQL export failed."); }
+    finally { setExportBusy(false); }
+  };
   const selectEvent = (eventId: string) => {
     const url = new URL(window.location.href); url.searchParams.set("view", "discover"); url.searchParams.set("event", eventId);
-    window.history.pushState({ cyberqalqonDiscover: applied, cyberqalqonDiscoverCursor: cursor, cyberqalqonDiscoverCursorStack: cursorStack }, "", url); setSelectedId(eventId);
+    window.history.pushState({ cyberqalqonDiscover: historySafeValues(applied), cyberqalqonDiscoverCursor: cursor, cyberqalqonDiscoverCursorStack: cursorStack }, "", url); setSelectedId(eventId);
   };
   const closeEvent = () => {
     const url = new URL(window.location.href); url.searchParams.delete("event");
-    window.history.replaceState({ cyberqalqonDiscover: applied, cyberqalqonDiscoverCursor: cursor, cyberqalqonDiscoverCursorStack: cursorStack }, "", url); setSelectedId(null);
+    window.history.replaceState({ cyberqalqonDiscover: historySafeValues(applied), cyberqalqonDiscoverCursor: cursor, cyberqalqonDiscoverCursorStack: cursorStack }, "", url); setSelectedId(null);
   };
   const persistPreferences = async (changes: Partial<Omit<AnalystPreferences, "version">>) => {
     setPreferenceError(null);
@@ -376,7 +493,7 @@ export function DiscoverPage({ api, preferences = DEFAULT_PREFERENCES, onPrefere
   return (
     <div className="page-grid page-grid--discover">
       <section className="page-column">
-        <header className="page-header"><div><span className="eyebrow">Discover</span><h1>Security event explorer</h1><p>Bounded Wazuh archive events and alert evidence. Filters execute server-side.</p></div><div className="page-header__metric"><strong>{data?.page.total ?? "—"}</strong><span>matching events</span></div></header>
+        <header className="page-header"><div><span className="eyebrow">Discover</span><h1>Security event explorer</h1><p>Bounded Wazuh archive events and alert evidence. Filters execute server-side.</p></div><div className="page-header__metric"><strong>{data?.page.total ?? data?.items.length ?? "—"}</strong><span>{applied.cqql.trim() ? "visible CQQL events" : "matching events"}</span></div></header>
         <section className="panel saved-searches" aria-label="Saved searches">
           <div><label className="filter-field"><span>Saved search</span><select value={selectedSavedId} onChange={(event) => loadSaved(event.target.value)}><option value="">Choose a saved search</option>{savedSearches.map((saved) => <option key={saved.saved_search_id} value={saved.saved_search_id}>{saved.name}</option>)}</select></label><button className="button button--secondary" type="button" disabled={!selectedSavedId || savedBusy} onClick={() => { void deleteSaved(); }}>Delete</button></div>
           <div><label className="filter-field"><span>Save current filters as</span><input maxLength={100} value={saveName} onChange={(event) => setSaveName(event.target.value)} placeholder="Investigation view" /></label><button className="button button--secondary" type="button" disabled={savedBusy} onClick={() => { void saveCurrent(); }}>{savedBusy ? "Working…" : "Save"}</button></div>
@@ -386,6 +503,8 @@ export function DiscoverPage({ api, preferences = DEFAULT_PREFERENCES, onPrefere
         <section className="panel column-controls" aria-label="Discover column settings"><div className="section-heading"><div><h2>Table layout</h2><p>Column order and density are stored for your analyst account.</p></div><button className="button button--ghost" type="button" onClick={() => { void persistPreferences({ discover_columns: [...DISCOVER_COLUMNS], table_density: "COMFORTABLE" }); }}>Restore defaults</button></div><div className="column-controls__list">{DISCOVER_COLUMNS.map((column) => { const visible = preferences.discover_columns.includes(column); const index = preferences.discover_columns.indexOf(column); const essential = column === "time" || column === "event"; return <span className="column-control" key={column}><label><input type="checkbox" checked={visible} disabled={essential} onChange={() => toggleColumn(column)} />{COLUMN_LABELS[column]}</label>{visible && <><button type="button" aria-label={`Move ${COLUMN_LABELS[column]} left`} disabled={index <= 0} onClick={() => moveColumn(column, -1)}>←</button><button type="button" aria-label={`Move ${COLUMN_LABELS[column]} right`} disabled={index === preferences.discover_columns.length - 1} onClick={() => moveColumn(column, 1)}>→</button></>}</span>; })}</div><label className="filter-field"><span>Density</span><select value={preferences.table_density} onChange={(event) => { void persistPreferences({ table_density: event.target.value as AnalystPreferences["table_density"] }); }}><option value="COMFORTABLE">Comfortable</option><option value="COMPACT">Compact</option></select></label>{preferenceError && <p className="inline-error" role="alert">{preferenceError}</p>}</section>
         <form className="panel event-filters" onSubmit={apply}>
           <div className="filter-grid">
+            <label className="filter-field filter-field--wide"><span>CQQL query</span><textarea aria-label="CQQL query" rows={3} maxLength={2000} placeholder={'source.ip = "192.0.2.10" AND event.severity >= 8'} {...field("cqql")} /></label>
+            <details className="filter-field filter-field--wide"><summary>CQQL syntax and examples</summary><p>Use quoted strings, numeric comparisons, AND, OR, NOT and parentheses. Full text uses <code>text CONTAINS "failed login"</code>. CQQL mode uses the selected time range and sort; the legacy fields below are not combined with it.</p><code>event.code = "4625" OR rule.id = "100120"</code></details>
             <label className="filter-field filter-field--wide"><span>Keyword</span><input id="discover-search" type="search" placeholder="Message, host, IP, rule…" maxLength={200} {...field("search")} /></label>
             <label className="filter-field"><span>Time range</span><select {...field("preset")}><option value="15m">Last 15 minutes</option><option value="1h">Last hour</option><option value="24h">Last 24 hours</option><option value="7d">Last 7 days</option><option value="custom">Custom</option></select></label>
             <label className="filter-field"><span>Source type</span><select {...field("sourceType")}><option value="">All sources</option>{EVENT_SOURCE_TYPES.map((value) => <option value={value} key={value}>{humanize(value)}</option>)}</select></label>
@@ -407,17 +526,26 @@ export function DiscoverPage({ api, preferences = DEFAULT_PREFERENCES, onPrefere
             <label className="filter-field"><span>Sort</span><select {...field("sort")}><option value="newest">Newest first</option><option value="oldest">Oldest first</option></select></label>
             {draft.preset === "custom" && <><label className="filter-field"><span>Start</span><input type="datetime-local" {...field("startTime")} /></label><label className="filter-field"><span>End</span><input type="datetime-local" {...field("endTime")} /></label></>}
           </div>
-          <div className="filter-actions">{draft.search && <button className="button button--ghost" type="button" onClick={() => setDraft((current) => ({ ...current, search: "" }))}>Clear search</button>}<button className="button button--primary" type="submit">Search events</button><button className="button button--secondary" type="button" onClick={clearFilters}>Reset</button></div>
+          <div className="filter-actions">{draft.cqql && <button className="button button--ghost" type="button" onClick={() => setDraft((current) => ({ ...current, cqql: "" }))}>Clear CQQL</button>}{draft.search && <button className="button button--ghost" type="button" onClick={() => setDraft((current) => ({ ...current, search: "" }))}>Clear search</button>}<button className="button button--primary" type="submit">Search events</button><button className="button button--secondary" type="button" onClick={clearFilters}>Reset</button></div>
         </form>
+        {cqqlMetadata && <section className="active-filters" aria-label="CQQL execution metadata"><span>CQQL v1</span><span>{cqqlMetadata.execution_ms.toFixed(1)} ms</span><span>{cqqlMetadata.clause_count} clauses</span><span>Cost: {cqqlMetadata.cost_class.toLowerCase()}</span><span>Plan class: {cqqlMetadata.plan_class.toLowerCase().replaceAll("_", " ")}</span><span>Planner: {cqqlMetadata.planner_strategy === "TIME_ORDERED_OR" ? "time-ordered OR" : cqqlMetadata.planner_strategy === "TIME_ORDERED_BOOLEAN" ? "time-ordered Boolean" : "default"}</span><span title={cqqlMetadata.diagnostic_reasons.join(", ")}>Diagnostics: {cqqlMetadata.diagnostic_reasons.length}</span><span>Data freshness: {cqqlMetadata.data_freshness ? formatTimestamp(cqqlMetadata.data_freshness) : "unknown"}</span><span>Exact total: unknown</span>{cqqlMetadata.fts_used && <span>Safe FTS5</span>}<button type="button" disabled={exportBusy} onClick={() => void exportCQQL()}>{exportBusy ? "Exporting…" : "Export CSV"}</button></section>}
+        {exportMessage && <p className="inline-status" role="status">{exportMessage}</p>}
+        {analyticsLoading && <StatePanel kind="loading" title="Loading CQQL analytics" message="Computing bounded exact aggregations…" />}
+        {analyticsError && <StatePanel kind="unavailable" title="CQQL analytics unavailable" message={analyticsError} />}
+        {cqqlAnalytics && !analyticsLoading && !analyticsError && <CQQLAnalyticsPanel analytics={cqqlAnalytics} />}
         {activeFilters.length > 0 && <section className="active-filters" aria-label="Active filters"><span>Active filters</span>{activeFilters.map(([name, value]) => <button type="button" key={name} onClick={() => removeFilter(name)} aria-label={`Remove ${humanize(name)} filter`}>{humanize(name)}: {value}<b aria-hidden="true">×</b></button>)}<button className="active-filters__clear" type="button" onClick={clearFilters}>Clear all</button></section>}
         {loading && !data && <StatePanel kind="loading" title="Searching events" message="Running bounded indexed queries…" />}
         {error && <StatePanel kind="unavailable" title="Event search unavailable" message={error} actionLabel="Retry" onAction={() => setRevision((value) => value + 1)} />}
         {!loading && !error && data?.items.length === 0 && <StatePanel kind="empty" title="No matching events" message="No stored event matches this range and filter set." />}
-        {!error && data && data.items.length > 0 && <><EventsTable events={data.items} selectedId={selectedId} onSelect={selectEvent} columns={preferences.discover_columns} compact={preferences.table_density === "COMPACT"} /><Pagination visible={data.items.length} total={data.page.total} hasPrevious={cursorStack.length > 0} hasNext={Boolean(data.page.next_cursor)} loading={loading} pageSize={pageSize} onPageSizeChange={(next) => { const size = next as 25 | 50 | 100; setPageSize(size); setCursor(undefined); setCursorStack([]); paginationHistory(applied, undefined, [], "replace"); void persistPreferences({ discover_page_size: size }); }} onPrevious={() => { const nextStack = cursorStack.slice(0, -1); const nextCursor = cursorStack[cursorStack.length - 1]; setCursor(nextCursor); setCursorStack(nextStack); paginationHistory(applied, nextCursor, nextStack); }} onNext={() => { if (data.page.next_cursor) { const nextStack = [...cursorStack, cursor]; setCursorStack(nextStack); setCursor(data.page.next_cursor); paginationHistory(applied, data.page.next_cursor, nextStack); } }} /></>}
+        {!error && data && data.items.length > 0 && <><EventsTable events={data.items} selectedId={selectedId} onSelect={selectEvent} columns={preferences.discover_columns} compact={preferences.table_density === "COMPACT"} /><Pagination visible={data.items.length} total={data.page.total ?? data.items.length} hasPrevious={cursorStack.length > 0} hasNext={Boolean(data.page.next_cursor)} loading={loading} pageSize={pageSize} onPageSizeChange={(next) => { const size = next as 25 | 50 | 100; setPageSize(size); setCursor(undefined); setCursorStack([]); paginationHistory(applied, undefined, [], "replace"); void persistPreferences({ discover_page_size: size }); }} onPrevious={() => { const nextStack = cursorStack.slice(0, -1); const nextCursor = cursorStack[cursorStack.length - 1]; setCursor(nextCursor); setCursorStack(nextStack); paginationHistory(applied, nextCursor, nextStack); }} onNext={() => { if (data.page.next_cursor) { const nextStack = [...cursorStack, cursor]; setCursorStack(nextStack); setCursor(data.page.next_cursor); paginationHistory(applied, data.page.next_cursor, nextStack); } }} /></>}
       </section>
       {selectedId && !detail && !detailError && <aside className="detail-panel detail-panel--state"><StatePanel kind="loading" title="Loading event" message="Reading redacted structured evidence…" /></aside>}
       {detailError && <aside className="detail-panel detail-panel--state"><StatePanel kind="error" title="Event unavailable" message={detailError} actionLabel="Close" onAction={closeEvent} /></aside>}
-      {detail && <EventDetail event={detail} onClose={closeEvent} onOpenAlert={onOpenAlert} onOpenIncident={onOpenIncident} onOpenCase={onOpenCase} onInvestigate={onInvestigate} />}
+      {detail && <EventDetail event={detail} onClose={closeEvent} onOpenAlert={onOpenAlert} onOpenIncident={onOpenIncident} onOpenCase={onOpenCase} onInvestigate={onInvestigate} onPivotQuery={(cqql)=>{
+        const next={...EMPTY_FILTERS,preset:applied.preset,startTime:applied.startTime,endTime:applied.endTime,sort:applied.sort,cqql};
+        closeEvent();setDraft(next);setApplied(next);setCursor(undefined);setCursorStack([]);
+        paginationHistory(next,undefined,[],"replace");
+      }} />}
     </div>
   );
 }

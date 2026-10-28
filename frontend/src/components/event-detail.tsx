@@ -4,6 +4,7 @@ import { CopyButton } from "./copy-button";
 import { MitreTags } from "./mitre-tags";
 import { SeverityBadge } from "./severity-badge";
 import { TimeValue } from "./time-value";
+import { EventSourceContext } from "./event-source-context";
 
 interface Props {
   event: EventDetailModel;
@@ -12,6 +13,7 @@ interface Props {
   onOpenIncident(incidentId: string): void;
   onOpenCase(caseId: string): void;
   onInvestigate(eventId: string): void;
+  onPivotQuery?(query: string): void;
 }
 
 function endpoint(ip?: string | null, port?: number | null): string {
@@ -20,7 +22,7 @@ function endpoint(ip?: string | null, port?: number | null): string {
   return ip.includes(":") ? `[${ip}]:${port}` : `${ip}:${port}`;
 }
 
-export function EventDetail({ event, onClose, onOpenAlert, onOpenIncident, onOpenCase, onInvestigate }: Props) {
+export function EventDetail({ event, onClose, onOpenAlert, onOpenIncident, onOpenCase, onInvestigate, onPivotQuery }: Props) {
   return (
     <aside className="detail-panel event-detail" aria-label="Security event detail">
       <header className="detail-panel__header">
@@ -32,6 +34,7 @@ export function EventDetail({ event, onClose, onOpenAlert, onOpenIncident, onOpe
           {event.severity == null ? <span className="source-pill">{humanize(event.source_type)}</span> : <SeverityBadge level={event.severity} />}
           <TimeValue value={event.timestamp} />
         </div>
+        <EventSourceContext event={event} onPivotQuery={onPivotQuery} />
         <section className="detail-section">
           <h3>Identity</h3>
           <dl className="metadata-grid">

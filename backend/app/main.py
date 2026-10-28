@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import time
+from uuid import uuid4
 from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
 
@@ -22,6 +23,12 @@ from app.api.routes.alerts import router as alerts_router
 from app.api.routes.alert_workflows import router as alert_workflows_router
 from app.api.routes.auth import router as auth_router
 from app.api.routes.cases import router as cases_router
+from app.api.routes.cqql import router as cqql_router
+from app.api.routes.shadow_detection import router as shadow_detection_router
+from app.api.routes.shadow_history import router as shadow_history_router
+from app.db.shadow_history import ShadowHistoryRepository
+from app.services.shadow_history import ShadowHistoryService
+from app.services.identity_resolution import IdentityResolver
 from app.api.routes.detection_engineering import router as detection_engineering_router
 from app.api.routes.detection_readiness import router as detection_readiness_router
 from app.api.routes.events import router as events_router
@@ -40,6 +47,7 @@ from app.db.alert_workflows import AlertWorkflowRepository
 from app.db.audit import AuditRepository
 from app.db.auth import AuthRepository
 from app.db.cases import CaseRepository
+from app.db.cqql import CQQLSearchRepository
 from app.db.detection_engineering import DetectionEngineeringRepository
 from app.db.detection_readiness import DetectionReadinessRepository
 from app.db.events import EventRepository
@@ -55,10 +63,27 @@ from app.services.incident_correlation import IncidentCorrelationEngine
 from app.services.advanced_detection import AdvancedDetectionEngine
 from app.services.ingestion_metrics import IngestionMetrics
 from app.version import APPLICATION_VERSION
+from app.services.request_tracing import TraceCollector, TraceMiddleware
 
 
-def create_app(settings: Settings | None = None, *, ai_provider: AIProvider | None = None) -> FastAPI:
+def create_app(settings: Settings | None = None, *, ai_provider: AIProvider | None = None,
+               disposable_detection_simulation: bool = False,
+               disposable_fts_rowid: bool = False,
+               disposable_request_traces: TraceCollector | None = None,
+               shadow_history: ShadowHistoryRepository | None = None,
+               identity_resolver: IdentityResolver | None = None,
+               disposable_collection_sources: tuple = ()) -> FastAPI:
     runtime_settings = settings or get_settings()
+    from app.services.collection import CollectionRegistry
+    from app.api.routes.collection import router as collection_router
+    from app.api.routes.sigma import router as sigma_router
+    if disposable_collection_sources and disposable_detection_simulation is not True:
+        raise ValueError('Registered collectors require explicit disposable application construction')
+    collection_registry = CollectionRegistry(disposable_collection_sources, synthetic=disposable_detection_simulation is True)
+    if disposable_request_traces is not None and (
+        disposable_detection_simulation is not True or not isinstance(disposable_request_traces, TraceCollector)
+    ):
+        raise ValueError('Request tracing requires explicit disposable application construction')
     repository = AlertRepository(
         runtime_settings.database_url,
         migration_target_version=(18 if runtime_settings.allow_m14_schema_migration else 17),
@@ -68,6 +93,14 @@ def create_app(settings: Settings | None = None, *, ai_provider: AIProvider | No
         retention_days=runtime_settings.security_event_retention_days,
         max_records=runtime_settings.security_event_max_records,
     )
+    if type(disposable_fts_rowid) is not bool or (disposable_fts_rowid is True and disposable_detection_simulation is not True):
+        raise ValueError('Experimental FTS requires explicit disposable application construction')
+    # Keep the original one-argument factory contract for existing M32 tooling.
+    cqql_search_repository = (CQQLSearchRepository(repository.path, fts_strategy='m32_rowid')
+                              if disposable_fts_rowid is True else CQQLSearchRepository(repository.path))
+    if shadow_history is not None and (disposable_detection_simulation is not True or shadow_history.source!=repository.path.resolve()):
+        raise ValueError('Durable history requires explicit matching disposable source')
+    history_service=ShadowHistoryService(shadow_history,cqql_search_repository,resolver=identity_resolver) if shadow_history else None
     ingestion_metrics = IngestionMetrics(
         batch_enabled=runtime_settings.event_batch_ingest_enabled,
         batch_limit=runtime_settings.event_batch_max_events,
@@ -118,8 +151,14 @@ def create_app(settings: Settings | None = None, *, ai_provider: AIProvider | No
     @asynccontextmanager
     async def lifespan(application: FastAPI) -> AsyncIterator[None]:
         repository.initialize()
+        if history_service is not None:history_service.open()
+        application.state.shadow_history_service=history_service
+        application.state.shadow_audit_repository=AuditRepository(shadow_history.path) if shadow_history else audit_repository
         application.state.alert_repository = repository
         application.state.event_repository = event_repository
+        application.state.collection_registry = collection_registry
+        application.state.continuous_shadow_workers = []  # Explicit owned demos only; never started here.
+        application.state.cqql_search_repository = cqql_search_repository
         application.state.ingestion_metrics = ingestion_metrics
         application.state.incident_repository = incident_repository
         application.state.case_repository = case_repository
@@ -142,6 +181,7 @@ def create_app(settings: Settings | None = None, *, ai_provider: AIProvider | No
         try:
             yield
         finally:
+            if history_service is not None:await run_in_threadpool(history_service.close)
             await ai_service.close()
 
     application = FastAPI(
@@ -153,12 +193,35 @@ def create_app(settings: Settings | None = None, *, ai_provider: AIProvider | No
         lifespan=lifespan,
     )
     application.state.settings = runtime_settings
+    # Constructor-only test gate. No environment/UI/API path can enable it.
+    application.state.disposable_detection_simulation = disposable_detection_simulation is True
+
+    # Match liveness before lazy API-router construction. A cold health request
+    # must not pay for unrelated routes while an ingestion worker is occupied.
+    @application.get(
+        "/health",
+        tags=["System"],
+        summary="Health check",
+        response_description="Service health status",
+    )
+    async def health() -> dict[str, str]:
+        return {"status": "ok", "service": "cyberqalqon-backend"}
+
+    application.include_router(collection_router)
+    application.include_router(sigma_router)
+    application.include_router(shadow_detection_router)
+    application.include_router(shadow_history_router)
 
     @application.middleware("http")
     async def capture_request_reception(request: Request, call_next):  # type: ignore[no-untyped-def]
         # A single monotonic timestamp gives ingestion diagnostics a bounded
         # routing/authentication baseline without retaining headers or bodies.
         request.state.request_received_monotonic = time.monotonic()
+        if request.url.path.startswith('/api/v1/detection-engineering/shadow-v2'):
+            request.state.shadow_request_id=uuid4().hex
+            response=await call_next(request)
+            response.headers['X-Correlation-ID']=request.state.shadow_request_id
+            return response
         return await call_next(request)
 
     @application.exception_handler(RequestValidationError)
@@ -190,6 +253,7 @@ def create_app(settings: Settings | None = None, *, ai_provider: AIProvider | No
     application.include_router(auth_router)
     application.include_router(agents_router)
     application.include_router(cases_router)
+    application.include_router(cqql_router)
     application.include_router(audit_router)
     application.include_router(alerts_router)
     application.include_router(alert_workflows_router)
@@ -207,15 +271,6 @@ def create_app(settings: Settings | None = None, *, ai_provider: AIProvider | No
     application.include_router(ai_router)
 
     @application.get(
-        "/health",
-        tags=["System"],
-        summary="Health check",
-        response_description="Service health status",
-    )
-    async def health() -> dict[str, str]:
-        return {"status": "ok", "service": "cyberqalqon-backend"}
-
-    @application.get(
         "/readiness",
         tags=["System"],
         summary="Storage readiness check",
@@ -230,6 +285,9 @@ def create_app(settings: Settings | None = None, *, ai_provider: AIProvider | No
             content={"status": "ready" if ready else "not_ready"},
         )
 
+    if disposable_request_traces is not None:
+        # Outermost, including routing, authentication, serialization and send.
+        application.add_middleware(TraceMiddleware, collector=disposable_request_traces)
     return application
 
 

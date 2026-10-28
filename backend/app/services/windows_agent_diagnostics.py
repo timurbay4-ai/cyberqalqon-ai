@@ -7,7 +7,8 @@ import os
 import re
 import socket
 import subprocess
-import xml.etree.ElementTree as ET
+from defusedxml import ElementTree as ET
+from defusedxml.common import DefusedXmlException
 from dataclasses import asdict, dataclass
 from pathlib import Path
 from typing import Literal
@@ -124,8 +125,8 @@ def _config(path: Path) -> dict[str, object]:
     if text is None:
         return {}
     try:
-        root = ET.fromstring(text)
-    except ET.ParseError:
+        root = ET.fromstring(text, forbid_dtd=True, forbid_entities=True, forbid_external=True)
+    except (ET.ParseError, DefusedXmlException):
         return {}
     server = root.find("./client/server")
     enrollment = root.find("./client/enrollment")

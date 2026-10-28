@@ -36,6 +36,8 @@ services:
       SESSION_COOKIE_SECURE: "true"
       LOGIN_MAX_FAILURES: ${LOGIN_MAX_FAILURES:-5}
       LOGIN_LOCKOUT_SECONDS: ${LOGIN_LOCKOUT_SECONDS:-900}
+      CORRELATION_ENABLED: ${CORRELATION_ENABLED:-false}
+      EVENT_BATCH_INGEST_ENABLED: ${EVENT_BATCH_INGEST_ENABLED:-false}
       AI_ENABLED: ${AI_ENABLED:-false}
       OLLAMA_BASE_URL: ${OLLAMA_BASE_URL:-http://ollama:11434}
       OLLAMA_MODEL: ${OLLAMA_MODEL:-}
@@ -91,8 +93,8 @@ services:
       args:
         VITE_API_BASE_URL: ""
     ports:
-      - "${BIND_ADDRESS:-0.0.0.0}:${HTTP_PORT:-80}:8080"
-      - "${BIND_ADDRESS:-0.0.0.0}:${HTTPS_PORT:-443}:8443"
+      - "${BIND_ADDRESS:-127.0.0.1}:${HTTP_PORT:-80}:8080"
+      - "${BIND_ADDRESS:-127.0.0.1}:${HTTPS_PORT:-443}:8443"
     volumes:
       - type: bind
         source: ${TLS_CERT_PATH:?Set TLS_CERT_PATH to a PEM certificate}

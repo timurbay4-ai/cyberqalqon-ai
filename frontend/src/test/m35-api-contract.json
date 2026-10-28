@@ -1,0 +1,1422 @@
+{
+  "scope": "SYNTHETIC_TEST",
+  "unsealed_run": {
+    "run_id": "RUN-acbabbd5f9274430bac65e5933d1d5a7",
+    "status": "FAILED",
+    "attempts": 1,
+    "error_code": "RuntimeError",
+    "checkpoint": "UNSEALED",
+    "snapshot_sha256": null,
+    "result": null,
+    "recovery_state": "UNSEALED_VERIFICATION_REQUIRED",
+    "recovery_intent": {
+      "version": "m35-bounded-snapshot-intent-v1",
+      "manifest_sha256": "667bdc8a2e9da5d35f97447d78f284a70525b194f887ee755c14b62b169e7562",
+      "candidate_rows": 4,
+      "candidate_truncated": false,
+      "scope": "BOUNDED_CANDIDATES_NOT_GLOBAL_COMPLETENESS",
+      "verification": "RECHECK_REQUIRED"
+    },
+    "production_active": false,
+    "scope": "DISPOSABLE_DURABLE_SHADOW",
+    "historical_continuity": "UNPROVEN"
+  },
+  "completed_run": {
+    "run_id": "RUN-acbabbd5f9274430bac65e5933d1d5a7",
+    "status": "COMPLETED",
+    "attempts": 2,
+    "error_code": null,
+    "checkpoint": "SEALED",
+    "snapshot_sha256": "667bdc8a2e9da5d35f97447d78f284a70525b194f887ee755c14b62b169e7562",
+    "result": {
+      "finding_ids": [
+        "DSF-edfc482079ba1a56529dfa5802a58ed8c586928d935238f4b519fb97fae2b122"
+      ],
+      "diagnostics": {
+        "CANDIDATE_ROWS": 4,
+        "ON_TIME": 4
+      },
+      "coverage": "BOUNDED_CANDIDATE_SLICE",
+      "identity_rejected": 0,
+      "candidate_count": 1,
+      "historical_continuity": "UNPROVEN",
+      "window_completeness": "UNPROVEN",
+      "evaluation_version": "m31-shadow-v1",
+      "graph_edges": [
+        {
+          "source": "DSF-edfc482079ba1a56529dfa5802a58ed8c586928d935238f4b519fb97fae2b122",
+          "target": "EVT-9E1C2884B856DDD57AF404A8",
+          "relationship": "FINDING_SUPPORTED_BY_EVENT",
+          "causal_claim": false
+        },
+        {
+          "source": "DSF-edfc482079ba1a56529dfa5802a58ed8c586928d935238f4b519fb97fae2b122",
+          "target": "EVT-DCB746A703B5D092124BB8E8",
+          "relationship": "FINDING_SUPPORTED_BY_EVENT",
+          "causal_claim": false
+        },
+        {
+          "source": "EVT-9E1C2884B856DDD57AF404A8",
+          "target": "EVT-DCB746A703B5D092124BB8E8",
+          "relationship": "OBSERVED_BEFORE",
+          "causal_claim": false
+        },
+        {
+          "source": "DSF-edfc482079ba1a56529dfa5802a58ed8c586928d935238f4b519fb97fae2b122",
+          "target": "EVT-9A3C03980E8E0C1742A01895",
+          "relationship": "FINDING_SUPPORTED_BY_EVENT",
+          "causal_claim": false
+        },
+        {
+          "source": "EVT-DCB746A703B5D092124BB8E8",
+          "target": "EVT-9A3C03980E8E0C1742A01895",
+          "relationship": "OBSERVED_BEFORE",
+          "causal_claim": false
+        },
+        {
+          "source": "DSF-edfc482079ba1a56529dfa5802a58ed8c586928d935238f4b519fb97fae2b122",
+          "target": "EVT-5C8BC7F86FA7B535F6DF8019",
+          "relationship": "FINDING_SUPPORTED_BY_EVENT",
+          "causal_claim": false
+        },
+        {
+          "source": "EVT-9A3C03980E8E0C1742A01895",
+          "target": "EVT-5C8BC7F86FA7B535F6DF8019",
+          "relationship": "OBSERVED_BEFORE",
+          "causal_claim": false
+        }
+      ]
+    },
+    "recovery_state": "NOT_REQUIRED",
+    "recovery_intent": {
+      "version": "m35-bounded-snapshot-intent-v1",
+      "manifest_sha256": "667bdc8a2e9da5d35f97447d78f284a70525b194f887ee755c14b62b169e7562",
+      "candidate_rows": 4,
+      "candidate_truncated": false,
+      "scope": "BOUNDED_CANDIDATES_NOT_GLOBAL_COMPLETENESS",
+      "verification": "SEALED"
+    },
+    "production_active": false,
+    "scope": "DISPOSABLE_DURABLE_SHADOW",
+    "historical_continuity": "UNPROVEN"
+  },
+  "unsealed_history_status": {
+    "enabled": true,
+    "scope": "DISPOSABLE_DURABLE_SHADOW",
+    "production_active": false,
+    "schema_version": 1,
+    "resource_state": {
+      "inflight": 0,
+      "queue_depth": 0,
+      "workers": 1,
+      "queue_capacity": 4,
+      "wait_ms_total": 0.028,
+      "queue_peak": 0,
+      "admitted": 1,
+      "released": 1
+    },
+    "recovery_runs": [
+      {
+        "run_id": "RUN-acbabbd5f9274430bac65e5933d1d5a7",
+        "status": "FAILED",
+        "attempts": 1,
+        "error_code": "RuntimeError",
+        "created_at": "2026-10-27T13:49:38.077252+00:00",
+        "sealed": 0,
+        "has_recovery_intent": 1
+      }
+    ]
+  },
+  "unsealed_coverage": {
+    "contract": "cq-source-coverage-v1",
+    "observed_at": "2026-10-27T13:49:38.155344+00:00",
+    "scope": "SYNTHETIC_TEST",
+    "coverage": "RETAINED_SAMPLE",
+    "sample_limit": 1000,
+    "sample_count": 6,
+    "truncated": false,
+    "historical_continuity": "UNPROVEN",
+    "production_active": false,
+    "registered_sources": [
+      {
+        "source_id": "synthetic-zeek",
+        "source_type": "ZEEK_JSON",
+        "host": "SYNTHETIC-M34-SENSOR",
+        "collector_id": "synthetic-collector",
+        "source_generation": "synthetic-generation-1",
+        "configuration_authority": "EXPLICIT_DISPOSABLE_CONSTRUCTOR",
+        "configured": true,
+        "connected": "UNKNOWN",
+        "delivery_state": "OBSERVED_COMMIT",
+        "last_committed_delivery_at": "2026-10-27T13:49:37.600668+00:00",
+        "last_acknowledged_delivery": null,
+        "sample_event_count": 1,
+        "last_event_time": "2026-10-27T13:44:36+00:00",
+        "last_ingestion_time": "2026-10-27T13:49:37.285512+00:00",
+        "queue_backlog": null,
+        "retry_count": null,
+        "dead_letter_count": null,
+        "process_counters": {
+          "inserted": 1,
+          "duplicate": 1
+        },
+        "counter_scope": "SINCE_APPLICATION_START",
+        "family": "ZEEK"
+      },
+      {
+        "source_id": "synthetic-suricata",
+        "source_type": "SURICATA_EVE",
+        "host": "SYNTHETIC-M34-SENSOR",
+        "collector_id": "synthetic-collector",
+        "source_generation": "synthetic-generation-1",
+        "configuration_authority": "EXPLICIT_DISPOSABLE_CONSTRUCTOR",
+        "configured": true,
+        "connected": "UNKNOWN",
+        "delivery_state": "OBSERVED_COMMIT",
+        "last_committed_delivery_at": "2026-10-27T13:49:37.647668+00:00",
+        "last_acknowledged_delivery": null,
+        "sample_event_count": 1,
+        "last_event_time": "2026-10-27T13:44:36+00:00",
+        "last_ingestion_time": "2026-10-27T13:49:37.614731+00:00",
+        "queue_backlog": null,
+        "retry_count": null,
+        "dead_letter_count": null,
+        "process_counters": {
+          "inserted": 1
+        },
+        "counter_scope": "SINCE_APPLICATION_START",
+        "family": "SURICATA"
+      }
+    ],
+    "families": [
+      {
+        "family": "WINDOWS_EVENTCHANNEL",
+        "parser_available": true,
+        "observed": true,
+        "sample_event_count": 4,
+        "sample_normalized_count": 4,
+        "last_event_time": "2026-10-27T13:45:06+00:00",
+        "last_ingestion_time": "2026-10-27T13:49:37.868762+00:00",
+        "latest_event_id": "EVT-5C8BC7F86FA7B535F6DF8019",
+        "freshness": "OBSERVED",
+        "search_fields_available": true,
+        "detection_eligible": "UNKNOWN",
+        "connected": "UNKNOWN",
+        "queue_backlog": null
+      },
+      {
+        "family": "SYSMON",
+        "parser_available": true,
+        "observed": false,
+        "sample_event_count": 0,
+        "sample_normalized_count": 0,
+        "last_event_time": null,
+        "last_ingestion_time": null,
+        "latest_event_id": null,
+        "freshness": "UNKNOWN",
+        "search_fields_available": true,
+        "detection_eligible": "UNKNOWN",
+        "connected": "UNKNOWN",
+        "queue_backlog": null
+      },
+      {
+        "family": "LINUX_AUTH",
+        "parser_available": true,
+        "observed": false,
+        "sample_event_count": 0,
+        "sample_normalized_count": 0,
+        "last_event_time": null,
+        "last_ingestion_time": null,
+        "latest_event_id": null,
+        "freshness": "UNKNOWN",
+        "search_fields_available": true,
+        "detection_eligible": "UNKNOWN",
+        "connected": "UNKNOWN",
+        "queue_backlog": null
+      },
+      {
+        "family": "SYSLOG",
+        "parser_available": true,
+        "observed": false,
+        "sample_event_count": 0,
+        "sample_normalized_count": 0,
+        "last_event_time": null,
+        "last_ingestion_time": null,
+        "latest_event_id": null,
+        "freshness": "UNKNOWN",
+        "search_fields_available": true,
+        "detection_eligible": "UNKNOWN",
+        "connected": "UNKNOWN",
+        "queue_backlog": null
+      },
+      {
+        "family": "JOURNALD",
+        "parser_available": true,
+        "observed": false,
+        "sample_event_count": 0,
+        "sample_normalized_count": 0,
+        "last_event_time": null,
+        "last_ingestion_time": null,
+        "latest_event_id": null,
+        "freshness": "UNKNOWN",
+        "search_fields_available": true,
+        "detection_eligible": "UNKNOWN",
+        "connected": "UNKNOWN",
+        "queue_backlog": null
+      },
+      {
+        "family": "WAZUH_GENERIC",
+        "parser_available": true,
+        "observed": false,
+        "sample_event_count": 0,
+        "sample_normalized_count": 0,
+        "last_event_time": null,
+        "last_ingestion_time": null,
+        "latest_event_id": null,
+        "freshness": "UNKNOWN",
+        "search_fields_available": true,
+        "detection_eligible": "UNKNOWN",
+        "connected": "UNKNOWN",
+        "queue_backlog": null
+      },
+      {
+        "family": "ZEEK",
+        "parser_available": true,
+        "observed": true,
+        "sample_event_count": 1,
+        "sample_normalized_count": 1,
+        "last_event_time": "2026-10-27T13:44:36+00:00",
+        "last_ingestion_time": "2026-10-27T13:49:37.285512+00:00",
+        "latest_event_id": "EVT-D95E4AE2DDC0C5F8199F3EC8",
+        "freshness": "OBSERVED",
+        "search_fields_available": true,
+        "detection_eligible": "UNKNOWN",
+        "connected": "UNKNOWN",
+        "queue_backlog": null
+      },
+      {
+        "family": "SURICATA",
+        "parser_available": true,
+        "observed": true,
+        "sample_event_count": 1,
+        "sample_normalized_count": 1,
+        "last_event_time": "2026-10-27T13:44:36+00:00",
+        "last_ingestion_time": "2026-10-27T13:49:37.614731+00:00",
+        "latest_event_id": "EVT-D55427DDE3A46081DF0A8631",
+        "freshness": "OBSERVED",
+        "search_fields_available": true,
+        "detection_eligible": "UNKNOWN",
+        "connected": "UNKNOWN",
+        "queue_backlog": null
+      }
+    ],
+    "detection_workers": [
+      {
+        "contract": "cq-continuous-shadow-v1",
+        "namespace": "cq-m34-continuous-shadow-v1",
+        "progress": {
+          "contract": "cq-shadow-progress-v1",
+          "stage": "RECOVERY_REQUIRED",
+          "observed_gap": "UNPROVEN",
+          "pending_run_id": "RUN-acbabbd5f9274430bac65e5933d1d5a7",
+          "run_status": "FAILED",
+          "snapshot_state": "UNSEALED",
+          "unsealed_intent_present": true,
+          "last_completed_evaluation": null,
+          "transition_count": 1,
+          "audit_scope": "M35_ONLY_LEGACY_NOT_BACKFILLED",
+          "transition_tail": [
+            {
+              "run_id": null,
+              "stage": "PENDING_COMMITTED",
+              "tick": 1
+            }
+          ],
+          "window_completeness": "UNPROVEN"
+        },
+        "state": "DEGRADED",
+        "reason": "SHADOW_WORKER_EXCEPTION",
+        "rule_id": "SHADOW-WINDOWS-AUTH",
+        "rule_version": "0265a87342b65eadc0dce1575a5ca9ae4aa83b10e2ef7b2b44db846af483e5df",
+        "ticks_committed": 0,
+        "last_end": null,
+        "pending_evaluation": true,
+        "last_run_id": null,
+        "last_finding_ids": [],
+        "observed_records": 0,
+        "late_observed": 0,
+        "late_outside_overlap": 0,
+        "gap_status": "UNPROVEN",
+        "historical_continuity": "UNPROVEN",
+        "production_active": false,
+        "scope": "DISPOSABLE_SHADOW_ONLY",
+        "source_checkpoint_reused": false,
+        "cross_database_atomicity": false,
+        "queue_capacity": 1,
+        "queue_depth": 1,
+        "late_counter_scope": "ALL_RETAINED_SOURCE_OBSERVATIONS",
+        "source_event_capacity": 1000,
+        "tick_capacity": 2048
+      }
+    ],
+    "continuous_worker_state": "OBSERVED_ISOLATED_WORKERS"
+  },
+  "history_committed_coverage": {
+    "contract": "cq-source-coverage-v1",
+    "observed_at": "2026-10-27T13:49:38.437352+00:00",
+    "scope": "SYNTHETIC_TEST",
+    "coverage": "RETAINED_SAMPLE",
+    "sample_limit": 1000,
+    "sample_count": 6,
+    "truncated": false,
+    "historical_continuity": "UNPROVEN",
+    "production_active": false,
+    "registered_sources": [
+      {
+        "source_id": "synthetic-zeek",
+        "source_type": "ZEEK_JSON",
+        "host": "SYNTHETIC-M34-SENSOR",
+        "collector_id": "synthetic-collector",
+        "source_generation": "synthetic-generation-1",
+        "configuration_authority": "EXPLICIT_DISPOSABLE_CONSTRUCTOR",
+        "configured": true,
+        "connected": "UNKNOWN",
+        "delivery_state": "OBSERVED_COMMIT",
+        "last_committed_delivery_at": "2026-10-27T13:49:37.600668+00:00",
+        "last_acknowledged_delivery": null,
+        "sample_event_count": 1,
+        "last_event_time": "2026-10-27T13:44:36+00:00",
+        "last_ingestion_time": "2026-10-27T13:49:37.285512+00:00",
+        "queue_backlog": null,
+        "retry_count": null,
+        "dead_letter_count": null,
+        "process_counters": {
+          "inserted": 1,
+          "duplicate": 1
+        },
+        "counter_scope": "SINCE_APPLICATION_START",
+        "family": "ZEEK"
+      },
+      {
+        "source_id": "synthetic-suricata",
+        "source_type": "SURICATA_EVE",
+        "host": "SYNTHETIC-M34-SENSOR",
+        "collector_id": "synthetic-collector",
+        "source_generation": "synthetic-generation-1",
+        "configuration_authority": "EXPLICIT_DISPOSABLE_CONSTRUCTOR",
+        "configured": true,
+        "connected": "UNKNOWN",
+        "delivery_state": "OBSERVED_COMMIT",
+        "last_committed_delivery_at": "2026-10-27T13:49:37.647668+00:00",
+        "last_acknowledged_delivery": null,
+        "sample_event_count": 1,
+        "last_event_time": "2026-10-27T13:44:36+00:00",
+        "last_ingestion_time": "2026-10-27T13:49:37.614731+00:00",
+        "queue_backlog": null,
+        "retry_count": null,
+        "dead_letter_count": null,
+        "process_counters": {
+          "inserted": 1
+        },
+        "counter_scope": "SINCE_APPLICATION_START",
+        "family": "SURICATA"
+      }
+    ],
+    "families": [
+      {
+        "family": "WINDOWS_EVENTCHANNEL",
+        "parser_available": true,
+        "observed": true,
+        "sample_event_count": 4,
+        "sample_normalized_count": 4,
+        "last_event_time": "2026-10-27T13:45:06+00:00",
+        "last_ingestion_time": "2026-10-27T13:49:37.868762+00:00",
+        "latest_event_id": "EVT-5C8BC7F86FA7B535F6DF8019",
+        "freshness": "OBSERVED",
+        "search_fields_available": true,
+        "detection_eligible": "UNKNOWN",
+        "connected": "UNKNOWN",
+        "queue_backlog": null
+      },
+      {
+        "family": "SYSMON",
+        "parser_available": true,
+        "observed": false,
+        "sample_event_count": 0,
+        "sample_normalized_count": 0,
+        "last_event_time": null,
+        "last_ingestion_time": null,
+        "latest_event_id": null,
+        "freshness": "UNKNOWN",
+        "search_fields_available": true,
+        "detection_eligible": "UNKNOWN",
+        "connected": "UNKNOWN",
+        "queue_backlog": null
+      },
+      {
+        "family": "LINUX_AUTH",
+        "parser_available": true,
+        "observed": false,
+        "sample_event_count": 0,
+        "sample_normalized_count": 0,
+        "last_event_time": null,
+        "last_ingestion_time": null,
+        "latest_event_id": null,
+        "freshness": "UNKNOWN",
+        "search_fields_available": true,
+        "detection_eligible": "UNKNOWN",
+        "connected": "UNKNOWN",
+        "queue_backlog": null
+      },
+      {
+        "family": "SYSLOG",
+        "parser_available": true,
+        "observed": false,
+        "sample_event_count": 0,
+        "sample_normalized_count": 0,
+        "last_event_time": null,
+        "last_ingestion_time": null,
+        "latest_event_id": null,
+        "freshness": "UNKNOWN",
+        "search_fields_available": true,
+        "detection_eligible": "UNKNOWN",
+        "connected": "UNKNOWN",
+        "queue_backlog": null
+      },
+      {
+        "family": "JOURNALD",
+        "parser_available": true,
+        "observed": false,
+        "sample_event_count": 0,
+        "sample_normalized_count": 0,
+        "last_event_time": null,
+        "last_ingestion_time": null,
+        "latest_event_id": null,
+        "freshness": "UNKNOWN",
+        "search_fields_available": true,
+        "detection_eligible": "UNKNOWN",
+        "connected": "UNKNOWN",
+        "queue_backlog": null
+      },
+      {
+        "family": "WAZUH_GENERIC",
+        "parser_available": true,
+        "observed": false,
+        "sample_event_count": 0,
+        "sample_normalized_count": 0,
+        "last_event_time": null,
+        "last_ingestion_time": null,
+        "latest_event_id": null,
+        "freshness": "UNKNOWN",
+        "search_fields_available": true,
+        "detection_eligible": "UNKNOWN",
+        "connected": "UNKNOWN",
+        "queue_backlog": null
+      },
+      {
+        "family": "ZEEK",
+        "parser_available": true,
+        "observed": true,
+        "sample_event_count": 1,
+        "sample_normalized_count": 1,
+        "last_event_time": "2026-10-27T13:44:36+00:00",
+        "last_ingestion_time": "2026-10-27T13:49:37.285512+00:00",
+        "latest_event_id": "EVT-D95E4AE2DDC0C5F8199F3EC8",
+        "freshness": "OBSERVED",
+        "search_fields_available": true,
+        "detection_eligible": "UNKNOWN",
+        "connected": "UNKNOWN",
+        "queue_backlog": null
+      },
+      {
+        "family": "SURICATA",
+        "parser_available": true,
+        "observed": true,
+        "sample_event_count": 1,
+        "sample_normalized_count": 1,
+        "last_event_time": "2026-10-27T13:44:36+00:00",
+        "last_ingestion_time": "2026-10-27T13:49:37.614731+00:00",
+        "latest_event_id": "EVT-D55427DDE3A46081DF0A8631",
+        "freshness": "OBSERVED",
+        "search_fields_available": true,
+        "detection_eligible": "UNKNOWN",
+        "connected": "UNKNOWN",
+        "queue_backlog": null
+      }
+    ],
+    "detection_workers": [
+      {
+        "contract": "cq-continuous-shadow-v1",
+        "namespace": "cq-m34-continuous-shadow-v1",
+        "progress": {
+          "contract": "cq-shadow-progress-v1",
+          "stage": "FINDINGS_COMMITTED",
+          "observed_gap": "UNPROVEN",
+          "pending_run_id": "RUN-acbabbd5f9274430bac65e5933d1d5a7",
+          "run_status": "COMPLETED",
+          "snapshot_state": "SEALED",
+          "unsealed_intent_present": true,
+          "last_completed_evaluation": "RUN-acbabbd5f9274430bac65e5933d1d5a7",
+          "transition_count": 1,
+          "audit_scope": "M35_ONLY_LEGACY_NOT_BACKFILLED",
+          "transition_tail": [
+            {
+              "run_id": null,
+              "stage": "PENDING_COMMITTED",
+              "tick": 1
+            }
+          ],
+          "window_completeness": "UNPROVEN"
+        },
+        "state": "DEGRADED",
+        "reason": "RuntimeError",
+        "rule_id": "SHADOW-WINDOWS-AUTH",
+        "rule_version": "0265a87342b65eadc0dce1575a5ca9ae4aa83b10e2ef7b2b44db846af483e5df",
+        "ticks_committed": 0,
+        "last_end": null,
+        "pending_evaluation": true,
+        "last_run_id": null,
+        "last_finding_ids": [],
+        "observed_records": 0,
+        "late_observed": 0,
+        "late_outside_overlap": 0,
+        "gap_status": "UNPROVEN",
+        "historical_continuity": "UNPROVEN",
+        "production_active": false,
+        "scope": "DISPOSABLE_SHADOW_ONLY",
+        "source_checkpoint_reused": false,
+        "cross_database_atomicity": false,
+        "queue_capacity": 1,
+        "queue_depth": 1,
+        "late_counter_scope": "ALL_RETAINED_SOURCE_OBSERVATIONS",
+        "source_event_capacity": 1000,
+        "tick_capacity": 2048
+      }
+    ],
+    "continuous_worker_state": "OBSERVED_ISOLATED_WORKERS"
+  },
+  "checkpoint_committed_coverage": {
+    "contract": "cq-source-coverage-v1",
+    "observed_at": "2026-10-27T13:49:38.574345+00:00",
+    "scope": "SYNTHETIC_TEST",
+    "coverage": "RETAINED_SAMPLE",
+    "sample_limit": 1000,
+    "sample_count": 6,
+    "truncated": false,
+    "historical_continuity": "UNPROVEN",
+    "production_active": false,
+    "registered_sources": [
+      {
+        "source_id": "synthetic-zeek",
+        "source_type": "ZEEK_JSON",
+        "host": "SYNTHETIC-M34-SENSOR",
+        "collector_id": "synthetic-collector",
+        "source_generation": "synthetic-generation-1",
+        "configuration_authority": "EXPLICIT_DISPOSABLE_CONSTRUCTOR",
+        "configured": true,
+        "connected": "UNKNOWN",
+        "delivery_state": "OBSERVED_COMMIT",
+        "last_committed_delivery_at": "2026-10-27T13:49:37.600668+00:00",
+        "last_acknowledged_delivery": null,
+        "sample_event_count": 1,
+        "last_event_time": "2026-10-27T13:44:36+00:00",
+        "last_ingestion_time": "2026-10-27T13:49:37.285512+00:00",
+        "queue_backlog": null,
+        "retry_count": null,
+        "dead_letter_count": null,
+        "process_counters": {
+          "inserted": 1,
+          "duplicate": 1
+        },
+        "counter_scope": "SINCE_APPLICATION_START",
+        "family": "ZEEK"
+      },
+      {
+        "source_id": "synthetic-suricata",
+        "source_type": "SURICATA_EVE",
+        "host": "SYNTHETIC-M34-SENSOR",
+        "collector_id": "synthetic-collector",
+        "source_generation": "synthetic-generation-1",
+        "configuration_authority": "EXPLICIT_DISPOSABLE_CONSTRUCTOR",
+        "configured": true,
+        "connected": "UNKNOWN",
+        "delivery_state": "OBSERVED_COMMIT",
+        "last_committed_delivery_at": "2026-10-27T13:49:37.647668+00:00",
+        "last_acknowledged_delivery": null,
+        "sample_event_count": 1,
+        "last_event_time": "2026-10-27T13:44:36+00:00",
+        "last_ingestion_time": "2026-10-27T13:49:37.614731+00:00",
+        "queue_backlog": null,
+        "retry_count": null,
+        "dead_letter_count": null,
+        "process_counters": {
+          "inserted": 1
+        },
+        "counter_scope": "SINCE_APPLICATION_START",
+        "family": "SURICATA"
+      }
+    ],
+    "families": [
+      {
+        "family": "WINDOWS_EVENTCHANNEL",
+        "parser_available": true,
+        "observed": true,
+        "sample_event_count": 4,
+        "sample_normalized_count": 4,
+        "last_event_time": "2026-10-27T13:45:06+00:00",
+        "last_ingestion_time": "2026-10-27T13:49:37.868762+00:00",
+        "latest_event_id": "EVT-5C8BC7F86FA7B535F6DF8019",
+        "freshness": "OBSERVED",
+        "search_fields_available": true,
+        "detection_eligible": "UNKNOWN",
+        "connected": "UNKNOWN",
+        "queue_backlog": null
+      },
+      {
+        "family": "SYSMON",
+        "parser_available": true,
+        "observed": false,
+        "sample_event_count": 0,
+        "sample_normalized_count": 0,
+        "last_event_time": null,
+        "last_ingestion_time": null,
+        "latest_event_id": null,
+        "freshness": "UNKNOWN",
+        "search_fields_available": true,
+        "detection_eligible": "UNKNOWN",
+        "connected": "UNKNOWN",
+        "queue_backlog": null
+      },
+      {
+        "family": "LINUX_AUTH",
+        "parser_available": true,
+        "observed": false,
+        "sample_event_count": 0,
+        "sample_normalized_count": 0,
+        "last_event_time": null,
+        "last_ingestion_time": null,
+        "latest_event_id": null,
+        "freshness": "UNKNOWN",
+        "search_fields_available": true,
+        "detection_eligible": "UNKNOWN",
+        "connected": "UNKNOWN",
+        "queue_backlog": null
+      },
+      {
+        "family": "SYSLOG",
+        "parser_available": true,
+        "observed": false,
+        "sample_event_count": 0,
+        "sample_normalized_count": 0,
+        "last_event_time": null,
+        "last_ingestion_time": null,
+        "latest_event_id": null,
+        "freshness": "UNKNOWN",
+        "search_fields_available": true,
+        "detection_eligible": "UNKNOWN",
+        "connected": "UNKNOWN",
+        "queue_backlog": null
+      },
+      {
+        "family": "JOURNALD",
+        "parser_available": true,
+        "observed": false,
+        "sample_event_count": 0,
+        "sample_normalized_count": 0,
+        "last_event_time": null,
+        "last_ingestion_time": null,
+        "latest_event_id": null,
+        "freshness": "UNKNOWN",
+        "search_fields_available": true,
+        "detection_eligible": "UNKNOWN",
+        "connected": "UNKNOWN",
+        "queue_backlog": null
+      },
+      {
+        "family": "WAZUH_GENERIC",
+        "parser_available": true,
+        "observed": false,
+        "sample_event_count": 0,
+        "sample_normalized_count": 0,
+        "last_event_time": null,
+        "last_ingestion_time": null,
+        "latest_event_id": null,
+        "freshness": "UNKNOWN",
+        "search_fields_available": true,
+        "detection_eligible": "UNKNOWN",
+        "connected": "UNKNOWN",
+        "queue_backlog": null
+      },
+      {
+        "family": "ZEEK",
+        "parser_available": true,
+        "observed": true,
+        "sample_event_count": 1,
+        "sample_normalized_count": 1,
+        "last_event_time": "2026-10-27T13:44:36+00:00",
+        "last_ingestion_time": "2026-10-27T13:49:37.285512+00:00",
+        "latest_event_id": "EVT-D95E4AE2DDC0C5F8199F3EC8",
+        "freshness": "OBSERVED",
+        "search_fields_available": true,
+        "detection_eligible": "UNKNOWN",
+        "connected": "UNKNOWN",
+        "queue_backlog": null
+      },
+      {
+        "family": "SURICATA",
+        "parser_available": true,
+        "observed": true,
+        "sample_event_count": 1,
+        "sample_normalized_count": 1,
+        "last_event_time": "2026-10-27T13:44:36+00:00",
+        "last_ingestion_time": "2026-10-27T13:49:37.614731+00:00",
+        "latest_event_id": "EVT-D55427DDE3A46081DF0A8631",
+        "freshness": "OBSERVED",
+        "search_fields_available": true,
+        "detection_eligible": "UNKNOWN",
+        "connected": "UNKNOWN",
+        "queue_backlog": null
+      }
+    ],
+    "detection_workers": [
+      {
+        "contract": "cq-continuous-shadow-v1",
+        "namespace": "cq-m34-continuous-shadow-v1",
+        "progress": {
+          "contract": "cq-shadow-progress-v1",
+          "stage": "CHECKPOINT_COMMITTED",
+          "observed_gap": "UNPROVEN",
+          "pending_run_id": null,
+          "run_status": null,
+          "snapshot_state": null,
+          "unsealed_intent_present": false,
+          "last_completed_evaluation": "RUN-acbabbd5f9274430bac65e5933d1d5a7",
+          "transition_count": 2,
+          "audit_scope": "M35_ONLY_LEGACY_NOT_BACKFILLED",
+          "transition_tail": [
+            {
+              "run_id": null,
+              "stage": "PENDING_COMMITTED",
+              "tick": 1
+            },
+            {
+              "run_id": "RUN-acbabbd5f9274430bac65e5933d1d5a7",
+              "stage": "CHECKPOINT_COMMITTED",
+              "tick": 1
+            }
+          ],
+          "window_completeness": "UNPROVEN"
+        },
+        "state": "OWNED",
+        "reason": null,
+        "rule_id": "SHADOW-WINDOWS-AUTH",
+        "rule_version": "0265a87342b65eadc0dce1575a5ca9ae4aa83b10e2ef7b2b44db846af483e5df",
+        "ticks_committed": 1,
+        "last_end": "2026-10-27T13:45:36+00:00",
+        "pending_evaluation": false,
+        "last_run_id": "RUN-acbabbd5f9274430bac65e5933d1d5a7",
+        "last_finding_ids": [
+          "DSF-edfc482079ba1a56529dfa5802a58ed8c586928d935238f4b519fb97fae2b122"
+        ],
+        "observed_records": 6,
+        "late_observed": 0,
+        "late_outside_overlap": 0,
+        "gap_status": "UNPROVEN",
+        "historical_continuity": "UNPROVEN",
+        "production_active": false,
+        "scope": "DISPOSABLE_SHADOW_ONLY",
+        "source_checkpoint_reused": false,
+        "cross_database_atomicity": false,
+        "queue_capacity": 1,
+        "queue_depth": 0,
+        "late_counter_scope": "ALL_RETAINED_SOURCE_OBSERVATIONS",
+        "source_event_capacity": 1000,
+        "tick_capacity": 2048
+      }
+    ],
+    "continuous_worker_state": "OBSERVED_ISOLATED_WORKERS"
+  },
+  "retention_gap_coverage": {
+    "contract": "cq-source-coverage-v1",
+    "observed_at": "2026-10-27T13:49:39.399072+00:00",
+    "scope": "SYNTHETIC_TEST",
+    "coverage": "RETAINED_SAMPLE",
+    "sample_limit": 1000,
+    "sample_count": 6,
+    "truncated": false,
+    "historical_continuity": "UNPROVEN",
+    "production_active": false,
+    "registered_sources": [
+      {
+        "source_id": "synthetic-zeek",
+        "source_type": "ZEEK_JSON",
+        "host": "SYNTHETIC-M34-SENSOR",
+        "collector_id": "synthetic-collector",
+        "source_generation": "synthetic-generation-1",
+        "configuration_authority": "EXPLICIT_DISPOSABLE_CONSTRUCTOR",
+        "configured": true,
+        "connected": "UNKNOWN",
+        "delivery_state": "OBSERVED_COMMIT",
+        "last_committed_delivery_at": "2026-10-27T13:49:37.600668+00:00",
+        "last_acknowledged_delivery": null,
+        "sample_event_count": 1,
+        "last_event_time": "2026-10-27T13:44:36+00:00",
+        "last_ingestion_time": "2026-10-27T13:49:37.285512+00:00",
+        "queue_backlog": null,
+        "retry_count": null,
+        "dead_letter_count": null,
+        "process_counters": {
+          "inserted": 1,
+          "duplicate": 1
+        },
+        "counter_scope": "SINCE_APPLICATION_START",
+        "family": "ZEEK"
+      },
+      {
+        "source_id": "synthetic-suricata",
+        "source_type": "SURICATA_EVE",
+        "host": "SYNTHETIC-M34-SENSOR",
+        "collector_id": "synthetic-collector",
+        "source_generation": "synthetic-generation-1",
+        "configuration_authority": "EXPLICIT_DISPOSABLE_CONSTRUCTOR",
+        "configured": true,
+        "connected": "UNKNOWN",
+        "delivery_state": "OBSERVED_COMMIT",
+        "last_committed_delivery_at": "2026-10-27T13:49:37.647668+00:00",
+        "last_acknowledged_delivery": null,
+        "sample_event_count": 1,
+        "last_event_time": "2026-10-27T13:44:36+00:00",
+        "last_ingestion_time": "2026-10-27T13:49:37.614731+00:00",
+        "queue_backlog": null,
+        "retry_count": null,
+        "dead_letter_count": null,
+        "process_counters": {
+          "inserted": 1
+        },
+        "counter_scope": "SINCE_APPLICATION_START",
+        "family": "SURICATA"
+      }
+    ],
+    "families": [
+      {
+        "family": "WINDOWS_EVENTCHANNEL",
+        "parser_available": true,
+        "observed": true,
+        "sample_event_count": 4,
+        "sample_normalized_count": 4,
+        "last_event_time": "2026-10-27T13:45:06+00:00",
+        "last_ingestion_time": "2026-10-27T13:49:39.039249+00:00",
+        "latest_event_id": "EVT-5C8BC7F86FA7B535F6DF8019",
+        "freshness": "OBSERVED",
+        "search_fields_available": true,
+        "detection_eligible": "UNKNOWN",
+        "connected": "UNKNOWN",
+        "queue_backlog": null
+      },
+      {
+        "family": "SYSMON",
+        "parser_available": true,
+        "observed": false,
+        "sample_event_count": 0,
+        "sample_normalized_count": 0,
+        "last_event_time": null,
+        "last_ingestion_time": null,
+        "latest_event_id": null,
+        "freshness": "UNKNOWN",
+        "search_fields_available": true,
+        "detection_eligible": "UNKNOWN",
+        "connected": "UNKNOWN",
+        "queue_backlog": null
+      },
+      {
+        "family": "LINUX_AUTH",
+        "parser_available": true,
+        "observed": false,
+        "sample_event_count": 0,
+        "sample_normalized_count": 0,
+        "last_event_time": null,
+        "last_ingestion_time": null,
+        "latest_event_id": null,
+        "freshness": "UNKNOWN",
+        "search_fields_available": true,
+        "detection_eligible": "UNKNOWN",
+        "connected": "UNKNOWN",
+        "queue_backlog": null
+      },
+      {
+        "family": "SYSLOG",
+        "parser_available": true,
+        "observed": false,
+        "sample_event_count": 0,
+        "sample_normalized_count": 0,
+        "last_event_time": null,
+        "last_ingestion_time": null,
+        "latest_event_id": null,
+        "freshness": "UNKNOWN",
+        "search_fields_available": true,
+        "detection_eligible": "UNKNOWN",
+        "connected": "UNKNOWN",
+        "queue_backlog": null
+      },
+      {
+        "family": "JOURNALD",
+        "parser_available": true,
+        "observed": false,
+        "sample_event_count": 0,
+        "sample_normalized_count": 0,
+        "last_event_time": null,
+        "last_ingestion_time": null,
+        "latest_event_id": null,
+        "freshness": "UNKNOWN",
+        "search_fields_available": true,
+        "detection_eligible": "UNKNOWN",
+        "connected": "UNKNOWN",
+        "queue_backlog": null
+      },
+      {
+        "family": "WAZUH_GENERIC",
+        "parser_available": true,
+        "observed": false,
+        "sample_event_count": 0,
+        "sample_normalized_count": 0,
+        "last_event_time": null,
+        "last_ingestion_time": null,
+        "latest_event_id": null,
+        "freshness": "UNKNOWN",
+        "search_fields_available": true,
+        "detection_eligible": "UNKNOWN",
+        "connected": "UNKNOWN",
+        "queue_backlog": null
+      },
+      {
+        "family": "ZEEK",
+        "parser_available": true,
+        "observed": true,
+        "sample_event_count": 1,
+        "sample_normalized_count": 1,
+        "last_event_time": "2026-10-27T13:44:36+00:00",
+        "last_ingestion_time": "2026-10-27T13:49:37.285512+00:00",
+        "latest_event_id": "EVT-D95E4AE2DDC0C5F8199F3EC8",
+        "freshness": "OBSERVED",
+        "search_fields_available": true,
+        "detection_eligible": "UNKNOWN",
+        "connected": "UNKNOWN",
+        "queue_backlog": null
+      },
+      {
+        "family": "SURICATA",
+        "parser_available": true,
+        "observed": true,
+        "sample_event_count": 1,
+        "sample_normalized_count": 1,
+        "last_event_time": "2026-10-27T13:44:36+00:00",
+        "last_ingestion_time": "2026-10-27T13:49:37.614731+00:00",
+        "latest_event_id": "EVT-D55427DDE3A46081DF0A8631",
+        "freshness": "OBSERVED",
+        "search_fields_available": true,
+        "detection_eligible": "UNKNOWN",
+        "connected": "UNKNOWN",
+        "queue_backlog": null
+      }
+    ],
+    "detection_workers": [
+      {
+        "contract": "cq-continuous-shadow-v1",
+        "namespace": "cq-m34-continuous-shadow-v1",
+        "progress": {
+          "contract": "cq-shadow-progress-v1",
+          "stage": "BLOCKED",
+          "observed_gap": "RETENTION_GAP",
+          "pending_run_id": null,
+          "run_status": null,
+          "snapshot_state": null,
+          "unsealed_intent_present": false,
+          "last_completed_evaluation": "RUN-7c823c281c6049b38adc91a7e11dbabd",
+          "transition_count": 4,
+          "audit_scope": "M35_ONLY_LEGACY_NOT_BACKFILLED",
+          "transition_tail": [
+            {
+              "run_id": null,
+              "stage": "PENDING_COMMITTED",
+              "tick": 1
+            },
+            {
+              "run_id": "RUN-acbabbd5f9274430bac65e5933d1d5a7",
+              "stage": "CHECKPOINT_COMMITTED",
+              "tick": 1
+            },
+            {
+              "run_id": null,
+              "stage": "PENDING_COMMITTED",
+              "tick": 2
+            },
+            {
+              "run_id": "RUN-7c823c281c6049b38adc91a7e11dbabd",
+              "stage": "CHECKPOINT_COMMITTED",
+              "tick": 2
+            }
+          ],
+          "window_completeness": "UNPROVEN"
+        },
+        "state": "DEGRADED",
+        "reason": "SOURCE_RETENTION_GAP",
+        "rule_id": "SHADOW-WINDOWS-AUTH",
+        "rule_version": "0265a87342b65eadc0dce1575a5ca9ae4aa83b10e2ef7b2b44db846af483e5df",
+        "ticks_committed": 2,
+        "last_end": "2026-10-27T13:46:06+00:00",
+        "pending_evaluation": false,
+        "last_run_id": "RUN-7c823c281c6049b38adc91a7e11dbabd",
+        "last_finding_ids": [
+          "DSF-edfc482079ba1a56529dfa5802a58ed8c586928d935238f4b519fb97fae2b122"
+        ],
+        "observed_records": 7,
+        "late_observed": 1,
+        "late_outside_overlap": 1,
+        "gap_status": "UNPROVEN",
+        "historical_continuity": "UNPROVEN",
+        "production_active": false,
+        "scope": "DISPOSABLE_SHADOW_ONLY",
+        "source_checkpoint_reused": false,
+        "cross_database_atomicity": false,
+        "queue_capacity": 1,
+        "queue_depth": 0,
+        "late_counter_scope": "ALL_RETAINED_SOURCE_OBSERVATIONS",
+        "source_event_capacity": 1000,
+        "tick_capacity": 2048
+      }
+    ],
+    "continuous_worker_state": "OBSERVED_ISOLATED_WORKERS"
+  },
+  "finding_detail": {
+    "finding_id": "DSF-edfc482079ba1a56529dfa5802a58ed8c586928d935238f4b519fb97fae2b122",
+    "matching_id": "SF-8a1b5a48548a7c4889572c85e37fc39683999bb2b5e9c87dc9c7b664e34dbddd",
+    "rule_version": "0265a87342b65eadc0dce1575a5ca9ae4aa83b10e2ef7b2b44db846af483e5df",
+    "policy_sha": "b2ae98dca860525f1e4d08bbf2006038070b9a969c290e6a3ec69af4907ea88f",
+    "current_revision": 1,
+    "state": "SHADOW_CANDIDATE",
+    "created_at": "2026-10-27T13:49:38.385340Z",
+    "last_observed_at": "2026-10-27T13:49:38.385340Z",
+    "revision": 1,
+    "matching_evidence": {
+      "finding_id": "SF-8a1b5a48548a7c4889572c85e37fc39683999bb2b5e9c87dc9c7b664e34dbddd",
+      "rule_id": "SHADOW-WINDOWS-AUTH",
+      "rule_version": "0265a87342b65eadc0dce1575a5ca9ae4aa83b10e2ef7b2b44db846af483e5df",
+      "evidence_manifest_sha256": "d7882729914dac4c53bfe15c0e566850a25f1e0ceea8a5e5b86873052634e815",
+      "rule_snapshot": {
+        "contract": "cdrc-v2",
+        "rule_id": "SHADOW-WINDOWS-AUTH",
+        "title": "Potential suspicious Windows authentication sequence",
+        "description": "Three failures followed by a success in the same claimed endpoint/account/source scope; requires analyst validation.",
+        "author": "CyberQalqon M30",
+        "status": "SHADOW_ONLY",
+        "severity": 8,
+        "confidence": 40,
+        "minimum_confidence": 0,
+        "source_families": [
+          "WINDOWS_EVENTCHANNEL"
+        ],
+        "required_fields": [
+          "host.name",
+          "user.name",
+          "source.ip"
+        ],
+        "steps": [
+          {
+            "query": "event.code = \"4625\" AND event.outcome = \"failure\"",
+            "threshold": 3,
+            "process_basename_equals": null,
+            "parent_basename_equals": null
+          },
+          {
+            "query": "event.code = \"4624\" AND event.outcome = \"success\"",
+            "threshold": 1,
+            "process_basename_equals": null,
+            "parent_basename_equals": null
+          }
+        ],
+        "group_by": [
+          "user.name",
+          "source.ip"
+        ],
+        "window_seconds": 600,
+        "allowed_lateness": 60,
+        "suppression_policy": "EVIDENCE_IDENTITY_ONLY",
+        "account_identity_policy": "SID_WHEN_PRESENT_NO_DOWNGRADE",
+        "source_duplicate_policy": "SOURCE_RECORD_WHEN_AVAILABLE_ELSE_DELIVERY",
+        "mitre_ids": [
+          "T1110.001",
+          "T1078"
+        ],
+        "tags": [
+          "related:DET-002"
+        ],
+        "references": [],
+        "created_at": "2026-10-24T00:00:00Z",
+        "updated_at": "2026-10-24T00:00:00Z"
+      },
+      "evaluation_version": "m30-shadow-v1",
+      "status": "SHADOW_ONLY",
+      "severity": 8,
+      "confidence": 40,
+      "identity_confidence": "CLAIMED_ENDPOINT_SCOPED",
+      "window_start": "2026-10-27T13:44:36Z",
+      "window_end": "2026-10-27T13:45:06Z",
+      "completeness": "UNPROVEN",
+      "group": {
+        "account_identity_basis": "SCOPED_NAME_ONLY_OR_NOT_USED",
+        "source.ip": "192.0.2.30",
+        "user.name": "SYNTHETIC\\analyst"
+      },
+      "explanation": "Observed ordered rule predicates in one claimed endpoint scope. Potential suspicious activity; requires analyst validation.",
+      "uncertainty": [
+        "Endpoint/account ownership is not independently verified.",
+        "No global source watermark; window/historical continuity UNPROVEN.",
+        "Benign retries or approved administration may explain this activity.",
+        "Evidence is not pinned; recheck availability on drill-down."
+      ],
+      "evidence": [
+        {
+          "event_id": "EVT-9E1C2884B856DDD57AF404A8",
+          "event_time": "2026-10-27T13:44:36Z",
+          "ingestion_time": "2026-10-27T13:49:37.720773Z",
+          "source_family": "WINDOWS_EVENTCHANNEL",
+          "host": "SYNTH-M30-WINDOWS",
+          "user": "SYNTHETIC\\analyst",
+          "user_sid": null,
+          "process": "C:\\Synthetic\\example.exe",
+          "event_code": "4625",
+          "process_guid": null,
+          "stored_envelope_sha256": "9e1c2884b856ddd57af404a8fb509eb38ce07474559e5e51b2c7dc6e0b5f62ac",
+          "source_identity_sha256": "9b8aa1acefc61e70d7b11cde984003a778fe8e6c1ab2969e9b8dc8de00adc5c7",
+          "source_record_key_sha256": "77b229109244963319dd2bea3fc8942316d9ded91b4d9bf2d3e637404dfc8ba4",
+          "provenance": "PARTIAL"
+        },
+        {
+          "event_id": "EVT-DCB746A703B5D092124BB8E8",
+          "event_time": "2026-10-27T13:44:46Z",
+          "ingestion_time": "2026-10-27T13:49:37.750767Z",
+          "source_family": "WINDOWS_EVENTCHANNEL",
+          "host": "SYNTH-M30-WINDOWS",
+          "user": "SYNTHETIC\\analyst",
+          "user_sid": null,
+          "process": "C:\\Synthetic\\example.exe",
+          "event_code": "4625",
+          "process_guid": null,
+          "stored_envelope_sha256": "dcb746a703b5d092124bb8e83bea5ee2ee1aeffa044e9ae7d4ce5e630858eadf",
+          "source_identity_sha256": "9b8aa1acefc61e70d7b11cde984003a778fe8e6c1ab2969e9b8dc8de00adc5c7",
+          "source_record_key_sha256": "28a338158a0bfd1eb10c4c395f042fb54148a57004300edd621e8f5cd46d0893",
+          "provenance": "PARTIAL"
+        },
+        {
+          "event_id": "EVT-9A3C03980E8E0C1742A01895",
+          "event_time": "2026-10-27T13:44:56Z",
+          "ingestion_time": "2026-10-27T13:49:37.827674Z",
+          "source_family": "WINDOWS_EVENTCHANNEL",
+          "host": "SYNTH-M30-WINDOWS",
+          "user": "SYNTHETIC\\analyst",
+          "user_sid": null,
+          "process": "C:\\Synthetic\\example.exe",
+          "event_code": "4625",
+          "process_guid": null,
+          "stored_envelope_sha256": "9a3c03980e8e0c1742a018955faec6e8cbf9c03e6e06a52b9f170af99ee79c07",
+          "source_identity_sha256": "9b8aa1acefc61e70d7b11cde984003a778fe8e6c1ab2969e9b8dc8de00adc5c7",
+          "source_record_key_sha256": "7a7b7061c39506d62aba5eb5cfde78c482ded80633903e1bd4b078e686e5c43c",
+          "provenance": "PARTIAL"
+        },
+        {
+          "event_id": "EVT-5C8BC7F86FA7B535F6DF8019",
+          "event_time": "2026-10-27T13:45:06Z",
+          "ingestion_time": "2026-10-27T13:49:37.868762Z",
+          "source_family": "WINDOWS_EVENTCHANNEL",
+          "host": "SYNTH-M30-WINDOWS",
+          "user": "SYNTHETIC\\analyst",
+          "user_sid": null,
+          "process": "C:\\Synthetic\\example.exe",
+          "event_code": "4624",
+          "process_guid": null,
+          "stored_envelope_sha256": "5c8bc7f86fa7b535f6df8019d313707dddd07f245204f0dab45192fedfe6abc4",
+          "source_identity_sha256": "9b8aa1acefc61e70d7b11cde984003a778fe8e6c1ab2969e9b8dc8de00adc5c7",
+          "source_record_key_sha256": "231b8b3995c01804b71737d9c9f1f30e8cd1b262c78d165c7114babad637ebc8",
+          "provenance": "PARTIAL"
+        }
+      ],
+      "mitre": [
+        {
+          "technique_id": "T1110.001",
+          "name": "Password Guessing",
+          "tactic": "Credential Access",
+          "evidence_strength": "RULE_TAGGED_TECHNIQUE"
+        },
+        {
+          "technique_id": "T1078",
+          "name": "Valid Accounts",
+          "tactic": "Defense Evasion / Persistence / Privilege Escalation / Initial Access",
+          "evidence_strength": "RULE_TAGGED_TECHNIQUE"
+        }
+      ]
+    },
+    "identity": {
+      "version": "m31-identity-v1",
+      "policy": {
+        "version": "identity-policy-v1",
+        "minimum": "PARTIAL"
+      },
+      "satisfied": true,
+      "entities": [
+        {
+          "kind": "HOST",
+          "status": "PARTIAL",
+          "entity_id": "ENTITY-f1900bb3693f31b7ab189979a909da964a4124cac87e26aa47c04174f0157121",
+          "scope_sha256": "4073cdbb9ff9588f578179e52a890b3a6e8addeeeac30c1a9b8e1d7b32113723",
+          "reason": "CLAIMED_SOURCE_SCOPE_ONLY",
+          "evidence_ids": [
+            "EVT-9E1C2884B856DDD57AF404A8",
+            "EVT-DCB746A703B5D092124BB8E8",
+            "EVT-9A3C03980E8E0C1742A01895",
+            "EVT-5C8BC7F86FA7B535F6DF8019"
+          ],
+          "authority_sha256": null
+        },
+        {
+          "kind": "ACCOUNT",
+          "status": "PARTIAL",
+          "entity_id": "ENTITY-5401337de14f2e26d196dde82991249b25fd81548c192a3e68e12c2b0640b73e",
+          "scope_sha256": "4073cdbb9ff9588f578179e52a890b3a6e8addeeeac30c1a9b8e1d7b32113723",
+          "reason": "CLAIMED_SOURCE_SCOPE_ONLY",
+          "evidence_ids": [
+            "EVT-9E1C2884B856DDD57AF404A8",
+            "EVT-DCB746A703B5D092124BB8E8",
+            "EVT-9A3C03980E8E0C1742A01895",
+            "EVT-5C8BC7F86FA7B535F6DF8019"
+          ],
+          "authority_sha256": null
+        },
+        {
+          "kind": "PROCESS",
+          "status": "UNVERIFIED",
+          "entity_id": null,
+          "scope_sha256": "4073cdbb9ff9588f578179e52a890b3a6e8addeeeac30c1a9b8e1d7b32113723",
+          "reason": "MISSING_IDENTITY",
+          "evidence_ids": [
+            "EVT-9E1C2884B856DDD57AF404A8",
+            "EVT-DCB746A703B5D092124BB8E8",
+            "EVT-9A3C03980E8E0C1742A01895",
+            "EVT-5C8BC7F86FA7B535F6DF8019"
+          ],
+          "authority_sha256": null
+        },
+        {
+          "kind": "NETWORK_ENDPOINT",
+          "status": "UNVERIFIED",
+          "entity_id": null,
+          "scope_sha256": "4073cdbb9ff9588f578179e52a890b3a6e8addeeeac30c1a9b8e1d7b32113723",
+          "reason": "MISSING_IDENTITY",
+          "evidence_ids": [
+            "EVT-9E1C2884B856DDD57AF404A8",
+            "EVT-DCB746A703B5D092124BB8E8",
+            "EVT-9A3C03980E8E0C1742A01895",
+            "EVT-5C8BC7F86FA7B535F6DF8019"
+          ],
+          "authority_sha256": null
+        },
+        {
+          "kind": "SESSION",
+          "status": "UNVERIFIED",
+          "entity_id": null,
+          "scope_sha256": "4073cdbb9ff9588f578179e52a890b3a6e8addeeeac30c1a9b8e1d7b32113723",
+          "reason": "MISSING_IDENTITY",
+          "evidence_ids": [
+            "EVT-9E1C2884B856DDD57AF404A8",
+            "EVT-DCB746A703B5D092124BB8E8",
+            "EVT-9A3C03980E8E0C1742A01895",
+            "EVT-5C8BC7F86FA7B535F6DF8019"
+          ],
+          "authority_sha256": null
+        },
+        {
+          "kind": "AGENT",
+          "status": "PARTIAL",
+          "entity_id": "ENTITY-cf9de1588aff6aa276d98f1e88fe5eb6a2e6d8ece20247238c143dbaca178554",
+          "scope_sha256": "4073cdbb9ff9588f578179e52a890b3a6e8addeeeac30c1a9b8e1d7b32113723",
+          "reason": "CLAIMED_SOURCE_SCOPE_ONLY",
+          "evidence_ids": [
+            "EVT-9E1C2884B856DDD57AF404A8",
+            "EVT-DCB746A703B5D092124BB8E8",
+            "EVT-9A3C03980E8E0C1742A01895",
+            "EVT-5C8BC7F86FA7B535F6DF8019"
+          ],
+          "authority_sha256": null
+        },
+        {
+          "kind": "COLLECTOR",
+          "status": "PARTIAL",
+          "entity_id": "ENTITY-ed9cf83979c0c2f1ef425b8b8d15a5adaf7f3a74071777090f58bd90f514f152",
+          "scope_sha256": "4073cdbb9ff9588f578179e52a890b3a6e8addeeeac30c1a9b8e1d7b32113723",
+          "reason": "CLAIMED_SOURCE_SCOPE_ONLY",
+          "evidence_ids": [
+            "EVT-9E1C2884B856DDD57AF404A8",
+            "EVT-DCB746A703B5D092124BB8E8",
+            "EVT-9A3C03980E8E0C1742A01895",
+            "EVT-5C8BC7F86FA7B535F6DF8019"
+          ],
+          "authority_sha256": null
+        }
+      ],
+      "required_kinds": [
+        "HOST",
+        "ACCOUNT"
+      ],
+      "historical_continuity": "UNPROVEN",
+      "causal_claim": false
+    },
+    "authority_documents": [],
+    "first_observed_at": "2026-10-27T13:49:38.385340Z",
+    "evidence_references": [
+      {
+        "event_id": "EVT-5C8BC7F86FA7B535F6DF8019",
+        "envelope_sha": "5c8bc7f86fa7b535f6df8019d313707dddd07f245204f0dab45192fedfe6abc4",
+        "row_sha": "13d7fec5218459e75edc78045d8de0e70cf7cbb87a04038e6d2210ac8db8627e"
+      },
+      {
+        "event_id": "EVT-9A3C03980E8E0C1742A01895",
+        "envelope_sha": "9a3c03980e8e0c1742a018955faec6e8cbf9c03e6e06a52b9f170af99ee79c07",
+        "row_sha": "25d18d06583632b5b60c09ab1d3aeb5eb528df0836a595d4e5645a64851f00d7"
+      },
+      {
+        "event_id": "EVT-9E1C2884B856DDD57AF404A8",
+        "envelope_sha": "9e1c2884b856ddd57af404a8fb509eb38ce07474559e5e51b2c7dc6e0b5f62ac",
+        "row_sha": "7ebacf66db15e8f24efff21ba3a828f732752fd11ab562c3583858647c42310a"
+      },
+      {
+        "event_id": "EVT-DCB746A703B5D092124BB8E8",
+        "envelope_sha": "dcb746a703b5d092124bb8e83bea5ee2ee1aeffa044e9ae7d4ce5e630858eadf",
+        "row_sha": "b7e6457a7e03203530f5c321702de2b8a75ff7c5bc8f4428af487a0a2e81f122"
+      }
+    ],
+    "history": [
+      {
+        "sequence": 1,
+        "finding_id": "DSF-edfc482079ba1a56529dfa5802a58ed8c586928d935238f4b519fb97fae2b122",
+        "revision": 1,
+        "previous_state": null,
+        "target_state": "SHADOW_CANDIDATE",
+        "reason": "INITIAL_MATCH",
+        "actor": "M34 isolated recovery",
+        "occurred_at": "2026-10-27T13:49:38.385340Z",
+        "superseded_by": null
+      }
+    ],
+    "history_truncated": false,
+    "historical_continuity": "UNPROVEN",
+    "production_active": false,
+    "scope": "DISPOSABLE_DURABLE_SHADOW",
+    "evidence_retention": "REFERENCES_NOT_AUTOMATIC_PINS",
+    "current_evidence_availability": {
+      "EVT-5C8BC7F86FA7B535F6DF8019": "AVAILABLE",
+      "EVT-9A3C03980E8E0C1742A01895": "AVAILABLE",
+      "EVT-9E1C2884B856DDD57AF404A8": "AVAILABLE",
+      "EVT-DCB746A703B5D092124BB8E8": "AVAILABLE"
+    },
+    "identity_context": "AT_ORIGINAL_EVALUATION_NOT_CURRENT_SOURCE_ATTESTATION"
+  }
+}

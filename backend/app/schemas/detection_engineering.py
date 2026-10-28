@@ -11,6 +11,7 @@ from typing import Literal
 from pydantic import Field, field_validator, model_validator
 
 from app.schemas.alerts import StrictModel
+from app.services.cqql import CQQLQueryError, compile_cqql
 
 
 MITRE_PATTERN = re.compile(r"^T\d{4}(?:\.\d{3})?$")
@@ -200,7 +201,8 @@ class BoundedTimeWindow(StrictModel):
         reference = now or datetime.now(timezone.utc)
         if self.relative_minutes is not None:
             return reference - timedelta(minutes=self.relative_minutes), reference
-        assert self.start_time is not None and self.end_time is not None
+        if not (self.start_time is not None and self.end_time is not None):
+            raise RuntimeError("Internal detection_engineering invariant failed")
         return self.start_time.astimezone(timezone.utc), self.end_time.astimezone(timezone.utc)
 
 
@@ -436,6 +438,7 @@ class ThreatHuntQuery(BoundedTimeWindow):
     rule_id: str | None = Field(default=None, max_length=128)
     mitre_id: str | None = Field(default=None, max_length=16)
     search: str | None = Field(default=None, max_length=200)
+    cqql: str | None = Field(default=None, max_length=2_000)
     sort: Literal["newest", "oldest"] = "newest"
 
     @field_validator("hostname", "username", "event_category", "rule_id", "search")
@@ -466,6 +469,20 @@ class ThreatHuntQuery(BoundedTimeWindow):
         normalized = value.strip().upper()
         if not MITRE_PATTERN.fullmatch(normalized):
             raise ValueError("MITRE ID must use T#### or T####.###")
+        return normalized
+
+    @field_validator("cqql")
+    @classmethod
+    def valid_cqql(cls, value: str | None) -> str | None:
+        if value is None:
+            return None
+        normalized = value.strip()
+        if not normalized:
+            raise ValueError("CQQL hunt filter must not be blank")
+        try:
+            compile_cqql(normalized)
+        except CQQLQueryError as exc:
+            raise ValueError(f"{exc.message} at position {exc.position}") from exc
         return normalized
 
 

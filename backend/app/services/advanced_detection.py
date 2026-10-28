@@ -13,12 +13,17 @@ import json
 import re
 import sqlite3
 import time
+import threading
 from collections import defaultdict, deque
 from contextlib import closing
 from dataclasses import dataclass, replace
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
-from typing import Any, Callable, Iterable, Mapping, Sequence
+from typing import TYPE_CHECKING, Any, Callable, Iterable, Mapping, Sequence
+
+if TYPE_CHECKING:
+    from app.db.cqql import CQQLSearchRepository
+    from app.schemas.shadow_detection import ShadowSimulationRequest, ShadowSimulationResult
 
 from app.schemas.detection_engineering import (
     AdvancedDetectionAvailability,
@@ -903,6 +908,13 @@ class AdvancedDetectionEngine:
 
     def __init__(self, database_path: Path) -> None:
         self.path = database_path
+        self._shadow_v2_slots = threading.BoundedSemaphore(2)
+
+    def simulate_contract(self, payload: ShadowSimulationRequest, query_repository: CQQLSearchRepository,
+                          *, cancel_event: threading.Event | None = None) -> ShadowSimulationResult:
+        """Explicit disposable CDRC extension; never called by ingestion."""
+        from app.services.shadow_detection import simulate
+        return simulate(payload,query_repository,self._shadow_v2_slots,cancel_event=cancel_event)
 
     def _connect(self) -> sqlite3.Connection:
         connection = sqlite3.connect(self.path, timeout=5)

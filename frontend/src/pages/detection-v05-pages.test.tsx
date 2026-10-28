@@ -39,6 +39,9 @@ describe("CyberQalqon v0.5 analyst pages", () => {
         fireEvent.change(screen.getByLabelText("Rule ID"), {
             target: { value: "100111" },
         });
+        fireEvent.change(screen.getByLabelText("CQQL refinement"), {
+            target: { value: 'event.severity >= 8 AND mitre.id = "T1046"' },
+        });
         fireEvent.click(screen.getByRole("button", { name: "Run hunt" }));
 
         await waitFor(() =>
@@ -46,6 +49,7 @@ describe("CyberQalqon v0.5 analyst pages", () => {
                 expect.objectContaining({
                     ip: "127.0.0.1",
                     ruleId: "100111",
+                    cqql: 'event.severity >= 8 AND mitre.id = "T1046"',
                     limit: 50,
                 }),
                 expect.any(AbortSignal),
@@ -53,6 +57,7 @@ describe("CyberQalqon v0.5 analyst pages", () => {
         );
         expect(window.location.search).toContain("rule_id=100111");
         expect(window.location.search).not.toContain("127.0.0.1");
+        expect(window.location.search).not.toContain("event.severity");
 
         fireEvent.click(
             screen.getByRole("button", { name: /09 Oct 2026|08 Oct 2026/ }),

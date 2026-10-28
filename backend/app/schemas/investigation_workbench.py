@@ -3,9 +3,10 @@
 from __future__ import annotations
 
 from datetime import datetime, timedelta
+import re
 from typing import Any, Literal
 
-from pydantic import Field, field_validator, model_validator
+from pydantic import Field, field_serializer, field_validator, model_validator
 
 from app.schemas.alerts import StrictModel
 from app.schemas.detection_engineering import (
@@ -13,11 +14,12 @@ from app.schemas.detection_engineering import (
     AdvancedDetectionRule,
 )
 from app.schemas.events import SecurityEventDetail, SecurityEventSummary
+from app.schemas.shadow_history import FindingDetail
 
 
 WorkbenchTargetType = Literal[
     "EVENT", "ALERT", "INCIDENT", "CASE", "CORRELATION_GROUP", "M11_FINDING",
-    "SHADOW_FINDING", "ENTITY"
+    "SHADOW_FINDING", "DURABLE_SHADOW_FINDING", "ENTITY"
 ]
 InvestigationEntityType = Literal[
     "IPV4", "IPV6", "HOSTNAME", "USERNAME", "AGENT_ID", "RULE_ID",
@@ -32,6 +34,7 @@ class WorkbenchRequest(StrictModel):
     entity_value: str | None = Field(default=None, min_length=1, max_length=2048)
     rule_id: str | None = Field(default=None, pattern=r"^DET-00[1-9]$")
     finding_key: str | None = Field(default=None, pattern=r"^[0-9A-Fa-f]{64}$")
+    shadow_revision: int | None = Field(default=None, ge=1, le=8192)
     start_time: datetime | None = None
     end_time: datetime | None = None
     relative_minutes: int | None = Field(default=1440, ge=15, le=44_640)
@@ -53,6 +56,12 @@ class WorkbenchRequest(StrictModel):
 
     @model_validator(mode="after")
     def validate_target(self) -> "WorkbenchRequest":
+        if self.shadow_revision is not None and self.target_type != "DURABLE_SHADOW_FINDING":
+            raise ValueError("shadow_revision requires a durable finding target")
+        if self.target_type == "DURABLE_SHADOW_FINDING" and (
+            self.target_id is None or not re.fullmatch(r'DSF-[a-f0-9]{64}', self.target_id)
+        ):
+            raise ValueError("invalid durable finding identity")
         if self.target_type == "ENTITY":
             if self.entity_type is None or self.entity_value is None:
                 raise ValueError("entity_type and entity_value are required for ENTITY targets")
@@ -186,4 +195,11 @@ class InvestigationWorkbench(StrictModel):
     ioc_matches: list[InvestigationIOCMatch]
     correlation_groups: list[InvestigationCorrelationGroup]
     detection_context: InvestigationDetectionContext | None = None
+    durable_shadow_context: FindingDetail | None = None
     query: InvestigationQueryMetadata
+
+    @field_serializer('durable_shadow_context', when_used='json')
+    def preserve_durable_snapshot(self, value):
+        # The workbench omits unrelated nullable fields. Immutable CDRC snapshots
+        # must retain their full canonical definition, including explicit nulls.
+        return value.model_dump(mode='json') if value is not None else None

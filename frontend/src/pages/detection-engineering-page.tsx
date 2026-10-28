@@ -7,6 +7,10 @@ import {
 } from "react";
 
 import { CopyButton } from "../components/copy-button";
+import { ShadowWorkbench } from "../components/shadow-workbench";
+import {ShadowHistory} from '../components/shadow-history';
+import {SigmaImport} from '../components/sigma-import';
+import type {SigmaPreview} from '../api/sigma-contract';
 import { SeverityBadge } from "../components/severity-badge";
 import { StatePanel } from "../components/state-panel";
 import { TimeValue } from "../components/time-value";
@@ -37,7 +41,7 @@ import type {
 } from "../types/detection-readiness";
 import { humanize } from "../utils/format";
 
-type Tab = "inventory" | "advanced" | "coverage" | "analytics" | "drafts";
+type Tab = "inventory" | "advanced" | "coverage" | "analytics" | "drafts" | "shadow-v2" | "shadow-history" | "sigma";
 type AdvancedView =
     | "overview"
     | "configuration"
@@ -72,6 +76,7 @@ export function DetectionEngineeringPage({
     onOpenAlerts,
     onOpenEvent,
     onInvestigateFinding = () => undefined,
+    onInvestigateDurable,
     initialRuleId,
 }: {
     api: BackendApi;
@@ -79,9 +84,11 @@ export function DetectionEngineeringPage({
     onOpenAlerts(ruleId: string): void;
     onOpenEvent(eventId: string): void;
     onInvestigateFinding?(ruleId: string, findingKey: string, startTime: string, endTime: string): void;
+    onInvestigateDurable?(target: import('../types/investigation-workbench').WorkbenchTarget): void;
     initialRuleId?: string | null;
 }) {
     const [tab, setTab] = useState<Tab>("inventory");
+    const [importedRules,setImportedRules]=useState<SigmaPreview['rules']>([]);
     const [rules, setRules] = useState<DetectionRuleSummary[] | null>(null);
     const [advancedRules, setAdvancedRules] = useState<AdvancedDetectionRule[]>([]);
     const [coverage, setCoverage] = useState<DetectionCoverage | null>(null);
@@ -516,6 +523,9 @@ export function DetectionEngineeringPage({
                             "coverage",
                             "analytics",
                             "drafts",
+                            "shadow-v2",
+                            "shadow-history",
+                            "sigma",
                         ] as Tab[]
                     ).map((item) => (
                         <button
@@ -562,6 +572,12 @@ export function DetectionEngineeringPage({
                     />
                 )}
 
+                {!loading && tab === "shadow-v2" && <ShadowWorkbench api={api} canMutate={canMutate} onOpenEvent={onOpenEvent}/>}
+                {!loading && tab === 'sigma' && <SigmaImport api={api} canMutate={canMutate} onUseRule={row=>{
+                    setImportedRules(current=>[...current.filter(value=>value.rule_version!==row.rule_version),row].slice(-8));
+                    setTab('shadow-history');
+                }}/>}
+                {!loading && tab === 'shadow-history' && <ShadowHistory api={api} canMutate={canMutate} onOpenEvent={onOpenEvent} onInvestigate={onInvestigateDurable} importedRules={importedRules}/>}
                 {!loading && tab === "inventory" && (
                     <>
                         <section className="panel">

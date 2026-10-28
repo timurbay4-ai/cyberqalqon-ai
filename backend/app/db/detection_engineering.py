@@ -5,6 +5,7 @@ from __future__ import annotations
 import base64
 import json
 import sqlite3
+import threading
 import time
 from contextlib import closing
 from datetime import datetime, timedelta, timezone
@@ -46,6 +47,7 @@ from app.schemas.detection_engineering import (
     TechniqueCoverage,
     normalize_indicator,
 )
+from app.services.cqql import compile_cqql
 from app.schemas.siem import DetectionRuleSummary
 from app.services.wazuh_normalizer import canonical_json
 
@@ -67,6 +69,18 @@ class DetectionEngineeringLifecycleError(RuntimeError):
 
 
 class InvalidHuntCursorError(ValueError):
+    pass
+
+
+class ThreatHuntQueryTimeoutError(RuntimeError):
+    pass
+
+
+class ThreatHuntQueryBusyError(RuntimeError):
+    pass
+
+
+class ThreatHuntQueryExecutionError(RuntimeError):
     pass
 
 
@@ -125,6 +139,7 @@ def _like(value: str) -> str:
 class DetectionEngineeringRepository:
     def __init__(self, database_path: Path) -> None:
         self.path = database_path
+        self._hunt_slots = threading.BoundedSemaphore(4)
 
     def _connect(self) -> sqlite3.Connection:
         connection = sqlite3.connect(self.path, timeout=5)
@@ -132,6 +147,22 @@ class DetectionEngineeringRepository:
         connection.execute("PRAGMA foreign_keys = ON")
         connection.execute("PRAGMA busy_timeout = 5000")
         return connection
+
+    def _hunt_connect(self) -> sqlite3.Connection:
+        connection = sqlite3.connect(
+            f"{self.path.resolve().as_uri()}?mode=ro",
+            uri=True,
+            timeout=1,
+        )
+        connection.row_factory = sqlite3.Row
+        connection.execute("PRAGMA query_only = ON")
+        connection.execute("PRAGMA foreign_keys = ON")
+        connection.execute("PRAGMA busy_timeout = 1000")
+        return connection
+
+    @staticmethod
+    def _install_hunt_deadline(connection: sqlite3.Connection, deadline: float) -> None:
+        connection.set_progress_handler(lambda: 1 if time.perf_counter() >= deadline else 0, 1_000)
 
     @staticmethod
     def _audit(
@@ -256,7 +287,8 @@ class DetectionEngineeringRepository:
             row = connection.execute(
                 "SELECT * FROM detection_rule_drafts WHERE draft_id = ?", (draft_id,)
             ).fetchone()
-            assert row is not None
+            if not (row is not None):
+                raise RuntimeError("Internal detection_engineering invariant failed")
             draft = self._draft(row)
             self._version(connection, draft, payload.change_summary, actor, now)
             self._audit(
@@ -301,7 +333,8 @@ class DetectionEngineeringRepository:
             updated = connection.execute(
                 "SELECT * FROM detection_rule_drafts WHERE draft_id = ?", (draft_id,)
             ).fetchone()
-            assert updated is not None
+            if not (updated is not None):
+                raise RuntimeError("Internal detection_engineering invariant failed")
             draft = self._draft(updated)
             self._version(connection, draft, payload.change_summary, actor, now)
             self._audit(
@@ -350,7 +383,8 @@ class DetectionEngineeringRepository:
             updated = connection.execute(
                 "SELECT * FROM detection_rule_drafts WHERE draft_id = ?", (draft_id,)
             ).fetchone()
-            assert updated is not None
+            if not (updated is not None):
+                raise RuntimeError("Internal detection_engineering invariant failed")
             draft = self._draft(updated)
             self._version(connection, draft, "Validated declarative rule schema", actor, now)
             self._audit(
@@ -436,7 +470,8 @@ class DetectionEngineeringRepository:
             row = connection.execute(
                 "SELECT * FROM detection_rule_drafts WHERE draft_id = ?", (draft_id,)
             ).fetchone()
-            assert row is not None
+            if not (row is not None):
+                raise RuntimeError("Internal detection_engineering invariant failed")
             updated = self._draft(row)
             self._version(connection, updated, "Bounded historical dry-run", actor, now)
             self._audit(
@@ -483,7 +518,8 @@ class DetectionEngineeringRepository:
             updated_row = connection.execute(
                 "SELECT * FROM detection_rule_drafts WHERE draft_id = ?", (draft_id,)
             ).fetchone()
-            assert updated_row is not None
+            if not (updated_row is not None):
+                raise RuntimeError("Internal detection_engineering invariant failed")
             updated = self._draft(updated_row)
             self._version(connection, updated, "Manual deployment review confirmed", actor, now)
             self._audit(
@@ -558,7 +594,8 @@ class DetectionEngineeringRepository:
             updated_row = connection.execute(
                 "SELECT * FROM detection_rule_drafts WHERE draft_id = ?", (draft_id,)
             ).fetchone()
-            assert updated_row is not None
+            if not (updated_row is not None):
+                raise RuntimeError("Internal detection_engineering invariant failed")
             updated = self._draft(updated_row)
             self._version(connection, updated, payload.change_summary, actor, now)
             self._audit(
@@ -597,6 +634,10 @@ class DetectionEngineeringRepository:
         if query.search:
             conditions.append("e.search_text LIKE ? ESCAPE '\\' COLLATE NOCASE")
             parameters.append(f"%{_like(query.search)}%")
+        if query.cqql:
+            compiled = compile_cqql(query.cqql)
+            conditions.append(compiled.sql)
+            parameters.extend(compiled.parameters)
         return " AND ".join(conditions), parameters
 
     def hunt(
@@ -608,7 +649,13 @@ class DetectionEngineeringRepository:
         where, parameters = self._hunt_where(query, start, end)
         offset = _offset(cursor)
         direction = "DESC" if query.sort == "newest" else "ASC"
-        with self._connect() as connection:
+        if not self._hunt_slots.acquire(timeout=0.05):
+            raise ThreatHuntQueryBusyError("Threat-hunt concurrent query limit reached")
+        connection: sqlite3.Connection | None = None
+        try:
+            connection = self._hunt_connect()
+            deadline = time.perf_counter() + 1.5
+            self._install_hunt_deadline(connection, deadline)
             total = int(connection.execute(
                 f"SELECT COUNT(*) FROM security_events e WHERE {where}", parameters
             ).fetchone()[0])
@@ -626,6 +673,20 @@ class DetectionEngineeringRepository:
                 """,
                 [*parameters, limit + 1, offset],
             ).fetchall()
+        except sqlite3.OperationalError as exc:
+            message = str(exc).casefold()
+            if "interrupted" in message:
+                raise ThreatHuntQueryTimeoutError(
+                    "Threat-hunt query exceeded its execution deadline"
+                ) from exc
+            if "locked" in message or "busy" in message:
+                raise ThreatHuntQueryBusyError("Threat-hunt storage is temporarily busy") from exc
+            raise ThreatHuntQueryExecutionError("Threat-hunt query could not be executed") from exc
+        finally:
+            if connection is not None:
+                connection.set_progress_handler(None, 0)
+                connection.close()
+            self._hunt_slots.release()
         has_more = len(rows) > limit
         rows = rows[:limit]
         return ThreatHuntPage(
@@ -693,7 +754,8 @@ class DetectionEngineeringRepository:
             row = connection.execute(
                 "SELECT * FROM saved_hunts WHERE saved_hunt_id = ?", (saved_id,)
             ).fetchone()
-            assert row is not None
+            if not (row is not None):
+                raise RuntimeError("Internal detection_engineering invariant failed")
             saved = self._saved_hunt(row)
             self._audit(
                 connection, action="THREAT_HUNT_SAVED", actor=actor,
@@ -803,7 +865,8 @@ class DetectionEngineeringRepository:
         row = connection.execute(
             "SELECT * FROM ioc_indicators WHERE indicator_id = ?", (indicator_id,)
         ).fetchone()
-        assert row is not None
+        if not (row is not None):
+            raise RuntimeError("Internal detection_engineering invariant failed")
         return self._indicator(row)
 
     def create_ioc(self, definition: IOCDefinition, actor: AnalystPrincipal) -> IOCIndicator:
@@ -895,7 +958,8 @@ class DetectionEngineeringRepository:
             updated_row = connection.execute(
                 "SELECT * FROM ioc_indicators WHERE indicator_id = ?", (indicator_id,)
             ).fetchone()
-            assert updated_row is not None
+            if not (updated_row is not None):
+                raise RuntimeError("Internal detection_engineering invariant failed")
             updated = self._indicator(updated_row)
             self._audit(
                 connection, action="IOC_UPDATED", actor=actor,
@@ -983,7 +1047,7 @@ class DetectionEngineeringRepository:
             if indicator_id:
                 matched_fields.setdefault(indicator_id, "hostname")
             for path, key, value in structured_values:
-                if any(token in key for token in ("domain", "hostname", "query_name")):
+                if key in {'dns_question_name', 'http_host', 'tls_server_name'} or any(token in key for token in ("domain", "hostname", "query_name")):
                     indicator_id = domain_indicators.get(value.rstrip(".").lower())
                     if indicator_id:
                         matched_fields.setdefault(indicator_id, f"structured_json:{path}")

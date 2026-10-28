@@ -1,6 +1,24 @@
-﻿# CyberQalqon AI
+> Publication review scope and independent gates: [candidate guide](docs/release/PUBLICATION_CANDIDATE.md).
+
+# CyberQalqon AI
 
 **Privacy-first SOC investigation platform designed around open-source security tooling.**
+
+> M36 source consolidation candidate (M1–M35 preserved). This working tree is
+> source-tested, not a production release. Evidence and independent gates:
+> M36 validation (local-only historical reference: `docs/release/M36_VALIDATION.md`).
+
+The consolidated platform includes CUSE normalization, bounded CQQL/FTS5 search,
+shadow detections and finding history, cases and Investigation Workbench, and a
+Go JSONL collector restricted to disposable synthetic Zeek/Suricata inputs.
+Python 3.11, Go 1.27.0 and Node 24 are the development toolchains. See
+source reconstruction (local-only historical reference: `docs/release/M36_BUILD_REPRODUCIBILITY.md`) for clean builds
+and [the collector guide](collector/README.md) for its safety boundaries.
+
+AI remains disabled; DET-001–DET-009 remain disabled/shadow-only. Historical
+collection continuity is UNPROVEN. Performance acceptance, strict SAST disposition,
+authenticated browser UAT, live telemetry and Git publication have separate gates.
+No live activation follows from a source build or a passing test suite.
 
 > v1.0 development line from the v0.9.1 baseline — deterministic SOC workflow; optional local
 > advisory AI remains disabled | Built in Uzbekistan
@@ -59,6 +77,7 @@ Wazuh → durable sender → authenticated ingestion → normalization → SQLit
 cyberqalqon-ai/
 ├── backend/          ← FastAPI API, migrations, and persistence
 ├── frontend/         ← React/Vite SOC application
+├── collector/        ← Go synthetic JSONL collector, spool and checkpoint tests
 ├── ai/               ← Local AI operator documentation (implementation is backend-owned)
 ├── wazuh/            ← Wazuh delivery integration and rules
 ├── shared/           ← Shared JSON schemas and example fixtures
@@ -119,14 +138,14 @@ See [`docs/GIT_WORKFLOW.md`](docs/GIT_WORKFLOW.md) for the full branching strate
 ### Current operational acceptance
 
 This repository is an engineering snapshot, not a claim of full production readiness. The
-implemented M1–M24 source and disposable-test evidence must be interpreted with these live gates:
+consolidated M1–M35 source and disposable-test evidence must be interpreted with these live gates:
 
 - Historical archive continuity remains `UNPROVEN`; the legacy inode/rotated-generation mismatch
   is unresolved. Preserved unread data requires a separately approved reconciliation procedure.
 - DET-001–DET-009 remain `DISABLED_BY_POLICY` / `SHADOW_ONLY`, `AI_ENABLED=false`, and historical
   replay is not active.
-- The live database remains schema 17. Schema 18 is implemented as an approval-gated migration but
-  has not been applied live.
+- Last reported live source schema was 17; M36 does not freshly attest the live database.
+  Application startup targets 17 unless the existing schema-18 opt-in is explicitly enabled.
 - Production batch ingestion is disabled; the approved path remains conservative single-event
   ingestion.
 - M23 Operations live cold-query acceptance did not pass. M24 performance improvements pass
@@ -135,8 +154,10 @@ implemented M1–M24 source and disposable-test evidence must be interpreted wit
   before any activation or renewal; an expired approval must never be bypassed.
 - Chrome/Edge browser UAT is `DEFERRED_BY_USER` and is not implied by component or build results.
 
-See [`docs/siem/KNOWN_LIMITATIONS.md`](docs/siem/KNOWN_LIMITATIONS.md) and
-[`docs/siem/M24_VALIDATION.md`](docs/siem/M24_VALIDATION.md) for detailed evidence and constraints.
+Current source tests and independent release gates are in
+`docs/release/M36_VALIDATION.md` (local-only historical reference: `docs/release/M36_VALIDATION.md`). Historical context is in
+[`docs/siem/KNOWN_LIMITATIONS.md`](docs/siem/KNOWN_LIMITATIONS.md) and
+`docs/siem/M24_VALIDATION.md` (local-only historical reference: `docs/siem/M24_VALIDATION.md`) for detailed evidence and constraints.
 
 ### 📋 PLANNED
 
@@ -149,7 +170,7 @@ See [`docs/siem/KNOWN_LIMITATIONS.md`](docs/siem/KNOWN_LIMITATIONS.md) and
 
 ---
 
-## Planned Components
+## Implemented Components and Deployment Boundaries
 
 ### Wazuh (Security Event Ingestion)
 - Custom rules mapped to MITRE ATT&CK techniques
@@ -199,6 +220,7 @@ See [`docs/siem/KNOWN_LIMITATIONS.md`](docs/siem/KNOWN_LIMITATIONS.md) and
 
 - Python 3.11+
 - Node.js 24+ (frontend CI/runtime baseline)
+- Go 1.27.0 (synthetic collector builds and real TCP integration tests)
 - Git 2.x
 
 ### Backend Quick Start
@@ -210,7 +232,7 @@ source .venv/bin/activate    # Linux/macOS
 .venv\Scripts\activate       # Windows
 
 pip install -r requirements-dev.txt
-uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
+uvicorn app.main:app --reload --host 127.0.0.1 --port 8000
 ```
 
 Health check:
@@ -226,7 +248,7 @@ API docs: http://localhost:8000/docs
 The M10 Windows monitoring design, supported enrollment handoff, exact EventChannel filters,
 built-in detection matrix, and safe test evidence are documented in:
 
-- [`docs/M10_WINDOWS_MONITORING_VALIDATION.md`](docs/M10_WINDOWS_MONITORING_VALIDATION.md)
+- `docs/M10_WINDOWS_MONITORING_VALIDATION.md` (local-only historical reference: `docs/M10_WINDOWS_MONITORING_VALIDATION.md`)
 - [`docs/windows/WINDOWS_AGENT_CONNECTIVITY.md`](docs/windows/WINDOWS_AGENT_CONNECTIVITY.md)
 - [`docs/windows/WINDOWS_EVENT_COLLECTION.md`](docs/windows/WINDOWS_EVENT_COLLECTION.md)
 - [`docs/windows/WINDOWS_DETECTION_COVERAGE.md`](docs/windows/WINDOWS_DETECTION_COVERAGE.md)

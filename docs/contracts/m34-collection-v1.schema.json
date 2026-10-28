@@ -1,0 +1,120 @@
+{
+  "additionalProperties": false,
+  "properties": {
+    "contract": {
+      "const": "cq-collection-v1",
+      "title": "Contract",
+      "type": "string"
+    },
+    "source_id": {
+      "pattern": "^[A-Za-z0-9][A-Za-z0-9_.:-]{0,127}$",
+      "title": "Source Id",
+      "type": "string"
+    },
+    "source_type": {
+      "enum": [
+        "ZEEK_JSON",
+        "SURICATA_EVE"
+      ],
+      "title": "Source Type",
+      "type": "string"
+    },
+    "collector_id": {
+      "pattern": "^[A-Za-z0-9][A-Za-z0-9_.:-]{0,127}$",
+      "title": "Collector Id",
+      "type": "string"
+    },
+    "collector_version": {
+      "maxLength": 32,
+      "minLength": 1,
+      "pattern": "^[A-Za-z0-9_.-]+$",
+      "title": "Collector Version",
+      "type": "string"
+    },
+    "source_generation": {
+      "pattern": "^[A-Za-z0-9][A-Za-z0-9_.:-]{0,127}$",
+      "title": "Source Generation",
+      "type": "string"
+    },
+    "source_event_id": {
+      "maxLength": 128,
+      "minLength": 1,
+      "pattern": "^[A-Za-z0-9][A-Za-z0-9_.:-]{0,127}$",
+      "title": "Source Event Id",
+      "type": "string"
+    },
+    "delivery_identity": {
+      "pattern": "^[A-Za-z0-9][A-Za-z0-9_.:-]{0,127}$",
+      "title": "Delivery Identity",
+      "type": "string"
+    },
+    "checkpoint_identity": {
+      "pattern": "^[A-Za-z0-9][A-Za-z0-9_.:-]{0,127}$",
+      "title": "Checkpoint Identity",
+      "type": "string"
+    },
+    "stream": {
+      "enum": [
+        "conn",
+        "dns",
+        "http",
+        "ssl",
+        "alert",
+        "tls",
+        "flow"
+      ],
+      "title": "Stream",
+      "type": "string"
+    },
+    "event_timestamp": {
+      "format": "date-time",
+      "title": "Event Timestamp",
+      "type": "string"
+    },
+    "observed_timestamp": {
+      "format": "date-time",
+      "title": "Observed Timestamp",
+      "type": "string"
+    },
+    "payload_encoding": {
+      "const": "json",
+      "default": "json",
+      "title": "Payload Encoding",
+      "type": "string"
+    },
+    "integrity_fingerprint": {
+      "pattern": "^[a-f0-9]{64}$",
+      "title": "Integrity Fingerprint",
+      "type": "string"
+    },
+    "normalization_version": {
+      "const": "cuse-v1",
+      "default": "cuse-v1",
+      "title": "Normalization Version",
+      "type": "string"
+    },
+    "payload": {
+      "additionalProperties": true,
+      "title": "Payload",
+      "type": "object"
+    }
+  },
+  "required": [
+    "contract",
+    "source_id",
+    "source_type",
+    "collector_id",
+    "collector_version",
+    "source_generation",
+    "source_event_id",
+    "delivery_identity",
+    "checkpoint_identity",
+    "stream",
+    "event_timestamp",
+    "observed_timestamp",
+    "integrity_fingerprint",
+    "payload"
+  ],
+  "title": "CollectionEnvelope",
+  "type": "object"
+}

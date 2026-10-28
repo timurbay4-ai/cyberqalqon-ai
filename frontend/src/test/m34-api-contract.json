@@ -1,0 +1,2610 @@
+{
+  "scope": "SYNTHETIC_TEST",
+  "production_active": false,
+  "empty_source_coverage": {
+    "contract": "cq-source-coverage-v1",
+    "observed_at": "2026-10-27T10:41:03.375627+00:00",
+    "scope": "SYNTHETIC_TEST",
+    "coverage": "RETAINED_SAMPLE",
+    "sample_limit": 1000,
+    "sample_count": 0,
+    "truncated": false,
+    "historical_continuity": "UNPROVEN",
+    "production_active": false,
+    "registered_sources": [
+      {
+        "source_id": "synthetic-zeek",
+        "source_type": "ZEEK_JSON",
+        "host": "SYNTHETIC-M34-SENSOR",
+        "collector_id": "synthetic-collector",
+        "source_generation": "synthetic-generation-1",
+        "configuration_authority": "EXPLICIT_DISPOSABLE_CONSTRUCTOR",
+        "configured": true,
+        "connected": "UNKNOWN",
+        "delivery_state": "UNKNOWN",
+        "last_committed_delivery_at": null,
+        "last_acknowledged_delivery": null,
+        "sample_event_count": 0,
+        "last_event_time": null,
+        "last_ingestion_time": null,
+        "queue_backlog": null,
+        "retry_count": null,
+        "dead_letter_count": null,
+        "process_counters": {},
+        "counter_scope": "SINCE_APPLICATION_START",
+        "family": "ZEEK"
+      },
+      {
+        "source_id": "synthetic-suricata",
+        "source_type": "SURICATA_EVE",
+        "host": "SYNTHETIC-M34-SENSOR",
+        "collector_id": "synthetic-collector",
+        "source_generation": "synthetic-generation-1",
+        "configuration_authority": "EXPLICIT_DISPOSABLE_CONSTRUCTOR",
+        "configured": true,
+        "connected": "UNKNOWN",
+        "delivery_state": "UNKNOWN",
+        "last_committed_delivery_at": null,
+        "last_acknowledged_delivery": null,
+        "sample_event_count": 0,
+        "last_event_time": null,
+        "last_ingestion_time": null,
+        "queue_backlog": null,
+        "retry_count": null,
+        "dead_letter_count": null,
+        "process_counters": {},
+        "counter_scope": "SINCE_APPLICATION_START",
+        "family": "SURICATA"
+      }
+    ],
+    "families": [
+      {
+        "family": "WINDOWS_EVENTCHANNEL",
+        "parser_available": true,
+        "observed": false,
+        "sample_event_count": 0,
+        "sample_normalized_count": 0,
+        "last_event_time": null,
+        "last_ingestion_time": null,
+        "latest_event_id": null,
+        "freshness": "UNKNOWN",
+        "search_fields_available": true,
+        "detection_eligible": "UNKNOWN",
+        "connected": "UNKNOWN",
+        "queue_backlog": null
+      },
+      {
+        "family": "SYSMON",
+        "parser_available": true,
+        "observed": false,
+        "sample_event_count": 0,
+        "sample_normalized_count": 0,
+        "last_event_time": null,
+        "last_ingestion_time": null,
+        "latest_event_id": null,
+        "freshness": "UNKNOWN",
+        "search_fields_available": true,
+        "detection_eligible": "UNKNOWN",
+        "connected": "UNKNOWN",
+        "queue_backlog": null
+      },
+      {
+        "family": "LINUX_AUTH",
+        "parser_available": true,
+        "observed": false,
+        "sample_event_count": 0,
+        "sample_normalized_count": 0,
+        "last_event_time": null,
+        "last_ingestion_time": null,
+        "latest_event_id": null,
+        "freshness": "UNKNOWN",
+        "search_fields_available": true,
+        "detection_eligible": "UNKNOWN",
+        "connected": "UNKNOWN",
+        "queue_backlog": null
+      },
+      {
+        "family": "SYSLOG",
+        "parser_available": true,
+        "observed": false,
+        "sample_event_count": 0,
+        "sample_normalized_count": 0,
+        "last_event_time": null,
+        "last_ingestion_time": null,
+        "latest_event_id": null,
+        "freshness": "UNKNOWN",
+        "search_fields_available": true,
+        "detection_eligible": "UNKNOWN",
+        "connected": "UNKNOWN",
+        "queue_backlog": null
+      },
+      {
+        "family": "JOURNALD",
+        "parser_available": true,
+        "observed": false,
+        "sample_event_count": 0,
+        "sample_normalized_count": 0,
+        "last_event_time": null,
+        "last_ingestion_time": null,
+        "latest_event_id": null,
+        "freshness": "UNKNOWN",
+        "search_fields_available": true,
+        "detection_eligible": "UNKNOWN",
+        "connected": "UNKNOWN",
+        "queue_backlog": null
+      },
+      {
+        "family": "WAZUH_GENERIC",
+        "parser_available": true,
+        "observed": false,
+        "sample_event_count": 0,
+        "sample_normalized_count": 0,
+        "last_event_time": null,
+        "last_ingestion_time": null,
+        "latest_event_id": null,
+        "freshness": "UNKNOWN",
+        "search_fields_available": true,
+        "detection_eligible": "UNKNOWN",
+        "connected": "UNKNOWN",
+        "queue_backlog": null
+      },
+      {
+        "family": "ZEEK",
+        "parser_available": true,
+        "observed": false,
+        "sample_event_count": 0,
+        "sample_normalized_count": 0,
+        "last_event_time": null,
+        "last_ingestion_time": null,
+        "latest_event_id": null,
+        "freshness": "UNKNOWN",
+        "search_fields_available": true,
+        "detection_eligible": "UNKNOWN",
+        "connected": "UNKNOWN",
+        "queue_backlog": null
+      },
+      {
+        "family": "SURICATA",
+        "parser_available": true,
+        "observed": false,
+        "sample_event_count": 0,
+        "sample_normalized_count": 0,
+        "last_event_time": null,
+        "last_ingestion_time": null,
+        "latest_event_id": null,
+        "freshness": "UNKNOWN",
+        "search_fields_available": true,
+        "detection_eligible": "UNKNOWN",
+        "connected": "UNKNOWN",
+        "queue_backlog": null
+      }
+    ],
+    "detection_workers": [],
+    "continuous_worker_state": "UNKNOWN_NOT_ACTIVATED"
+  },
+  "acknowledgements": [
+    {
+      "contract": "cq-collection-ack-v1",
+      "committed": true,
+      "duplicate": false,
+      "event_id": "EVT-88F2730CB679C91C6046BFAB",
+      "source_event_id": "ZEEK_JSON-conn",
+      "delivery_identity": "delivery-ZEEK_JSON-conn",
+      "checkpoint_identity": "checkpoint-ZEEK_JSON-conn",
+      "integrity_fingerprint": "a33b6bd0f57fd4f000c816375622f5afec2ac44fd2cbb1c5dc7989e17a71d951"
+    },
+    {
+      "contract": "cq-collection-ack-v1",
+      "committed": true,
+      "duplicate": false,
+      "event_id": "EVT-3A3FEB417A6C313F3336A39C",
+      "source_event_id": "ZEEK_JSON-dns",
+      "delivery_identity": "delivery-ZEEK_JSON-dns",
+      "checkpoint_identity": "checkpoint-ZEEK_JSON-dns",
+      "integrity_fingerprint": "fa13a8337300123fb4eff6e3e50100d72ec11947a72df786815fcdbfec57b785"
+    },
+    {
+      "contract": "cq-collection-ack-v1",
+      "committed": true,
+      "duplicate": false,
+      "event_id": "EVT-D1B205F6CEFB35BC57FF14CF",
+      "source_event_id": "ZEEK_JSON-http",
+      "delivery_identity": "delivery-ZEEK_JSON-http",
+      "checkpoint_identity": "checkpoint-ZEEK_JSON-http",
+      "integrity_fingerprint": "15e3380ac2883fa49c5a4fa0dacd8710710d3b1cb0fea088c64aef5341d44939"
+    },
+    {
+      "contract": "cq-collection-ack-v1",
+      "committed": true,
+      "duplicate": false,
+      "event_id": "EVT-31845739DA774568568D80B2",
+      "source_event_id": "ZEEK_JSON-ssl",
+      "delivery_identity": "delivery-ZEEK_JSON-ssl",
+      "checkpoint_identity": "checkpoint-ZEEK_JSON-ssl",
+      "integrity_fingerprint": "2d1f86d4f372dc7f50a5768c3908fd7dcbdf220c372b12e8334b49bfdaf6a8d7"
+    },
+    {
+      "contract": "cq-collection-ack-v1",
+      "committed": true,
+      "duplicate": false,
+      "event_id": "EVT-1B2AB7F74C812F79FFE7E39B",
+      "source_event_id": "SURICATA_EVE-alert",
+      "delivery_identity": "delivery-SURICATA_EVE-alert",
+      "checkpoint_identity": "checkpoint-SURICATA_EVE-alert",
+      "integrity_fingerprint": "a23deb043ae9ce64f5ee7bd828398df4bd33e9828eb5d69d7aae1b7c89d85845"
+    },
+    {
+      "contract": "cq-collection-ack-v1",
+      "committed": true,
+      "duplicate": false,
+      "event_id": "EVT-5915AA13CDD60ABF6438F11D",
+      "source_event_id": "SURICATA_EVE-dns",
+      "delivery_identity": "delivery-SURICATA_EVE-dns",
+      "checkpoint_identity": "checkpoint-SURICATA_EVE-dns",
+      "integrity_fingerprint": "d999e73d0a4258499831ba4b3db5690b4eb8761517264c6f0f4fee1c31826a58"
+    },
+    {
+      "contract": "cq-collection-ack-v1",
+      "committed": true,
+      "duplicate": false,
+      "event_id": "EVT-9A5C4BEC118DE87EB0739A67",
+      "source_event_id": "SURICATA_EVE-http",
+      "delivery_identity": "delivery-SURICATA_EVE-http",
+      "checkpoint_identity": "checkpoint-SURICATA_EVE-http",
+      "integrity_fingerprint": "27ff21a3431224a1d9544805a32495e2e9a5acde0814bdf6f7fbe2f38f7b8127"
+    },
+    {
+      "contract": "cq-collection-ack-v1",
+      "committed": true,
+      "duplicate": false,
+      "event_id": "EVT-DA808AE4AEA0F6189660DB5E",
+      "source_event_id": "SURICATA_EVE-tls",
+      "delivery_identity": "delivery-SURICATA_EVE-tls",
+      "checkpoint_identity": "checkpoint-SURICATA_EVE-tls",
+      "integrity_fingerprint": "35d2b6ef68fe3a5032ea9f4fc58a94854e0fae12dcfa51a50ba993998bd135b7"
+    },
+    {
+      "contract": "cq-collection-ack-v1",
+      "committed": true,
+      "duplicate": false,
+      "event_id": "EVT-3E1553B1C1D2FF808A3D0497",
+      "source_event_id": "SURICATA_EVE-flow",
+      "delivery_identity": "delivery-SURICATA_EVE-flow",
+      "checkpoint_identity": "checkpoint-SURICATA_EVE-flow",
+      "integrity_fingerprint": "225295da76ab58ac6857a97ca443f5dcae30b88c28ac5327a2339fe0a8d4d1e8"
+    }
+  ],
+  "network_events": [
+    {
+      "event_id": "EVT-88F2730CB679C91C6046BFAB",
+      "source_event_id": "COLL-b708eac1c92b50f644dd78892eab998d64e1dbd97a5c3589b2f079a917eec847",
+      "timestamp": "2026-10-27T10:40:33Z",
+      "ingested_at": "2026-10-27T10:41:03.410503Z",
+      "source_type": "network",
+      "hostname": "SYNTHETIC-M34-SENSOR",
+      "agent_id": "synthetic-zeek",
+      "agent_name": "SYNTHETIC-M34-SENSOR",
+      "manager_identity": "synthetic-collector",
+      "event_provider": "Zeek",
+      "event_channel": "conn",
+      "normalization_schema": "collection-event-v1",
+      "source_ip": "192.0.2.34",
+      "destination_ip": "198.51.100.34",
+      "source_port": 50334,
+      "destination_port": 53,
+      "event_category": "network_conn",
+      "event_action": "observe",
+      "outcome": "observed",
+      "mitre": {
+        "ids": [],
+        "tactics": [],
+        "techniques": []
+      },
+      "message": "ZEEK_JSON conn observation",
+      "ingestion_source": "collection:synthetic-zeek",
+      "cuse": {
+        "version": "cuse-v1",
+        "adapter_version": "m34-network-v1",
+        "source_family": "ZEEK",
+        "normalization_status": "NORMALIZED",
+        "provenance_status": "PARTIAL",
+        "historical_continuity": "UNPROVEN",
+        "transport_authenticated": true,
+        "endpoint_identity_verified": false,
+        "source_event_time": "2026-10-27T10:40:33Z",
+        "collector_observation_time": "2026-10-27T10:40:33Z",
+        "timestamp_basis": "SOURCE_EVENT_TIME",
+        "original_event_identity": "ZEEK_JSON-conn",
+        "source_identity_sha256": "14d4d0383474373948ba9c958d4735d58d34897dc4050e51c4af630fa7c274c9",
+        "content_fingerprint": "ea6e7505767a04d4214aed6783fe75c0e0d48691c057644e60990dcf71508845",
+        "idempotency_contract": "REGISTERED_SOURCE_RECORD_SHA256",
+        "delivery_identity": "delivery-ZEEK_JSON-conn",
+        "source_generation": "synthetic-generation-1",
+        "warnings": [
+          "SOURCE_IDENTITY_CLAIMED"
+        ],
+        "attributes": {
+          "connection_uid": "SYNTHETIC-CONNECTION-1",
+          "network_duration_ms": 1250,
+          "network_protocol": "udp",
+          "sensor_id": "synthetic-zeek"
+        }
+      },
+      "structured_payload": {
+        "_cuse": {
+          "adapter_version": "m34-network-v1",
+          "attributes": {
+            "connection_uid": "SYNTHETIC-CONNECTION-1",
+            "network_duration_ms": 1250,
+            "network_protocol": "udp",
+            "sensor_id": "synthetic-zeek"
+          },
+          "collector_observation_time": "2026-10-27T10:40:33Z",
+          "content_fingerprint": "ea6e7505767a04d4214aed6783fe75c0e0d48691c057644e60990dcf71508845",
+          "delivery_identity": "delivery-ZEEK_JSON-conn",
+          "endpoint_identity_verified": false,
+          "historical_continuity": "UNPROVEN",
+          "idempotency_contract": "REGISTERED_SOURCE_RECORD_SHA256",
+          "normalization_status": "NORMALIZED",
+          "original_event_identity": "ZEEK_JSON-conn",
+          "provenance_status": "PARTIAL",
+          "source_event_time": "2026-10-27T10:40:33Z",
+          "source_family": "ZEEK",
+          "source_generation": "synthetic-generation-1",
+          "source_identity_sha256": "14d4d0383474373948ba9c958d4735d58d34897dc4050e51c4af630fa7c274c9",
+          "timestamp_basis": "SOURCE_EVENT_TIME",
+          "transport_authenticated": true,
+          "version": "cuse-v1",
+          "warnings": [
+            "SOURCE_IDENTITY_CLAIMED"
+          ]
+        },
+        "agent": {
+          "id": "synthetic-zeek",
+          "name": "SYNTHETIC-M34-SENSOR"
+        },
+        "data": {
+          "network_event": {
+            "duration": 1.25,
+            "id.orig_h": "192.0.2.34",
+            "id.orig_p": 50334,
+            "id.resp_h": "198.51.100.34",
+            "id.resp_p": 53,
+            "proto": "udp",
+            "ts": 1793097633.0,
+            "uid": "SYNTHETIC-CONNECTION-1"
+          },
+          "payload_sha256": "a33b6bd0f57fd4f000c816375622f5afec2ac44fd2cbb1c5dc7989e17a71d951",
+          "source_generation": "synthetic-generation-1",
+          "source_type": "ZEEK_JSON",
+          "stream": "conn"
+        },
+        "decoder": {
+          "name": "m34-zeek"
+        },
+        "manager": {
+          "name": "synthetic-collector"
+        },
+        "rule": {
+          "description": "ZEEK_JSON conn observation"
+        }
+      },
+      "raw_payload": {
+        "agent": {
+          "id": "synthetic-zeek",
+          "name": "SYNTHETIC-M34-SENSOR"
+        },
+        "data": {
+          "network_event": {
+            "duration": 1.25,
+            "id.orig_h": "192.0.2.34",
+            "id.orig_p": 50334,
+            "id.resp_h": "198.51.100.34",
+            "id.resp_p": 53,
+            "proto": "udp",
+            "ts": 1793097633.0,
+            "uid": "SYNTHETIC-CONNECTION-1"
+          },
+          "payload_sha256": "a33b6bd0f57fd4f000c816375622f5afec2ac44fd2cbb1c5dc7989e17a71d951",
+          "source_generation": "synthetic-generation-1",
+          "source_type": "ZEEK_JSON",
+          "stream": "conn"
+        },
+        "decoder": {
+          "name": "m34-zeek"
+        },
+        "id": "ZEEK_JSON-conn",
+        "manager": {
+          "name": "synthetic-collector"
+        },
+        "rule": {
+          "description": "ZEEK_JSON conn observation"
+        },
+        "timestamp": "2026-10-27T10:40:33+00:00"
+      },
+      "related_incident_ids": [],
+      "related_case_ids": [],
+      "raw_evidence_ref": "EVT-88F2730CB679C91C6046BFAB"
+    },
+    {
+      "event_id": "EVT-3A3FEB417A6C313F3336A39C",
+      "source_event_id": "COLL-f3b171847ec05e06ead8c918addd4b0f42452e64b173741d6d275eebf3738ebb",
+      "timestamp": "2026-10-27T10:40:33Z",
+      "ingested_at": "2026-10-27T10:41:03.862393Z",
+      "source_type": "network",
+      "hostname": "SYNTHETIC-M34-SENSOR",
+      "agent_id": "synthetic-zeek",
+      "agent_name": "SYNTHETIC-M34-SENSOR",
+      "manager_identity": "synthetic-collector",
+      "event_provider": "Zeek",
+      "event_channel": "dns",
+      "normalization_schema": "collection-event-v1",
+      "source_ip": "192.0.2.34",
+      "destination_ip": "198.51.100.34",
+      "source_port": 50334,
+      "destination_port": 53,
+      "event_category": "network_dns",
+      "event_action": "observe",
+      "outcome": "observed",
+      "mitre": {
+        "ids": [],
+        "tactics": [],
+        "techniques": []
+      },
+      "message": "ZEEK_JSON dns observation",
+      "ingestion_source": "collection:synthetic-zeek",
+      "cuse": {
+        "version": "cuse-v1",
+        "adapter_version": "m34-network-v1",
+        "source_family": "ZEEK",
+        "normalization_status": "NORMALIZED",
+        "provenance_status": "PARTIAL",
+        "historical_continuity": "UNPROVEN",
+        "transport_authenticated": true,
+        "endpoint_identity_verified": false,
+        "source_event_time": "2026-10-27T10:40:33Z",
+        "collector_observation_time": "2026-10-27T10:40:33Z",
+        "timestamp_basis": "SOURCE_EVENT_TIME",
+        "original_event_identity": "ZEEK_JSON-dns",
+        "source_identity_sha256": "14d4d0383474373948ba9c958d4735d58d34897dc4050e51c4af630fa7c274c9",
+        "content_fingerprint": "9e6c7c463ca903ad017f11a10f64350ba2a85c091d63dae7e224ab92368acf25",
+        "idempotency_contract": "REGISTERED_SOURCE_RECORD_SHA256",
+        "delivery_identity": "delivery-ZEEK_JSON-dns",
+        "source_generation": "synthetic-generation-1",
+        "warnings": [
+          "SOURCE_IDENTITY_CLAIMED"
+        ],
+        "attributes": {
+          "connection_uid": "SYNTHETIC-CONNECTION-1",
+          "dns_answers_json": "[\"203.0.113.34\"]",
+          "dns_question_name": "synthetic.example.test",
+          "dns_response_code": "NOERROR",
+          "network_protocol": "udp",
+          "sensor_id": "synthetic-zeek"
+        }
+      },
+      "structured_payload": {
+        "_cuse": {
+          "adapter_version": "m34-network-v1",
+          "attributes": {
+            "connection_uid": "SYNTHETIC-CONNECTION-1",
+            "dns_answers_json": "[\"203.0.113.34\"]",
+            "dns_question_name": "synthetic.example.test",
+            "dns_response_code": "NOERROR",
+            "network_protocol": "udp",
+            "sensor_id": "synthetic-zeek"
+          },
+          "collector_observation_time": "2026-10-27T10:40:33Z",
+          "content_fingerprint": "9e6c7c463ca903ad017f11a10f64350ba2a85c091d63dae7e224ab92368acf25",
+          "delivery_identity": "delivery-ZEEK_JSON-dns",
+          "endpoint_identity_verified": false,
+          "historical_continuity": "UNPROVEN",
+          "idempotency_contract": "REGISTERED_SOURCE_RECORD_SHA256",
+          "normalization_status": "NORMALIZED",
+          "original_event_identity": "ZEEK_JSON-dns",
+          "provenance_status": "PARTIAL",
+          "source_event_time": "2026-10-27T10:40:33Z",
+          "source_family": "ZEEK",
+          "source_generation": "synthetic-generation-1",
+          "source_identity_sha256": "14d4d0383474373948ba9c958d4735d58d34897dc4050e51c4af630fa7c274c9",
+          "timestamp_basis": "SOURCE_EVENT_TIME",
+          "transport_authenticated": true,
+          "version": "cuse-v1",
+          "warnings": [
+            "SOURCE_IDENTITY_CLAIMED"
+          ]
+        },
+        "agent": {
+          "id": "synthetic-zeek",
+          "name": "SYNTHETIC-M34-SENSOR"
+        },
+        "data": {
+          "network_event": {
+            "answers": [
+              "203.0.113.34"
+            ],
+            "id.orig_h": "192.0.2.34",
+            "id.orig_p": 50334,
+            "id.resp_h": "198.51.100.34",
+            "id.resp_p": 53,
+            "proto": "udp",
+            "query": "synthetic.example.test",
+            "rcode_name": "NOERROR",
+            "ts": 1793097633.0,
+            "uid": "SYNTHETIC-CONNECTION-1"
+          },
+          "payload_sha256": "fa13a8337300123fb4eff6e3e50100d72ec11947a72df786815fcdbfec57b785",
+          "source_generation": "synthetic-generation-1",
+          "source_type": "ZEEK_JSON",
+          "stream": "dns"
+        },
+        "decoder": {
+          "name": "m34-zeek"
+        },
+        "manager": {
+          "name": "synthetic-collector"
+        },
+        "rule": {
+          "description": "ZEEK_JSON dns observation"
+        }
+      },
+      "raw_payload": {
+        "agent": {
+          "id": "synthetic-zeek",
+          "name": "SYNTHETIC-M34-SENSOR"
+        },
+        "data": {
+          "network_event": {
+            "answers": [
+              "203.0.113.34"
+            ],
+            "id.orig_h": "192.0.2.34",
+            "id.orig_p": 50334,
+            "id.resp_h": "198.51.100.34",
+            "id.resp_p": 53,
+            "proto": "udp",
+            "query": "synthetic.example.test",
+            "rcode_name": "NOERROR",
+            "ts": 1793097633.0,
+            "uid": "SYNTHETIC-CONNECTION-1"
+          },
+          "payload_sha256": "fa13a8337300123fb4eff6e3e50100d72ec11947a72df786815fcdbfec57b785",
+          "source_generation": "synthetic-generation-1",
+          "source_type": "ZEEK_JSON",
+          "stream": "dns"
+        },
+        "decoder": {
+          "name": "m34-zeek"
+        },
+        "id": "ZEEK_JSON-dns",
+        "manager": {
+          "name": "synthetic-collector"
+        },
+        "rule": {
+          "description": "ZEEK_JSON dns observation"
+        },
+        "timestamp": "2026-10-27T10:40:33+00:00"
+      },
+      "related_incident_ids": [],
+      "related_case_ids": [],
+      "raw_evidence_ref": "EVT-3A3FEB417A6C313F3336A39C"
+    },
+    {
+      "event_id": "EVT-D1B205F6CEFB35BC57FF14CF",
+      "source_event_id": "COLL-b97d660784496dab0f9cc567bb607b4d687f2b2e7b1686098d8c05712683ef5f",
+      "timestamp": "2026-10-27T10:40:33Z",
+      "ingested_at": "2026-10-27T10:41:03.955923Z",
+      "source_type": "network",
+      "hostname": "SYNTHETIC-M34-SENSOR",
+      "agent_id": "synthetic-zeek",
+      "agent_name": "SYNTHETIC-M34-SENSOR",
+      "manager_identity": "synthetic-collector",
+      "event_provider": "Zeek",
+      "event_channel": "http",
+      "normalization_schema": "collection-event-v1",
+      "source_ip": "192.0.2.34",
+      "destination_ip": "198.51.100.34",
+      "source_port": 50334,
+      "destination_port": 53,
+      "event_category": "network_http",
+      "event_action": "observe",
+      "outcome": "observed",
+      "mitre": {
+        "ids": [],
+        "tactics": [],
+        "techniques": []
+      },
+      "message": "ZEEK_JSON http observation",
+      "ingestion_source": "collection:synthetic-zeek",
+      "cuse": {
+        "version": "cuse-v1",
+        "adapter_version": "m34-network-v1",
+        "source_family": "ZEEK",
+        "normalization_status": "NORMALIZED",
+        "provenance_status": "PARTIAL",
+        "historical_continuity": "UNPROVEN",
+        "transport_authenticated": true,
+        "endpoint_identity_verified": false,
+        "source_event_time": "2026-10-27T10:40:33Z",
+        "collector_observation_time": "2026-10-27T10:40:33Z",
+        "timestamp_basis": "SOURCE_EVENT_TIME",
+        "original_event_identity": "ZEEK_JSON-http",
+        "source_identity_sha256": "14d4d0383474373948ba9c958d4735d58d34897dc4050e51c4af630fa7c274c9",
+        "content_fingerprint": "8805525e264b4ae2f78c5a7a1bb159c8937140d188d0a1f6badac0ae02f34739",
+        "idempotency_contract": "REGISTERED_SOURCE_RECORD_SHA256",
+        "delivery_identity": "delivery-ZEEK_JSON-http",
+        "source_generation": "synthetic-generation-1",
+        "warnings": [
+          "SOURCE_IDENTITY_CLAIMED"
+        ],
+        "attributes": {
+          "connection_uid": "SYNTHETIC-CONNECTION-1",
+          "http_host": "synthetic.example.test",
+          "network_protocol": "udp",
+          "sensor_id": "synthetic-zeek",
+          "url_path": "/synthetic-path"
+        }
+      },
+      "structured_payload": {
+        "_cuse": {
+          "adapter_version": "m34-network-v1",
+          "attributes": {
+            "connection_uid": "SYNTHETIC-CONNECTION-1",
+            "http_host": "synthetic.example.test",
+            "network_protocol": "udp",
+            "sensor_id": "synthetic-zeek",
+            "url_path": "/synthetic-path"
+          },
+          "collector_observation_time": "2026-10-27T10:40:33Z",
+          "content_fingerprint": "8805525e264b4ae2f78c5a7a1bb159c8937140d188d0a1f6badac0ae02f34739",
+          "delivery_identity": "delivery-ZEEK_JSON-http",
+          "endpoint_identity_verified": false,
+          "historical_continuity": "UNPROVEN",
+          "idempotency_contract": "REGISTERED_SOURCE_RECORD_SHA256",
+          "normalization_status": "NORMALIZED",
+          "original_event_identity": "ZEEK_JSON-http",
+          "provenance_status": "PARTIAL",
+          "source_event_time": "2026-10-27T10:40:33Z",
+          "source_family": "ZEEK",
+          "source_generation": "synthetic-generation-1",
+          "source_identity_sha256": "14d4d0383474373948ba9c958d4735d58d34897dc4050e51c4af630fa7c274c9",
+          "timestamp_basis": "SOURCE_EVENT_TIME",
+          "transport_authenticated": true,
+          "version": "cuse-v1",
+          "warnings": [
+            "SOURCE_IDENTITY_CLAIMED"
+          ]
+        },
+        "agent": {
+          "id": "synthetic-zeek",
+          "name": "SYNTHETIC-M34-SENSOR"
+        },
+        "data": {
+          "network_event": {
+            "host": "synthetic.example.test",
+            "id.orig_h": "192.0.2.34",
+            "id.orig_p": 50334,
+            "id.resp_h": "198.51.100.34",
+            "id.resp_p": 53,
+            "proto": "udp",
+            "ts": 1793097633.0,
+            "uid": "SYNTHETIC-CONNECTION-1",
+            "uri": "/synthetic-path"
+          },
+          "payload_sha256": "15e3380ac2883fa49c5a4fa0dacd8710710d3b1cb0fea088c64aef5341d44939",
+          "source_generation": "synthetic-generation-1",
+          "source_type": "ZEEK_JSON",
+          "stream": "http"
+        },
+        "decoder": {
+          "name": "m34-zeek"
+        },
+        "manager": {
+          "name": "synthetic-collector"
+        },
+        "rule": {
+          "description": "ZEEK_JSON http observation"
+        }
+      },
+      "raw_payload": {
+        "agent": {
+          "id": "synthetic-zeek",
+          "name": "SYNTHETIC-M34-SENSOR"
+        },
+        "data": {
+          "network_event": {
+            "host": "synthetic.example.test",
+            "id.orig_h": "192.0.2.34",
+            "id.orig_p": 50334,
+            "id.resp_h": "198.51.100.34",
+            "id.resp_p": 53,
+            "proto": "udp",
+            "ts": 1793097633.0,
+            "uid": "SYNTHETIC-CONNECTION-1",
+            "uri": "/synthetic-path"
+          },
+          "payload_sha256": "15e3380ac2883fa49c5a4fa0dacd8710710d3b1cb0fea088c64aef5341d44939",
+          "source_generation": "synthetic-generation-1",
+          "source_type": "ZEEK_JSON",
+          "stream": "http"
+        },
+        "decoder": {
+          "name": "m34-zeek"
+        },
+        "id": "ZEEK_JSON-http",
+        "manager": {
+          "name": "synthetic-collector"
+        },
+        "rule": {
+          "description": "ZEEK_JSON http observation"
+        },
+        "timestamp": "2026-10-27T10:40:33+00:00"
+      },
+      "related_incident_ids": [],
+      "related_case_ids": [],
+      "raw_evidence_ref": "EVT-D1B205F6CEFB35BC57FF14CF"
+    },
+    {
+      "event_id": "EVT-31845739DA774568568D80B2",
+      "source_event_id": "COLL-d1474f72943fd1ba990ad625290e7e7211b877ab6b5e5e6f135a16f17f71c460",
+      "timestamp": "2026-10-27T10:40:33Z",
+      "ingested_at": "2026-10-27T10:41:04.117028Z",
+      "source_type": "network",
+      "hostname": "SYNTHETIC-M34-SENSOR",
+      "agent_id": "synthetic-zeek",
+      "agent_name": "SYNTHETIC-M34-SENSOR",
+      "manager_identity": "synthetic-collector",
+      "event_provider": "Zeek",
+      "event_channel": "ssl",
+      "normalization_schema": "collection-event-v1",
+      "source_ip": "192.0.2.34",
+      "destination_ip": "198.51.100.34",
+      "source_port": 50334,
+      "destination_port": 53,
+      "event_category": "network_tls",
+      "event_action": "observe",
+      "outcome": "observed",
+      "mitre": {
+        "ids": [],
+        "tactics": [],
+        "techniques": []
+      },
+      "message": "ZEEK_JSON ssl observation",
+      "ingestion_source": "collection:synthetic-zeek",
+      "cuse": {
+        "version": "cuse-v1",
+        "adapter_version": "m34-network-v1",
+        "source_family": "ZEEK",
+        "normalization_status": "NORMALIZED",
+        "provenance_status": "PARTIAL",
+        "historical_continuity": "UNPROVEN",
+        "transport_authenticated": true,
+        "endpoint_identity_verified": false,
+        "source_event_time": "2026-10-27T10:40:33Z",
+        "collector_observation_time": "2026-10-27T10:40:33Z",
+        "timestamp_basis": "SOURCE_EVENT_TIME",
+        "original_event_identity": "ZEEK_JSON-ssl",
+        "source_identity_sha256": "14d4d0383474373948ba9c958d4735d58d34897dc4050e51c4af630fa7c274c9",
+        "content_fingerprint": "c3b264696e8a227953f0f1b8db21c7b13515492bd5aa50cb9b6f4dd6e55617b5",
+        "idempotency_contract": "REGISTERED_SOURCE_RECORD_SHA256",
+        "delivery_identity": "delivery-ZEEK_JSON-ssl",
+        "source_generation": "synthetic-generation-1",
+        "warnings": [
+          "SOURCE_IDENTITY_CLAIMED"
+        ],
+        "attributes": {
+          "connection_uid": "SYNTHETIC-CONNECTION-1",
+          "network_protocol": "udp",
+          "sensor_id": "synthetic-zeek",
+          "tls_server_name": "synthetic.example.test"
+        }
+      },
+      "structured_payload": {
+        "_cuse": {
+          "adapter_version": "m34-network-v1",
+          "attributes": {
+            "connection_uid": "SYNTHETIC-CONNECTION-1",
+            "network_protocol": "udp",
+            "sensor_id": "synthetic-zeek",
+            "tls_server_name": "synthetic.example.test"
+          },
+          "collector_observation_time": "2026-10-27T10:40:33Z",
+          "content_fingerprint": "c3b264696e8a227953f0f1b8db21c7b13515492bd5aa50cb9b6f4dd6e55617b5",
+          "delivery_identity": "delivery-ZEEK_JSON-ssl",
+          "endpoint_identity_verified": false,
+          "historical_continuity": "UNPROVEN",
+          "idempotency_contract": "REGISTERED_SOURCE_RECORD_SHA256",
+          "normalization_status": "NORMALIZED",
+          "original_event_identity": "ZEEK_JSON-ssl",
+          "provenance_status": "PARTIAL",
+          "source_event_time": "2026-10-27T10:40:33Z",
+          "source_family": "ZEEK",
+          "source_generation": "synthetic-generation-1",
+          "source_identity_sha256": "14d4d0383474373948ba9c958d4735d58d34897dc4050e51c4af630fa7c274c9",
+          "timestamp_basis": "SOURCE_EVENT_TIME",
+          "transport_authenticated": true,
+          "version": "cuse-v1",
+          "warnings": [
+            "SOURCE_IDENTITY_CLAIMED"
+          ]
+        },
+        "agent": {
+          "id": "synthetic-zeek",
+          "name": "SYNTHETIC-M34-SENSOR"
+        },
+        "data": {
+          "network_event": {
+            "id.orig_h": "192.0.2.34",
+            "id.orig_p": 50334,
+            "id.resp_h": "198.51.100.34",
+            "id.resp_p": 53,
+            "proto": "udp",
+            "server_name": "synthetic.example.test",
+            "ts": 1793097633.0,
+            "uid": "SYNTHETIC-CONNECTION-1"
+          },
+          "payload_sha256": "2d1f86d4f372dc7f50a5768c3908fd7dcbdf220c372b12e8334b49bfdaf6a8d7",
+          "source_generation": "synthetic-generation-1",
+          "source_type": "ZEEK_JSON",
+          "stream": "ssl"
+        },
+        "decoder": {
+          "name": "m34-zeek"
+        },
+        "manager": {
+          "name": "synthetic-collector"
+        },
+        "rule": {
+          "description": "ZEEK_JSON ssl observation"
+        }
+      },
+      "raw_payload": {
+        "agent": {
+          "id": "synthetic-zeek",
+          "name": "SYNTHETIC-M34-SENSOR"
+        },
+        "data": {
+          "network_event": {
+            "id.orig_h": "192.0.2.34",
+            "id.orig_p": 50334,
+            "id.resp_h": "198.51.100.34",
+            "id.resp_p": 53,
+            "proto": "udp",
+            "server_name": "synthetic.example.test",
+            "ts": 1793097633.0,
+            "uid": "SYNTHETIC-CONNECTION-1"
+          },
+          "payload_sha256": "2d1f86d4f372dc7f50a5768c3908fd7dcbdf220c372b12e8334b49bfdaf6a8d7",
+          "source_generation": "synthetic-generation-1",
+          "source_type": "ZEEK_JSON",
+          "stream": "ssl"
+        },
+        "decoder": {
+          "name": "m34-zeek"
+        },
+        "id": "ZEEK_JSON-ssl",
+        "manager": {
+          "name": "synthetic-collector"
+        },
+        "rule": {
+          "description": "ZEEK_JSON ssl observation"
+        },
+        "timestamp": "2026-10-27T10:40:33+00:00"
+      },
+      "related_incident_ids": [],
+      "related_case_ids": [],
+      "raw_evidence_ref": "EVT-31845739DA774568568D80B2"
+    },
+    {
+      "event_id": "EVT-1B2AB7F74C812F79FFE7E39B",
+      "source_event_id": "COLL-ce0bc7e175804ec263e73f907dbd5c544dcf47685e0c061030c3211fd5b2f125",
+      "timestamp": "2026-10-27T10:40:33Z",
+      "ingested_at": "2026-10-27T10:41:04.255222Z",
+      "source_type": "network",
+      "hostname": "SYNTHETIC-M34-SENSOR",
+      "agent_id": "synthetic-suricata",
+      "agent_name": "SYNTHETIC-M34-SENSOR",
+      "manager_identity": "synthetic-collector",
+      "event_provider": "Suricata",
+      "event_channel": "alert",
+      "normalization_schema": "collection-event-v1",
+      "source_ip": "192.0.2.34",
+      "destination_ip": "198.51.100.34",
+      "source_port": 50334,
+      "destination_port": 443,
+      "event_category": "network_alert",
+      "event_action": "alert",
+      "outcome": "observed",
+      "rule_id": "34001",
+      "severity": 8,
+      "mitre": {
+        "ids": [],
+        "tactics": [],
+        "techniques": []
+      },
+      "message": "SURICATA_EVE alert observation",
+      "ingestion_source": "collection:synthetic-suricata",
+      "cuse": {
+        "version": "cuse-v1",
+        "adapter_version": "m34-network-v1",
+        "source_family": "SURICATA",
+        "normalization_status": "NORMALIZED",
+        "provenance_status": "PARTIAL",
+        "historical_continuity": "UNPROVEN",
+        "transport_authenticated": true,
+        "endpoint_identity_verified": false,
+        "source_event_time": "2026-10-27T10:40:33Z",
+        "collector_observation_time": "2026-10-27T10:40:33Z",
+        "timestamp_basis": "SOURCE_EVENT_TIME",
+        "original_event_identity": "SURICATA_EVE-alert",
+        "source_identity_sha256": "c7962437981b057684fc4e4b0d9ca78e2c8469fc46265112e0e7e9d67810cb60",
+        "content_fingerprint": "a6cb60c8ae131878be65eb620ab259dcf534cc86127402f064564343e7a8d6bf",
+        "idempotency_contract": "REGISTERED_SOURCE_RECORD_SHA256",
+        "delivery_identity": "delivery-SURICATA_EVE-alert",
+        "source_generation": "synthetic-generation-1",
+        "warnings": [
+          "SOURCE_IDENTITY_CLAIMED"
+        ],
+        "attributes": {
+          "connection_uid": "34001",
+          "network_protocol": "tcp",
+          "sensor_id": "synthetic-suricata",
+          "signature_action": "allowed",
+          "signature_signature": "SYNTHETIC test signature"
+        }
+      },
+      "structured_payload": {
+        "_cuse": {
+          "adapter_version": "m34-network-v1",
+          "attributes": {
+            "connection_uid": "34001",
+            "network_protocol": "tcp",
+            "sensor_id": "synthetic-suricata",
+            "signature_action": "allowed",
+            "signature_signature": "SYNTHETIC test signature"
+          },
+          "collector_observation_time": "2026-10-27T10:40:33Z",
+          "content_fingerprint": "a6cb60c8ae131878be65eb620ab259dcf534cc86127402f064564343e7a8d6bf",
+          "delivery_identity": "delivery-SURICATA_EVE-alert",
+          "endpoint_identity_verified": false,
+          "historical_continuity": "UNPROVEN",
+          "idempotency_contract": "REGISTERED_SOURCE_RECORD_SHA256",
+          "normalization_status": "NORMALIZED",
+          "original_event_identity": "SURICATA_EVE-alert",
+          "provenance_status": "PARTIAL",
+          "source_event_time": "2026-10-27T10:40:33Z",
+          "source_family": "SURICATA",
+          "source_generation": "synthetic-generation-1",
+          "source_identity_sha256": "c7962437981b057684fc4e4b0d9ca78e2c8469fc46265112e0e7e9d67810cb60",
+          "timestamp_basis": "SOURCE_EVENT_TIME",
+          "transport_authenticated": true,
+          "version": "cuse-v1",
+          "warnings": [
+            "SOURCE_IDENTITY_CLAIMED"
+          ]
+        },
+        "agent": {
+          "id": "synthetic-suricata",
+          "name": "SYNTHETIC-M34-SENSOR"
+        },
+        "data": {
+          "network_event": {
+            "alert": {
+              "action": "allowed",
+              "severity": 2,
+              "signature": "SYNTHETIC test signature",
+              "signature_id": 34001
+            },
+            "dest_ip": "198.51.100.34",
+            "dest_port": 443,
+            "event_type": "alert",
+            "flow_id": 34001,
+            "proto": "TCP",
+            "src_ip": "192.0.2.34",
+            "src_port": 50334,
+            "timestamp": "2026-10-27T10:40:33+00:00"
+          },
+          "payload_sha256": "a23deb043ae9ce64f5ee7bd828398df4bd33e9828eb5d69d7aae1b7c89d85845",
+          "source_generation": "synthetic-generation-1",
+          "source_type": "SURICATA_EVE",
+          "stream": "alert"
+        },
+        "decoder": {
+          "name": "m34-suricata"
+        },
+        "manager": {
+          "name": "synthetic-collector"
+        },
+        "rule": {
+          "description": "SURICATA_EVE alert observation"
+        }
+      },
+      "raw_payload": {
+        "agent": {
+          "id": "synthetic-suricata",
+          "name": "SYNTHETIC-M34-SENSOR"
+        },
+        "data": {
+          "network_event": {
+            "alert": {
+              "action": "allowed",
+              "severity": 2,
+              "signature": "SYNTHETIC test signature",
+              "signature_id": 34001
+            },
+            "dest_ip": "198.51.100.34",
+            "dest_port": 443,
+            "event_type": "alert",
+            "flow_id": 34001,
+            "proto": "TCP",
+            "src_ip": "192.0.2.34",
+            "src_port": 50334,
+            "timestamp": "2026-10-27T10:40:33+00:00"
+          },
+          "payload_sha256": "a23deb043ae9ce64f5ee7bd828398df4bd33e9828eb5d69d7aae1b7c89d85845",
+          "source_generation": "synthetic-generation-1",
+          "source_type": "SURICATA_EVE",
+          "stream": "alert"
+        },
+        "decoder": {
+          "name": "m34-suricata"
+        },
+        "id": "SURICATA_EVE-alert",
+        "manager": {
+          "name": "synthetic-collector"
+        },
+        "rule": {
+          "description": "SURICATA_EVE alert observation"
+        },
+        "timestamp": "2026-10-27T10:40:33+00:00"
+      },
+      "related_incident_ids": [],
+      "related_case_ids": [],
+      "raw_evidence_ref": "EVT-1B2AB7F74C812F79FFE7E39B"
+    },
+    {
+      "event_id": "EVT-5915AA13CDD60ABF6438F11D",
+      "source_event_id": "COLL-bf3abf08788dbf381c6192a08643f1fb597556b7e3e46e2841608cd7ce5aafe8",
+      "timestamp": "2026-10-27T10:40:33Z",
+      "ingested_at": "2026-10-27T10:41:04.438806Z",
+      "source_type": "network",
+      "hostname": "SYNTHETIC-M34-SENSOR",
+      "agent_id": "synthetic-suricata",
+      "agent_name": "SYNTHETIC-M34-SENSOR",
+      "manager_identity": "synthetic-collector",
+      "event_provider": "Suricata",
+      "event_channel": "dns",
+      "normalization_schema": "collection-event-v1",
+      "source_ip": "192.0.2.34",
+      "destination_ip": "198.51.100.34",
+      "source_port": 50334,
+      "destination_port": 443,
+      "event_category": "network_dns",
+      "event_action": "observe",
+      "outcome": "observed",
+      "mitre": {
+        "ids": [],
+        "tactics": [],
+        "techniques": []
+      },
+      "message": "SURICATA_EVE dns observation",
+      "ingestion_source": "collection:synthetic-suricata",
+      "cuse": {
+        "version": "cuse-v1",
+        "adapter_version": "m34-network-v1",
+        "source_family": "SURICATA",
+        "normalization_status": "NORMALIZED",
+        "provenance_status": "PARTIAL",
+        "historical_continuity": "UNPROVEN",
+        "transport_authenticated": true,
+        "endpoint_identity_verified": false,
+        "source_event_time": "2026-10-27T10:40:33Z",
+        "collector_observation_time": "2026-10-27T10:40:33Z",
+        "timestamp_basis": "SOURCE_EVENT_TIME",
+        "original_event_identity": "SURICATA_EVE-dns",
+        "source_identity_sha256": "c7962437981b057684fc4e4b0d9ca78e2c8469fc46265112e0e7e9d67810cb60",
+        "content_fingerprint": "2fe4d4b7bb480f4f2cc888ea631112e54bbd297d2b097bb409b28f9173471aad",
+        "idempotency_contract": "REGISTERED_SOURCE_RECORD_SHA256",
+        "delivery_identity": "delivery-SURICATA_EVE-dns",
+        "source_generation": "synthetic-generation-1",
+        "warnings": [
+          "SOURCE_IDENTITY_CLAIMED"
+        ],
+        "attributes": {
+          "connection_uid": "34001",
+          "dns_answers_json": "[{\"rdata\":\"203.0.113.34\",\"rrname\":\"synthetic.example.test\",\"rrtype\":\"A\"}]",
+          "dns_question_name": "synthetic.example.test",
+          "dns_response_code": "NOERROR",
+          "network_protocol": "tcp",
+          "sensor_id": "synthetic-suricata"
+        }
+      },
+      "structured_payload": {
+        "_cuse": {
+          "adapter_version": "m34-network-v1",
+          "attributes": {
+            "connection_uid": "34001",
+            "dns_answers_json": "[{\"rdata\":\"203.0.113.34\",\"rrname\":\"synthetic.example.test\",\"rrtype\":\"A\"}]",
+            "dns_question_name": "synthetic.example.test",
+            "dns_response_code": "NOERROR",
+            "network_protocol": "tcp",
+            "sensor_id": "synthetic-suricata"
+          },
+          "collector_observation_time": "2026-10-27T10:40:33Z",
+          "content_fingerprint": "2fe4d4b7bb480f4f2cc888ea631112e54bbd297d2b097bb409b28f9173471aad",
+          "delivery_identity": "delivery-SURICATA_EVE-dns",
+          "endpoint_identity_verified": false,
+          "historical_continuity": "UNPROVEN",
+          "idempotency_contract": "REGISTERED_SOURCE_RECORD_SHA256",
+          "normalization_status": "NORMALIZED",
+          "original_event_identity": "SURICATA_EVE-dns",
+          "provenance_status": "PARTIAL",
+          "source_event_time": "2026-10-27T10:40:33Z",
+          "source_family": "SURICATA",
+          "source_generation": "synthetic-generation-1",
+          "source_identity_sha256": "c7962437981b057684fc4e4b0d9ca78e2c8469fc46265112e0e7e9d67810cb60",
+          "timestamp_basis": "SOURCE_EVENT_TIME",
+          "transport_authenticated": true,
+          "version": "cuse-v1",
+          "warnings": [
+            "SOURCE_IDENTITY_CLAIMED"
+          ]
+        },
+        "agent": {
+          "id": "synthetic-suricata",
+          "name": "SYNTHETIC-M34-SENSOR"
+        },
+        "data": {
+          "network_event": {
+            "dest_ip": "198.51.100.34",
+            "dest_port": 443,
+            "dns": {
+              "answers": [
+                {
+                  "rdata": "203.0.113.34",
+                  "rrname": "synthetic.example.test",
+                  "rrtype": "A"
+                }
+              ],
+              "rcode": "NOERROR",
+              "rrname": "synthetic.example.test"
+            },
+            "event_type": "dns",
+            "flow_id": 34001,
+            "proto": "TCP",
+            "src_ip": "192.0.2.34",
+            "src_port": 50334,
+            "timestamp": "2026-10-27T10:40:33+00:00"
+          },
+          "payload_sha256": "d999e73d0a4258499831ba4b3db5690b4eb8761517264c6f0f4fee1c31826a58",
+          "source_generation": "synthetic-generation-1",
+          "source_type": "SURICATA_EVE",
+          "stream": "dns"
+        },
+        "decoder": {
+          "name": "m34-suricata"
+        },
+        "manager": {
+          "name": "synthetic-collector"
+        },
+        "rule": {
+          "description": "SURICATA_EVE dns observation"
+        }
+      },
+      "raw_payload": {
+        "agent": {
+          "id": "synthetic-suricata",
+          "name": "SYNTHETIC-M34-SENSOR"
+        },
+        "data": {
+          "network_event": {
+            "dest_ip": "198.51.100.34",
+            "dest_port": 443,
+            "dns": {
+              "answers": [
+                {
+                  "rdata": "203.0.113.34",
+                  "rrname": "synthetic.example.test",
+                  "rrtype": "A"
+                }
+              ],
+              "rcode": "NOERROR",
+              "rrname": "synthetic.example.test"
+            },
+            "event_type": "dns",
+            "flow_id": 34001,
+            "proto": "TCP",
+            "src_ip": "192.0.2.34",
+            "src_port": 50334,
+            "timestamp": "2026-10-27T10:40:33+00:00"
+          },
+          "payload_sha256": "d999e73d0a4258499831ba4b3db5690b4eb8761517264c6f0f4fee1c31826a58",
+          "source_generation": "synthetic-generation-1",
+          "source_type": "SURICATA_EVE",
+          "stream": "dns"
+        },
+        "decoder": {
+          "name": "m34-suricata"
+        },
+        "id": "SURICATA_EVE-dns",
+        "manager": {
+          "name": "synthetic-collector"
+        },
+        "rule": {
+          "description": "SURICATA_EVE dns observation"
+        },
+        "timestamp": "2026-10-27T10:40:33+00:00"
+      },
+      "related_incident_ids": [],
+      "related_case_ids": [],
+      "raw_evidence_ref": "EVT-5915AA13CDD60ABF6438F11D"
+    },
+    {
+      "event_id": "EVT-9A5C4BEC118DE87EB0739A67",
+      "source_event_id": "COLL-703d89284c3995794d094d45b7b0f5c30b767d2b9de0e2dfc1ee91bef2126351",
+      "timestamp": "2026-10-27T10:40:33Z",
+      "ingested_at": "2026-10-27T10:41:04.568214Z",
+      "source_type": "network",
+      "hostname": "SYNTHETIC-M34-SENSOR",
+      "agent_id": "synthetic-suricata",
+      "agent_name": "SYNTHETIC-M34-SENSOR",
+      "manager_identity": "synthetic-collector",
+      "event_provider": "Suricata",
+      "event_channel": "http",
+      "normalization_schema": "collection-event-v1",
+      "source_ip": "192.0.2.34",
+      "destination_ip": "198.51.100.34",
+      "source_port": 50334,
+      "destination_port": 443,
+      "event_category": "network_http",
+      "event_action": "observe",
+      "outcome": "observed",
+      "mitre": {
+        "ids": [],
+        "tactics": [],
+        "techniques": []
+      },
+      "message": "SURICATA_EVE http observation",
+      "ingestion_source": "collection:synthetic-suricata",
+      "cuse": {
+        "version": "cuse-v1",
+        "adapter_version": "m34-network-v1",
+        "source_family": "SURICATA",
+        "normalization_status": "NORMALIZED",
+        "provenance_status": "PARTIAL",
+        "historical_continuity": "UNPROVEN",
+        "transport_authenticated": true,
+        "endpoint_identity_verified": false,
+        "source_event_time": "2026-10-27T10:40:33Z",
+        "collector_observation_time": "2026-10-27T10:40:33Z",
+        "timestamp_basis": "SOURCE_EVENT_TIME",
+        "original_event_identity": "SURICATA_EVE-http",
+        "source_identity_sha256": "c7962437981b057684fc4e4b0d9ca78e2c8469fc46265112e0e7e9d67810cb60",
+        "content_fingerprint": "692682a79dcc5ac511420acbac2b6fc00dbba29ed2cf36293ff1e64f53a4519e",
+        "idempotency_contract": "REGISTERED_SOURCE_RECORD_SHA256",
+        "delivery_identity": "delivery-SURICATA_EVE-http",
+        "source_generation": "synthetic-generation-1",
+        "warnings": [
+          "SOURCE_IDENTITY_CLAIMED"
+        ],
+        "attributes": {
+          "connection_uid": "34001",
+          "http_host": "synthetic.example.test",
+          "network_protocol": "tcp",
+          "sensor_id": "synthetic-suricata",
+          "url_path": "/synthetic-path"
+        }
+      },
+      "structured_payload": {
+        "_cuse": {
+          "adapter_version": "m34-network-v1",
+          "attributes": {
+            "connection_uid": "34001",
+            "http_host": "synthetic.example.test",
+            "network_protocol": "tcp",
+            "sensor_id": "synthetic-suricata",
+            "url_path": "/synthetic-path"
+          },
+          "collector_observation_time": "2026-10-27T10:40:33Z",
+          "content_fingerprint": "692682a79dcc5ac511420acbac2b6fc00dbba29ed2cf36293ff1e64f53a4519e",
+          "delivery_identity": "delivery-SURICATA_EVE-http",
+          "endpoint_identity_verified": false,
+          "historical_continuity": "UNPROVEN",
+          "idempotency_contract": "REGISTERED_SOURCE_RECORD_SHA256",
+          "normalization_status": "NORMALIZED",
+          "original_event_identity": "SURICATA_EVE-http",
+          "provenance_status": "PARTIAL",
+          "source_event_time": "2026-10-27T10:40:33Z",
+          "source_family": "SURICATA",
+          "source_generation": "synthetic-generation-1",
+          "source_identity_sha256": "c7962437981b057684fc4e4b0d9ca78e2c8469fc46265112e0e7e9d67810cb60",
+          "timestamp_basis": "SOURCE_EVENT_TIME",
+          "transport_authenticated": true,
+          "version": "cuse-v1",
+          "warnings": [
+            "SOURCE_IDENTITY_CLAIMED"
+          ]
+        },
+        "agent": {
+          "id": "synthetic-suricata",
+          "name": "SYNTHETIC-M34-SENSOR"
+        },
+        "data": {
+          "network_event": {
+            "dest_ip": "198.51.100.34",
+            "dest_port": 443,
+            "event_type": "http",
+            "flow_id": 34001,
+            "http": {
+              "hostname": "synthetic.example.test",
+              "url": "/synthetic-path"
+            },
+            "proto": "TCP",
+            "src_ip": "192.0.2.34",
+            "src_port": 50334,
+            "timestamp": "2026-10-27T10:40:33+00:00"
+          },
+          "payload_sha256": "27ff21a3431224a1d9544805a32495e2e9a5acde0814bdf6f7fbe2f38f7b8127",
+          "source_generation": "synthetic-generation-1",
+          "source_type": "SURICATA_EVE",
+          "stream": "http"
+        },
+        "decoder": {
+          "name": "m34-suricata"
+        },
+        "manager": {
+          "name": "synthetic-collector"
+        },
+        "rule": {
+          "description": "SURICATA_EVE http observation"
+        }
+      },
+      "raw_payload": {
+        "agent": {
+          "id": "synthetic-suricata",
+          "name": "SYNTHETIC-M34-SENSOR"
+        },
+        "data": {
+          "network_event": {
+            "dest_ip": "198.51.100.34",
+            "dest_port": 443,
+            "event_type": "http",
+            "flow_id": 34001,
+            "http": {
+              "hostname": "synthetic.example.test",
+              "url": "/synthetic-path"
+            },
+            "proto": "TCP",
+            "src_ip": "192.0.2.34",
+            "src_port": 50334,
+            "timestamp": "2026-10-27T10:40:33+00:00"
+          },
+          "payload_sha256": "27ff21a3431224a1d9544805a32495e2e9a5acde0814bdf6f7fbe2f38f7b8127",
+          "source_generation": "synthetic-generation-1",
+          "source_type": "SURICATA_EVE",
+          "stream": "http"
+        },
+        "decoder": {
+          "name": "m34-suricata"
+        },
+        "id": "SURICATA_EVE-http",
+        "manager": {
+          "name": "synthetic-collector"
+        },
+        "rule": {
+          "description": "SURICATA_EVE http observation"
+        },
+        "timestamp": "2026-10-27T10:40:33+00:00"
+      },
+      "related_incident_ids": [],
+      "related_case_ids": [],
+      "raw_evidence_ref": "EVT-9A5C4BEC118DE87EB0739A67"
+    },
+    {
+      "event_id": "EVT-DA808AE4AEA0F6189660DB5E",
+      "source_event_id": "COLL-1d8f1587435a06ebad5d8cdd849312e3a6aed10a72e37e6827cd91a5f158bd2c",
+      "timestamp": "2026-10-27T10:40:33Z",
+      "ingested_at": "2026-10-27T10:41:04.710640Z",
+      "source_type": "network",
+      "hostname": "SYNTHETIC-M34-SENSOR",
+      "agent_id": "synthetic-suricata",
+      "agent_name": "SYNTHETIC-M34-SENSOR",
+      "manager_identity": "synthetic-collector",
+      "event_provider": "Suricata",
+      "event_channel": "tls",
+      "normalization_schema": "collection-event-v1",
+      "source_ip": "192.0.2.34",
+      "destination_ip": "198.51.100.34",
+      "source_port": 50334,
+      "destination_port": 443,
+      "event_category": "network_tls",
+      "event_action": "observe",
+      "outcome": "observed",
+      "mitre": {
+        "ids": [],
+        "tactics": [],
+        "techniques": []
+      },
+      "message": "SURICATA_EVE tls observation",
+      "ingestion_source": "collection:synthetic-suricata",
+      "cuse": {
+        "version": "cuse-v1",
+        "adapter_version": "m34-network-v1",
+        "source_family": "SURICATA",
+        "normalization_status": "NORMALIZED",
+        "provenance_status": "PARTIAL",
+        "historical_continuity": "UNPROVEN",
+        "transport_authenticated": true,
+        "endpoint_identity_verified": false,
+        "source_event_time": "2026-10-27T10:40:33Z",
+        "collector_observation_time": "2026-10-27T10:40:33Z",
+        "timestamp_basis": "SOURCE_EVENT_TIME",
+        "original_event_identity": "SURICATA_EVE-tls",
+        "source_identity_sha256": "c7962437981b057684fc4e4b0d9ca78e2c8469fc46265112e0e7e9d67810cb60",
+        "content_fingerprint": "b4eba3281eeef7cd993d96314c342cde403c085576f393d4eda5546497734de5",
+        "idempotency_contract": "REGISTERED_SOURCE_RECORD_SHA256",
+        "delivery_identity": "delivery-SURICATA_EVE-tls",
+        "source_generation": "synthetic-generation-1",
+        "warnings": [
+          "SOURCE_IDENTITY_CLAIMED"
+        ],
+        "attributes": {
+          "connection_uid": "34001",
+          "network_protocol": "tcp",
+          "sensor_id": "synthetic-suricata",
+          "tls_server_name": "synthetic.example.test"
+        }
+      },
+      "structured_payload": {
+        "_cuse": {
+          "adapter_version": "m34-network-v1",
+          "attributes": {
+            "connection_uid": "34001",
+            "network_protocol": "tcp",
+            "sensor_id": "synthetic-suricata",
+            "tls_server_name": "synthetic.example.test"
+          },
+          "collector_observation_time": "2026-10-27T10:40:33Z",
+          "content_fingerprint": "b4eba3281eeef7cd993d96314c342cde403c085576f393d4eda5546497734de5",
+          "delivery_identity": "delivery-SURICATA_EVE-tls",
+          "endpoint_identity_verified": false,
+          "historical_continuity": "UNPROVEN",
+          "idempotency_contract": "REGISTERED_SOURCE_RECORD_SHA256",
+          "normalization_status": "NORMALIZED",
+          "original_event_identity": "SURICATA_EVE-tls",
+          "provenance_status": "PARTIAL",
+          "source_event_time": "2026-10-27T10:40:33Z",
+          "source_family": "SURICATA",
+          "source_generation": "synthetic-generation-1",
+          "source_identity_sha256": "c7962437981b057684fc4e4b0d9ca78e2c8469fc46265112e0e7e9d67810cb60",
+          "timestamp_basis": "SOURCE_EVENT_TIME",
+          "transport_authenticated": true,
+          "version": "cuse-v1",
+          "warnings": [
+            "SOURCE_IDENTITY_CLAIMED"
+          ]
+        },
+        "agent": {
+          "id": "synthetic-suricata",
+          "name": "SYNTHETIC-M34-SENSOR"
+        },
+        "data": {
+          "network_event": {
+            "dest_ip": "198.51.100.34",
+            "dest_port": 443,
+            "event_type": "tls",
+            "flow_id": 34001,
+            "proto": "TCP",
+            "src_ip": "192.0.2.34",
+            "src_port": 50334,
+            "timestamp": "2026-10-27T10:40:33+00:00",
+            "tls": {
+              "sni": "synthetic.example.test"
+            }
+          },
+          "payload_sha256": "35d2b6ef68fe3a5032ea9f4fc58a94854e0fae12dcfa51a50ba993998bd135b7",
+          "source_generation": "synthetic-generation-1",
+          "source_type": "SURICATA_EVE",
+          "stream": "tls"
+        },
+        "decoder": {
+          "name": "m34-suricata"
+        },
+        "manager": {
+          "name": "synthetic-collector"
+        },
+        "rule": {
+          "description": "SURICATA_EVE tls observation"
+        }
+      },
+      "raw_payload": {
+        "agent": {
+          "id": "synthetic-suricata",
+          "name": "SYNTHETIC-M34-SENSOR"
+        },
+        "data": {
+          "network_event": {
+            "dest_ip": "198.51.100.34",
+            "dest_port": 443,
+            "event_type": "tls",
+            "flow_id": 34001,
+            "proto": "TCP",
+            "src_ip": "192.0.2.34",
+            "src_port": 50334,
+            "timestamp": "2026-10-27T10:40:33+00:00",
+            "tls": {
+              "sni": "synthetic.example.test"
+            }
+          },
+          "payload_sha256": "35d2b6ef68fe3a5032ea9f4fc58a94854e0fae12dcfa51a50ba993998bd135b7",
+          "source_generation": "synthetic-generation-1",
+          "source_type": "SURICATA_EVE",
+          "stream": "tls"
+        },
+        "decoder": {
+          "name": "m34-suricata"
+        },
+        "id": "SURICATA_EVE-tls",
+        "manager": {
+          "name": "synthetic-collector"
+        },
+        "rule": {
+          "description": "SURICATA_EVE tls observation"
+        },
+        "timestamp": "2026-10-27T10:40:33+00:00"
+      },
+      "related_incident_ids": [],
+      "related_case_ids": [],
+      "raw_evidence_ref": "EVT-DA808AE4AEA0F6189660DB5E"
+    },
+    {
+      "event_id": "EVT-3E1553B1C1D2FF808A3D0497",
+      "source_event_id": "COLL-4ac0c27d45bc5b2bdc8fc9e63e479a83b9b609719aad784f43f093b24692207c",
+      "timestamp": "2026-10-27T10:40:33Z",
+      "ingested_at": "2026-10-27T10:41:04.829493Z",
+      "source_type": "network",
+      "hostname": "SYNTHETIC-M34-SENSOR",
+      "agent_id": "synthetic-suricata",
+      "agent_name": "SYNTHETIC-M34-SENSOR",
+      "manager_identity": "synthetic-collector",
+      "event_provider": "Suricata",
+      "event_channel": "flow",
+      "normalization_schema": "collection-event-v1",
+      "source_ip": "192.0.2.34",
+      "destination_ip": "198.51.100.34",
+      "source_port": 50334,
+      "destination_port": 443,
+      "event_category": "network_flow",
+      "event_action": "observe",
+      "outcome": "observed",
+      "mitre": {
+        "ids": [],
+        "tactics": [],
+        "techniques": []
+      },
+      "message": "SURICATA_EVE flow observation",
+      "ingestion_source": "collection:synthetic-suricata",
+      "cuse": {
+        "version": "cuse-v1",
+        "adapter_version": "m34-network-v1",
+        "source_family": "SURICATA",
+        "normalization_status": "NORMALIZED",
+        "provenance_status": "PARTIAL",
+        "historical_continuity": "UNPROVEN",
+        "transport_authenticated": true,
+        "endpoint_identity_verified": false,
+        "source_event_time": "2026-10-27T10:40:33Z",
+        "collector_observation_time": "2026-10-27T10:40:33Z",
+        "timestamp_basis": "SOURCE_EVENT_TIME",
+        "original_event_identity": "SURICATA_EVE-flow",
+        "source_identity_sha256": "c7962437981b057684fc4e4b0d9ca78e2c8469fc46265112e0e7e9d67810cb60",
+        "content_fingerprint": "a30bf503fe092b6f97faf7614f8453d4530062461cf668f6e0070d5c24b26d6c",
+        "idempotency_contract": "REGISTERED_SOURCE_RECORD_SHA256",
+        "delivery_identity": "delivery-SURICATA_EVE-flow",
+        "source_generation": "synthetic-generation-1",
+        "warnings": [
+          "SOURCE_IDENTITY_CLAIMED"
+        ],
+        "attributes": {
+          "connection_uid": "34001",
+          "network_duration_ms": 5000,
+          "network_protocol": "tcp",
+          "sensor_id": "synthetic-suricata"
+        }
+      },
+      "structured_payload": {
+        "_cuse": {
+          "adapter_version": "m34-network-v1",
+          "attributes": {
+            "connection_uid": "34001",
+            "network_duration_ms": 5000,
+            "network_protocol": "tcp",
+            "sensor_id": "synthetic-suricata"
+          },
+          "collector_observation_time": "2026-10-27T10:40:33Z",
+          "content_fingerprint": "a30bf503fe092b6f97faf7614f8453d4530062461cf668f6e0070d5c24b26d6c",
+          "delivery_identity": "delivery-SURICATA_EVE-flow",
+          "endpoint_identity_verified": false,
+          "historical_continuity": "UNPROVEN",
+          "idempotency_contract": "REGISTERED_SOURCE_RECORD_SHA256",
+          "normalization_status": "NORMALIZED",
+          "original_event_identity": "SURICATA_EVE-flow",
+          "provenance_status": "PARTIAL",
+          "source_event_time": "2026-10-27T10:40:33Z",
+          "source_family": "SURICATA",
+          "source_generation": "synthetic-generation-1",
+          "source_identity_sha256": "c7962437981b057684fc4e4b0d9ca78e2c8469fc46265112e0e7e9d67810cb60",
+          "timestamp_basis": "SOURCE_EVENT_TIME",
+          "transport_authenticated": true,
+          "version": "cuse-v1",
+          "warnings": [
+            "SOURCE_IDENTITY_CLAIMED"
+          ]
+        },
+        "agent": {
+          "id": "synthetic-suricata",
+          "name": "SYNTHETIC-M34-SENSOR"
+        },
+        "data": {
+          "network_event": {
+            "dest_ip": "198.51.100.34",
+            "dest_port": 443,
+            "event_type": "flow",
+            "flow": {
+              "age": 5
+            },
+            "flow_id": 34001,
+            "proto": "TCP",
+            "src_ip": "192.0.2.34",
+            "src_port": 50334,
+            "timestamp": "2026-10-27T10:40:33+00:00"
+          },
+          "payload_sha256": "225295da76ab58ac6857a97ca443f5dcae30b88c28ac5327a2339fe0a8d4d1e8",
+          "source_generation": "synthetic-generation-1",
+          "source_type": "SURICATA_EVE",
+          "stream": "flow"
+        },
+        "decoder": {
+          "name": "m34-suricata"
+        },
+        "manager": {
+          "name": "synthetic-collector"
+        },
+        "rule": {
+          "description": "SURICATA_EVE flow observation"
+        }
+      },
+      "raw_payload": {
+        "agent": {
+          "id": "synthetic-suricata",
+          "name": "SYNTHETIC-M34-SENSOR"
+        },
+        "data": {
+          "network_event": {
+            "dest_ip": "198.51.100.34",
+            "dest_port": 443,
+            "event_type": "flow",
+            "flow": {
+              "age": 5
+            },
+            "flow_id": 34001,
+            "proto": "TCP",
+            "src_ip": "192.0.2.34",
+            "src_port": 50334,
+            "timestamp": "2026-10-27T10:40:33+00:00"
+          },
+          "payload_sha256": "225295da76ab58ac6857a97ca443f5dcae30b88c28ac5327a2339fe0a8d4d1e8",
+          "source_generation": "synthetic-generation-1",
+          "source_type": "SURICATA_EVE",
+          "stream": "flow"
+        },
+        "decoder": {
+          "name": "m34-suricata"
+        },
+        "id": "SURICATA_EVE-flow",
+        "manager": {
+          "name": "synthetic-collector"
+        },
+        "rule": {
+          "description": "SURICATA_EVE flow observation"
+        },
+        "timestamp": "2026-10-27T10:40:33+00:00"
+      },
+      "related_incident_ids": [],
+      "related_case_ids": [],
+      "raw_evidence_ref": "EVT-3E1553B1C1D2FF808A3D0497"
+    }
+  ],
+  "observed_source_coverage": {
+    "contract": "cq-source-coverage-v1",
+    "observed_at": "2026-10-27T10:41:05.028525+00:00",
+    "scope": "SYNTHETIC_TEST",
+    "coverage": "RETAINED_SAMPLE",
+    "sample_limit": 1000,
+    "sample_count": 9,
+    "truncated": false,
+    "historical_continuity": "UNPROVEN",
+    "production_active": false,
+    "registered_sources": [
+      {
+        "source_id": "synthetic-zeek",
+        "source_type": "ZEEK_JSON",
+        "host": "SYNTHETIC-M34-SENSOR",
+        "collector_id": "synthetic-collector",
+        "source_generation": "synthetic-generation-1",
+        "configuration_authority": "EXPLICIT_DISPOSABLE_CONSTRUCTOR",
+        "configured": true,
+        "connected": "UNKNOWN",
+        "delivery_state": "OBSERVED_COMMIT",
+        "last_committed_delivery_at": "2026-10-27T10:41:04.156301+00:00",
+        "last_acknowledged_delivery": null,
+        "sample_event_count": 4,
+        "last_event_time": "2026-10-27T10:40:33+00:00",
+        "last_ingestion_time": "2026-10-27T10:41:04.117028+00:00",
+        "queue_backlog": null,
+        "retry_count": null,
+        "dead_letter_count": null,
+        "process_counters": {
+          "inserted": 4
+        },
+        "counter_scope": "SINCE_APPLICATION_START",
+        "family": "ZEEK"
+      },
+      {
+        "source_id": "synthetic-suricata",
+        "source_type": "SURICATA_EVE",
+        "host": "SYNTHETIC-M34-SENSOR",
+        "collector_id": "synthetic-collector",
+        "source_generation": "synthetic-generation-1",
+        "configuration_authority": "EXPLICIT_DISPOSABLE_CONSTRUCTOR",
+        "configured": true,
+        "connected": "UNKNOWN",
+        "delivery_state": "OBSERVED_COMMIT",
+        "last_committed_delivery_at": "2026-10-27T10:41:04.866733+00:00",
+        "last_acknowledged_delivery": null,
+        "sample_event_count": 5,
+        "last_event_time": "2026-10-27T10:40:33+00:00",
+        "last_ingestion_time": "2026-10-27T10:41:04.829493+00:00",
+        "queue_backlog": null,
+        "retry_count": null,
+        "dead_letter_count": null,
+        "process_counters": {
+          "inserted": 5
+        },
+        "counter_scope": "SINCE_APPLICATION_START",
+        "family": "SURICATA"
+      }
+    ],
+    "families": [
+      {
+        "family": "WINDOWS_EVENTCHANNEL",
+        "parser_available": true,
+        "observed": false,
+        "sample_event_count": 0,
+        "sample_normalized_count": 0,
+        "last_event_time": null,
+        "last_ingestion_time": null,
+        "latest_event_id": null,
+        "freshness": "UNKNOWN",
+        "search_fields_available": true,
+        "detection_eligible": "UNKNOWN",
+        "connected": "UNKNOWN",
+        "queue_backlog": null
+      },
+      {
+        "family": "SYSMON",
+        "parser_available": true,
+        "observed": false,
+        "sample_event_count": 0,
+        "sample_normalized_count": 0,
+        "last_event_time": null,
+        "last_ingestion_time": null,
+        "latest_event_id": null,
+        "freshness": "UNKNOWN",
+        "search_fields_available": true,
+        "detection_eligible": "UNKNOWN",
+        "connected": "UNKNOWN",
+        "queue_backlog": null
+      },
+      {
+        "family": "LINUX_AUTH",
+        "parser_available": true,
+        "observed": false,
+        "sample_event_count": 0,
+        "sample_normalized_count": 0,
+        "last_event_time": null,
+        "last_ingestion_time": null,
+        "latest_event_id": null,
+        "freshness": "UNKNOWN",
+        "search_fields_available": true,
+        "detection_eligible": "UNKNOWN",
+        "connected": "UNKNOWN",
+        "queue_backlog": null
+      },
+      {
+        "family": "SYSLOG",
+        "parser_available": true,
+        "observed": false,
+        "sample_event_count": 0,
+        "sample_normalized_count": 0,
+        "last_event_time": null,
+        "last_ingestion_time": null,
+        "latest_event_id": null,
+        "freshness": "UNKNOWN",
+        "search_fields_available": true,
+        "detection_eligible": "UNKNOWN",
+        "connected": "UNKNOWN",
+        "queue_backlog": null
+      },
+      {
+        "family": "JOURNALD",
+        "parser_available": true,
+        "observed": false,
+        "sample_event_count": 0,
+        "sample_normalized_count": 0,
+        "last_event_time": null,
+        "last_ingestion_time": null,
+        "latest_event_id": null,
+        "freshness": "UNKNOWN",
+        "search_fields_available": true,
+        "detection_eligible": "UNKNOWN",
+        "connected": "UNKNOWN",
+        "queue_backlog": null
+      },
+      {
+        "family": "WAZUH_GENERIC",
+        "parser_available": true,
+        "observed": false,
+        "sample_event_count": 0,
+        "sample_normalized_count": 0,
+        "last_event_time": null,
+        "last_ingestion_time": null,
+        "latest_event_id": null,
+        "freshness": "UNKNOWN",
+        "search_fields_available": true,
+        "detection_eligible": "UNKNOWN",
+        "connected": "UNKNOWN",
+        "queue_backlog": null
+      },
+      {
+        "family": "ZEEK",
+        "parser_available": true,
+        "observed": true,
+        "sample_event_count": 4,
+        "sample_normalized_count": 4,
+        "last_event_time": "2026-10-27T10:40:33+00:00",
+        "last_ingestion_time": "2026-10-27T10:41:04.117028+00:00",
+        "latest_event_id": "EVT-D1B205F6CEFB35BC57FF14CF",
+        "freshness": "OBSERVED",
+        "search_fields_available": true,
+        "detection_eligible": "UNKNOWN",
+        "connected": "UNKNOWN",
+        "queue_backlog": null
+      },
+      {
+        "family": "SURICATA",
+        "parser_available": true,
+        "observed": true,
+        "sample_event_count": 5,
+        "sample_normalized_count": 5,
+        "last_event_time": "2026-10-27T10:40:33+00:00",
+        "last_ingestion_time": "2026-10-27T10:41:04.829493+00:00",
+        "latest_event_id": "EVT-DA808AE4AEA0F6189660DB5E",
+        "freshness": "OBSERVED",
+        "search_fields_available": true,
+        "detection_eligible": "UNKNOWN",
+        "connected": "UNKNOWN",
+        "queue_backlog": null
+      }
+    ],
+    "detection_workers": [],
+    "continuous_worker_state": "UNKNOWN_NOT_ACTIVATED"
+  },
+  "network_workbench": {
+    "target_type": "EVENT",
+    "target_label": "Event EVT-3A3FEB417A6C313F3336A39C",
+    "primary_event": {
+      "event_id": "EVT-3A3FEB417A6C313F3336A39C",
+      "source_event_id": "COLL-f3b171847ec05e06ead8c918addd4b0f42452e64b173741d6d275eebf3738ebb",
+      "timestamp": "2026-10-27T10:40:33Z",
+      "ingested_at": "2026-10-27T10:41:03.862393Z",
+      "source_type": "network",
+      "hostname": "SYNTHETIC-M34-SENSOR",
+      "agent_id": "synthetic-zeek",
+      "agent_name": "SYNTHETIC-M34-SENSOR",
+      "manager_identity": "synthetic-collector",
+      "event_provider": "Zeek",
+      "event_channel": "dns",
+      "normalization_schema": "collection-event-v1",
+      "source_ip": "192.0.2.34",
+      "destination_ip": "198.51.100.34",
+      "source_port": 50334,
+      "destination_port": 53,
+      "event_category": "network_dns",
+      "event_action": "observe",
+      "outcome": "observed",
+      "mitre": {
+        "ids": [],
+        "tactics": [],
+        "techniques": []
+      },
+      "message": "ZEEK_JSON dns observation",
+      "ingestion_source": "collection:synthetic-zeek",
+      "cuse": {
+        "version": "cuse-v1",
+        "adapter_version": "m34-network-v1",
+        "source_family": "ZEEK",
+        "normalization_status": "NORMALIZED",
+        "provenance_status": "PARTIAL",
+        "historical_continuity": "UNPROVEN",
+        "transport_authenticated": true,
+        "endpoint_identity_verified": false,
+        "source_event_time": "2026-10-27T10:40:33Z",
+        "collector_observation_time": "2026-10-27T10:40:33Z",
+        "timestamp_basis": "SOURCE_EVENT_TIME",
+        "original_event_identity": "ZEEK_JSON-dns",
+        "source_identity_sha256": "14d4d0383474373948ba9c958d4735d58d34897dc4050e51c4af630fa7c274c9",
+        "content_fingerprint": "9e6c7c463ca903ad017f11a10f64350ba2a85c091d63dae7e224ab92368acf25",
+        "idempotency_contract": "REGISTERED_SOURCE_RECORD_SHA256",
+        "delivery_identity": "delivery-ZEEK_JSON-dns",
+        "source_generation": "synthetic-generation-1",
+        "warnings": [
+          "SOURCE_IDENTITY_CLAIMED"
+        ],
+        "attributes": {
+          "connection_uid": "SYNTHETIC-CONNECTION-1",
+          "dns_answers_json": "[\"203.0.113.34\"]",
+          "dns_question_name": "synthetic.example.test",
+          "dns_response_code": "NOERROR",
+          "network_protocol": "udp",
+          "sensor_id": "synthetic-zeek"
+        }
+      },
+      "structured_payload": {
+        "_cuse": {
+          "adapter_version": "m34-network-v1",
+          "attributes": {
+            "connection_uid": "SYNTHETIC-CONNECTION-1",
+            "dns_answers_json": "[\"203.0.113.34\"]",
+            "dns_question_name": "synthetic.example.test",
+            "dns_response_code": "NOERROR",
+            "network_protocol": "udp",
+            "sensor_id": "synthetic-zeek"
+          },
+          "collector_observation_time": "2026-10-27T10:40:33Z",
+          "content_fingerprint": "9e6c7c463ca903ad017f11a10f64350ba2a85c091d63dae7e224ab92368acf25",
+          "delivery_identity": "delivery-ZEEK_JSON-dns",
+          "endpoint_identity_verified": false,
+          "historical_continuity": "UNPROVEN",
+          "idempotency_contract": "REGISTERED_SOURCE_RECORD_SHA256",
+          "normalization_status": "NORMALIZED",
+          "original_event_identity": "ZEEK_JSON-dns",
+          "provenance_status": "PARTIAL",
+          "source_event_time": "2026-10-27T10:40:33Z",
+          "source_family": "ZEEK",
+          "source_generation": "synthetic-generation-1",
+          "source_identity_sha256": "14d4d0383474373948ba9c958d4735d58d34897dc4050e51c4af630fa7c274c9",
+          "timestamp_basis": "SOURCE_EVENT_TIME",
+          "transport_authenticated": true,
+          "version": "cuse-v1",
+          "warnings": [
+            "SOURCE_IDENTITY_CLAIMED"
+          ]
+        },
+        "agent": {
+          "id": "synthetic-zeek",
+          "name": "SYNTHETIC-M34-SENSOR"
+        },
+        "data": {
+          "network_event": {
+            "answers": [
+              "203.0.113.34"
+            ],
+            "id.orig_h": "192.0.2.34",
+            "id.orig_p": 50334,
+            "id.resp_h": "198.51.100.34",
+            "id.resp_p": 53,
+            "proto": "udp",
+            "query": "synthetic.example.test",
+            "rcode_name": "NOERROR",
+            "ts": 1793097633.0,
+            "uid": "SYNTHETIC-CONNECTION-1"
+          },
+          "payload_sha256": "fa13a8337300123fb4eff6e3e50100d72ec11947a72df786815fcdbfec57b785",
+          "source_generation": "synthetic-generation-1",
+          "source_type": "ZEEK_JSON",
+          "stream": "dns"
+        },
+        "decoder": {
+          "name": "m34-zeek"
+        },
+        "manager": {
+          "name": "synthetic-collector"
+        },
+        "rule": {
+          "description": "ZEEK_JSON dns observation"
+        }
+      },
+      "raw_payload": {
+        "agent": {
+          "id": "synthetic-zeek",
+          "name": "SYNTHETIC-M34-SENSOR"
+        },
+        "data": {
+          "network_event": {
+            "answers": [
+              "203.0.113.34"
+            ],
+            "id.orig_h": "192.0.2.34",
+            "id.orig_p": 50334,
+            "id.resp_h": "198.51.100.34",
+            "id.resp_p": 53,
+            "proto": "udp",
+            "query": "synthetic.example.test",
+            "rcode_name": "NOERROR",
+            "ts": 1793097633.0,
+            "uid": "SYNTHETIC-CONNECTION-1"
+          },
+          "payload_sha256": "fa13a8337300123fb4eff6e3e50100d72ec11947a72df786815fcdbfec57b785",
+          "source_generation": "synthetic-generation-1",
+          "source_type": "ZEEK_JSON",
+          "stream": "dns"
+        },
+        "decoder": {
+          "name": "m34-zeek"
+        },
+        "id": "ZEEK_JSON-dns",
+        "manager": {
+          "name": "synthetic-collector"
+        },
+        "rule": {
+          "description": "ZEEK_JSON dns observation"
+        },
+        "timestamp": "2026-10-27T10:40:33+00:00"
+      },
+      "related_incident_ids": [],
+      "related_case_ids": [],
+      "raw_evidence_ref": "EVT-3A3FEB417A6C313F3336A39C"
+    },
+    "summary": {
+      "observations": [
+        "Observed network evidence at 2026-10-27T10:40:33+00:00.",
+        "The evidence is stored as event EVT-3A3FEB417A6C313F3336A39C with rule unavailable.",
+        "Recorded context includes host SYNTHETIC-M34-SENSOR and account unavailable."
+      ],
+      "interpretations": [
+        "These facts support investigation but do not by themselves establish attacker intent or confirmed compromise."
+      ],
+      "missing_fields": [
+        "username",
+        "rule_id"
+      ]
+    },
+    "entities": [
+      {
+        "entity_type": "HOSTNAME",
+        "value": "SYNTHETIC-M34-SENSOR",
+        "label": "Hostname",
+        "sensitive": false,
+        "pivot_supported": true,
+        "evidence_field": "hostname"
+      },
+      {
+        "entity_type": "AGENT_ID",
+        "value": "synthetic-zeek",
+        "label": "Agent ID",
+        "sensitive": false,
+        "pivot_supported": true,
+        "evidence_field": "agent_id"
+      },
+      {
+        "entity_type": "IPV4",
+        "value": "192.0.2.34",
+        "label": "Source IP",
+        "sensitive": true,
+        "pivot_supported": true,
+        "evidence_field": "source_ip"
+      },
+      {
+        "entity_type": "IPV4",
+        "value": "198.51.100.34",
+        "label": "Destination IP",
+        "sensitive": true,
+        "pivot_supported": true,
+        "evidence_field": "destination_ip"
+      },
+      {
+        "entity_type": "DOMAIN",
+        "value": "synthetic.example.test",
+        "label": "Domain",
+        "sensitive": true,
+        "pivot_supported": true,
+        "evidence_field": "structured_payload.data.network_event.query"
+      },
+      {
+        "entity_type": "FILE_HASH",
+        "value": "fa13a8337300123fb4eff6e3e50100d72ec11947a72df786815fcdbfec57b785",
+        "label": "File hash",
+        "sensitive": true,
+        "pivot_supported": true,
+        "evidence_field": "structured_payload.data.payload_sha256"
+      }
+    ],
+    "related_events": [
+      {
+        "event": {
+          "event_id": "EVT-DA808AE4AEA0F6189660DB5E",
+          "source_event_id": "COLL-1d8f1587435a06ebad5d8cdd849312e3a6aed10a72e37e6827cd91a5f158bd2c",
+          "timestamp": "2026-10-27T10:40:33Z",
+          "ingested_at": "2026-10-27T10:41:04.710640Z",
+          "source_type": "network",
+          "hostname": "SYNTHETIC-M34-SENSOR",
+          "agent_id": "synthetic-suricata",
+          "agent_name": "SYNTHETIC-M34-SENSOR",
+          "manager_identity": "synthetic-collector",
+          "event_provider": "Suricata",
+          "event_channel": "tls",
+          "normalization_schema": "collection-event-v1",
+          "source_ip": "192.0.2.34",
+          "destination_ip": "198.51.100.34",
+          "source_port": 50334,
+          "destination_port": 443,
+          "event_category": "network_tls",
+          "event_action": "observe",
+          "outcome": "observed",
+          "mitre": {
+            "ids": [],
+            "tactics": [],
+            "techniques": []
+          },
+          "message": "SURICATA_EVE tls observation",
+          "ingestion_source": "collection:synthetic-suricata"
+        },
+        "relationship_types": [
+          "SAME_DESTINATION_IP",
+          "SAME_HOST",
+          "SAME_SOURCE_IP"
+        ]
+      },
+      {
+        "event": {
+          "event_id": "EVT-D1B205F6CEFB35BC57FF14CF",
+          "source_event_id": "COLL-b97d660784496dab0f9cc567bb607b4d687f2b2e7b1686098d8c05712683ef5f",
+          "timestamp": "2026-10-27T10:40:33Z",
+          "ingested_at": "2026-10-27T10:41:03.955923Z",
+          "source_type": "network",
+          "hostname": "SYNTHETIC-M34-SENSOR",
+          "agent_id": "synthetic-zeek",
+          "agent_name": "SYNTHETIC-M34-SENSOR",
+          "manager_identity": "synthetic-collector",
+          "event_provider": "Zeek",
+          "event_channel": "http",
+          "normalization_schema": "collection-event-v1",
+          "source_ip": "192.0.2.34",
+          "destination_ip": "198.51.100.34",
+          "source_port": 50334,
+          "destination_port": 53,
+          "event_category": "network_http",
+          "event_action": "observe",
+          "outcome": "observed",
+          "mitre": {
+            "ids": [],
+            "tactics": [],
+            "techniques": []
+          },
+          "message": "ZEEK_JSON http observation",
+          "ingestion_source": "collection:synthetic-zeek"
+        },
+        "relationship_types": [
+          "SAME_AGENT",
+          "SAME_DESTINATION_IP",
+          "SAME_HOST",
+          "SAME_SOURCE_IP"
+        ]
+      },
+      {
+        "event": {
+          "event_id": "EVT-9A5C4BEC118DE87EB0739A67",
+          "source_event_id": "COLL-703d89284c3995794d094d45b7b0f5c30b767d2b9de0e2dfc1ee91bef2126351",
+          "timestamp": "2026-10-27T10:40:33Z",
+          "ingested_at": "2026-10-27T10:41:04.568214Z",
+          "source_type": "network",
+          "hostname": "SYNTHETIC-M34-SENSOR",
+          "agent_id": "synthetic-suricata",
+          "agent_name": "SYNTHETIC-M34-SENSOR",
+          "manager_identity": "synthetic-collector",
+          "event_provider": "Suricata",
+          "event_channel": "http",
+          "normalization_schema": "collection-event-v1",
+          "source_ip": "192.0.2.34",
+          "destination_ip": "198.51.100.34",
+          "source_port": 50334,
+          "destination_port": 443,
+          "event_category": "network_http",
+          "event_action": "observe",
+          "outcome": "observed",
+          "mitre": {
+            "ids": [],
+            "tactics": [],
+            "techniques": []
+          },
+          "message": "SURICATA_EVE http observation",
+          "ingestion_source": "collection:synthetic-suricata"
+        },
+        "relationship_types": [
+          "SAME_DESTINATION_IP",
+          "SAME_HOST",
+          "SAME_SOURCE_IP"
+        ]
+      },
+      {
+        "event": {
+          "event_id": "EVT-88F2730CB679C91C6046BFAB",
+          "source_event_id": "COLL-b708eac1c92b50f644dd78892eab998d64e1dbd97a5c3589b2f079a917eec847",
+          "timestamp": "2026-10-27T10:40:33Z",
+          "ingested_at": "2026-10-27T10:41:03.410503Z",
+          "source_type": "network",
+          "hostname": "SYNTHETIC-M34-SENSOR",
+          "agent_id": "synthetic-zeek",
+          "agent_name": "SYNTHETIC-M34-SENSOR",
+          "manager_identity": "synthetic-collector",
+          "event_provider": "Zeek",
+          "event_channel": "conn",
+          "normalization_schema": "collection-event-v1",
+          "source_ip": "192.0.2.34",
+          "destination_ip": "198.51.100.34",
+          "source_port": 50334,
+          "destination_port": 53,
+          "event_category": "network_conn",
+          "event_action": "observe",
+          "outcome": "observed",
+          "mitre": {
+            "ids": [],
+            "tactics": [],
+            "techniques": []
+          },
+          "message": "ZEEK_JSON conn observation",
+          "ingestion_source": "collection:synthetic-zeek"
+        },
+        "relationship_types": [
+          "SAME_AGENT",
+          "SAME_DESTINATION_IP",
+          "SAME_HOST",
+          "SAME_SOURCE_IP"
+        ]
+      },
+      {
+        "event": {
+          "event_id": "EVT-5915AA13CDD60ABF6438F11D",
+          "source_event_id": "COLL-bf3abf08788dbf381c6192a08643f1fb597556b7e3e46e2841608cd7ce5aafe8",
+          "timestamp": "2026-10-27T10:40:33Z",
+          "ingested_at": "2026-10-27T10:41:04.438806Z",
+          "source_type": "network",
+          "hostname": "SYNTHETIC-M34-SENSOR",
+          "agent_id": "synthetic-suricata",
+          "agent_name": "SYNTHETIC-M34-SENSOR",
+          "manager_identity": "synthetic-collector",
+          "event_provider": "Suricata",
+          "event_channel": "dns",
+          "normalization_schema": "collection-event-v1",
+          "source_ip": "192.0.2.34",
+          "destination_ip": "198.51.100.34",
+          "source_port": 50334,
+          "destination_port": 443,
+          "event_category": "network_dns",
+          "event_action": "observe",
+          "outcome": "observed",
+          "mitre": {
+            "ids": [],
+            "tactics": [],
+            "techniques": []
+          },
+          "message": "SURICATA_EVE dns observation",
+          "ingestion_source": "collection:synthetic-suricata"
+        },
+        "relationship_types": [
+          "SAME_DESTINATION_IP",
+          "SAME_HOST",
+          "SAME_SOURCE_IP"
+        ]
+      },
+      {
+        "event": {
+          "event_id": "EVT-3E1553B1C1D2FF808A3D0497",
+          "source_event_id": "COLL-4ac0c27d45bc5b2bdc8fc9e63e479a83b9b609719aad784f43f093b24692207c",
+          "timestamp": "2026-10-27T10:40:33Z",
+          "ingested_at": "2026-10-27T10:41:04.829493Z",
+          "source_type": "network",
+          "hostname": "SYNTHETIC-M34-SENSOR",
+          "agent_id": "synthetic-suricata",
+          "agent_name": "SYNTHETIC-M34-SENSOR",
+          "manager_identity": "synthetic-collector",
+          "event_provider": "Suricata",
+          "event_channel": "flow",
+          "normalization_schema": "collection-event-v1",
+          "source_ip": "192.0.2.34",
+          "destination_ip": "198.51.100.34",
+          "source_port": 50334,
+          "destination_port": 443,
+          "event_category": "network_flow",
+          "event_action": "observe",
+          "outcome": "observed",
+          "mitre": {
+            "ids": [],
+            "tactics": [],
+            "techniques": []
+          },
+          "message": "SURICATA_EVE flow observation",
+          "ingestion_source": "collection:synthetic-suricata"
+        },
+        "relationship_types": [
+          "SAME_DESTINATION_IP",
+          "SAME_HOST",
+          "SAME_SOURCE_IP"
+        ]
+      },
+      {
+        "event": {
+          "event_id": "EVT-31845739DA774568568D80B2",
+          "source_event_id": "COLL-d1474f72943fd1ba990ad625290e7e7211b877ab6b5e5e6f135a16f17f71c460",
+          "timestamp": "2026-10-27T10:40:33Z",
+          "ingested_at": "2026-10-27T10:41:04.117028Z",
+          "source_type": "network",
+          "hostname": "SYNTHETIC-M34-SENSOR",
+          "agent_id": "synthetic-zeek",
+          "agent_name": "SYNTHETIC-M34-SENSOR",
+          "manager_identity": "synthetic-collector",
+          "event_provider": "Zeek",
+          "event_channel": "ssl",
+          "normalization_schema": "collection-event-v1",
+          "source_ip": "192.0.2.34",
+          "destination_ip": "198.51.100.34",
+          "source_port": 50334,
+          "destination_port": 53,
+          "event_category": "network_tls",
+          "event_action": "observe",
+          "outcome": "observed",
+          "mitre": {
+            "ids": [],
+            "tactics": [],
+            "techniques": []
+          },
+          "message": "ZEEK_JSON ssl observation",
+          "ingestion_source": "collection:synthetic-zeek"
+        },
+        "relationship_types": [
+          "SAME_AGENT",
+          "SAME_DESTINATION_IP",
+          "SAME_HOST",
+          "SAME_SOURCE_IP"
+        ]
+      },
+      {
+        "event": {
+          "event_id": "EVT-1B2AB7F74C812F79FFE7E39B",
+          "source_event_id": "COLL-ce0bc7e175804ec263e73f907dbd5c544dcf47685e0c061030c3211fd5b2f125",
+          "timestamp": "2026-10-27T10:40:33Z",
+          "ingested_at": "2026-10-27T10:41:04.255222Z",
+          "source_type": "network",
+          "hostname": "SYNTHETIC-M34-SENSOR",
+          "agent_id": "synthetic-suricata",
+          "agent_name": "SYNTHETIC-M34-SENSOR",
+          "manager_identity": "synthetic-collector",
+          "event_provider": "Suricata",
+          "event_channel": "alert",
+          "normalization_schema": "collection-event-v1",
+          "source_ip": "192.0.2.34",
+          "destination_ip": "198.51.100.34",
+          "source_port": 50334,
+          "destination_port": 443,
+          "event_category": "network_alert",
+          "event_action": "alert",
+          "outcome": "observed",
+          "rule_id": "34001",
+          "severity": 8,
+          "mitre": {
+            "ids": [],
+            "tactics": [],
+            "techniques": []
+          },
+          "message": "SURICATA_EVE alert observation",
+          "ingestion_source": "collection:synthetic-suricata"
+        },
+        "relationship_types": [
+          "SAME_DESTINATION_IP",
+          "SAME_HOST",
+          "SAME_SOURCE_IP"
+        ]
+      }
+    ],
+    "links": [],
+    "timeline": [
+      {
+        "item_id": "event:EVT-1B2AB7F74C812F79FFE7E39B",
+        "item_type": "SECURITY_EVENT",
+        "timestamp": "2026-10-27T10:40:33Z",
+        "timestamp_kind": "EVENT_TIME",
+        "timestamp_status": "NORMAL",
+        "title": "SURICATA_EVE alert observation",
+        "source_id": "EVT-1B2AB7F74C812F79FFE7E39B",
+        "severity": 8,
+        "relationship_types": [
+          "SAME_DESTINATION_IP",
+          "SAME_HOST",
+          "SAME_SOURCE_IP"
+        ],
+        "details": {
+          "source_type": "network",
+          "rule_id": "34001",
+          "event_code": null
+        }
+      },
+      {
+        "item_id": "event:EVT-31845739DA774568568D80B2",
+        "item_type": "SECURITY_EVENT",
+        "timestamp": "2026-10-27T10:40:33Z",
+        "timestamp_kind": "EVENT_TIME",
+        "timestamp_status": "NORMAL",
+        "title": "ZEEK_JSON ssl observation",
+        "source_id": "EVT-31845739DA774568568D80B2",
+        "relationship_types": [
+          "SAME_AGENT",
+          "SAME_DESTINATION_IP",
+          "SAME_HOST",
+          "SAME_SOURCE_IP"
+        ],
+        "details": {
+          "source_type": "network",
+          "rule_id": null,
+          "event_code": null
+        }
+      },
+      {
+        "item_id": "event:EVT-3A3FEB417A6C313F3336A39C",
+        "item_type": "SECURITY_EVENT",
+        "timestamp": "2026-10-27T10:40:33Z",
+        "timestamp_kind": "EVENT_TIME",
+        "timestamp_status": "NORMAL",
+        "title": "ZEEK_JSON dns observation",
+        "source_id": "EVT-3A3FEB417A6C313F3336A39C",
+        "relationship_types": [
+          "PRIMARY_EVIDENCE"
+        ],
+        "details": {
+          "source_type": "network",
+          "rule_id": null,
+          "event_code": null
+        }
+      },
+      {
+        "item_id": "event:EVT-3E1553B1C1D2FF808A3D0497",
+        "item_type": "SECURITY_EVENT",
+        "timestamp": "2026-10-27T10:40:33Z",
+        "timestamp_kind": "EVENT_TIME",
+        "timestamp_status": "NORMAL",
+        "title": "SURICATA_EVE flow observation",
+        "source_id": "EVT-3E1553B1C1D2FF808A3D0497",
+        "relationship_types": [
+          "SAME_DESTINATION_IP",
+          "SAME_HOST",
+          "SAME_SOURCE_IP"
+        ],
+        "details": {
+          "source_type": "network",
+          "rule_id": null,
+          "event_code": null
+        }
+      },
+      {
+        "item_id": "event:EVT-5915AA13CDD60ABF6438F11D",
+        "item_type": "SECURITY_EVENT",
+        "timestamp": "2026-10-27T10:40:33Z",
+        "timestamp_kind": "EVENT_TIME",
+        "timestamp_status": "NORMAL",
+        "title": "SURICATA_EVE dns observation",
+        "source_id": "EVT-5915AA13CDD60ABF6438F11D",
+        "relationship_types": [
+          "SAME_DESTINATION_IP",
+          "SAME_HOST",
+          "SAME_SOURCE_IP"
+        ],
+        "details": {
+          "source_type": "network",
+          "rule_id": null,
+          "event_code": null
+        }
+      },
+      {
+        "item_id": "event:EVT-88F2730CB679C91C6046BFAB",
+        "item_type": "SECURITY_EVENT",
+        "timestamp": "2026-10-27T10:40:33Z",
+        "timestamp_kind": "EVENT_TIME",
+        "timestamp_status": "NORMAL",
+        "title": "ZEEK_JSON conn observation",
+        "source_id": "EVT-88F2730CB679C91C6046BFAB",
+        "relationship_types": [
+          "SAME_AGENT",
+          "SAME_DESTINATION_IP",
+          "SAME_HOST",
+          "SAME_SOURCE_IP"
+        ],
+        "details": {
+          "source_type": "network",
+          "rule_id": null,
+          "event_code": null
+        }
+      },
+      {
+        "item_id": "event:EVT-9A5C4BEC118DE87EB0739A67",
+        "item_type": "SECURITY_EVENT",
+        "timestamp": "2026-10-27T10:40:33Z",
+        "timestamp_kind": "EVENT_TIME",
+        "timestamp_status": "NORMAL",
+        "title": "SURICATA_EVE http observation",
+        "source_id": "EVT-9A5C4BEC118DE87EB0739A67",
+        "relationship_types": [
+          "SAME_DESTINATION_IP",
+          "SAME_HOST",
+          "SAME_SOURCE_IP"
+        ],
+        "details": {
+          "source_type": "network",
+          "rule_id": null,
+          "event_code": null
+        }
+      },
+      {
+        "item_id": "event:EVT-D1B205F6CEFB35BC57FF14CF",
+        "item_type": "SECURITY_EVENT",
+        "timestamp": "2026-10-27T10:40:33Z",
+        "timestamp_kind": "EVENT_TIME",
+        "timestamp_status": "NORMAL",
+        "title": "ZEEK_JSON http observation",
+        "source_id": "EVT-D1B205F6CEFB35BC57FF14CF",
+        "relationship_types": [
+          "SAME_AGENT",
+          "SAME_DESTINATION_IP",
+          "SAME_HOST",
+          "SAME_SOURCE_IP"
+        ],
+        "details": {
+          "source_type": "network",
+          "rule_id": null,
+          "event_code": null
+        }
+      },
+      {
+        "item_id": "event:EVT-DA808AE4AEA0F6189660DB5E",
+        "item_type": "SECURITY_EVENT",
+        "timestamp": "2026-10-27T10:40:33Z",
+        "timestamp_kind": "EVENT_TIME",
+        "timestamp_status": "NORMAL",
+        "title": "SURICATA_EVE tls observation",
+        "source_id": "EVT-DA808AE4AEA0F6189660DB5E",
+        "relationship_types": [
+          "SAME_DESTINATION_IP",
+          "SAME_HOST",
+          "SAME_SOURCE_IP"
+        ],
+        "details": {
+          "source_type": "network",
+          "rule_id": null,
+          "event_code": null
+        }
+      }
+    ],
+    "ioc_matches": [],
+    "correlation_groups": [],
+    "query": {
+      "start_time": "2026-10-27T10:40:32Z",
+      "end_time": "2026-10-27T10:40:34Z",
+      "related_limit": 25,
+      "timeline_limit": 100,
+      "sort": "oldest",
+      "execution_ms": 59.244,
+      "related_truncated": false,
+      "schema_version": 17,
+      "unavailable_relationships": []
+    }
+  }
+}

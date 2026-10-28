@@ -1,0 +1,30 @@
+{
+  "label": "SYNTHETIC_M28_GOLDEN_DATASET",
+  "windows": [
+    ["4624", "logon", "success"], ["4625", "logon", "failure"],
+    ["4634", "logoff", "success"], ["4648", "explicit_credentials", "observed"],
+    ["4672", "privileged_logon", "success"], ["4688", "process_start", "success"],
+    ["4720", "account_create", "success"], ["4740", "account_lockout", "observed"],
+    ["4104", "powershell_script_block", "observed"]
+  ],
+  "sysmon": [
+    ["1", "process_start"], ["3", "network_connection"], ["7", "image_load"],
+    ["8", "remote_thread_create"], ["10", "process_access"], ["11", "file_create"],
+    ["12", "registry_object_change"], ["13", "registry_value_set"],
+    ["14", "registry_rename"], ["22", "dns_query"]
+  ],
+  "linux": [
+    {"name":"ssh-success", "program":"sshd", "message":"Accepted publickey for synthetic-user from 192.0.2.20 port 50200 ssh2", "expected":{"event_action":"authenticate", "outcome":"success", "username":"synthetic-user", "source_ip":"192.0.2.20"}},
+    {"name":"ssh-failure", "program":"sshd", "message":"Failed password for synthetic-user from 192.0.2.21 port 50201 ssh2", "expected":{"event_action":"authenticate", "outcome":"failure", "username":"synthetic-user", "source_ip":"192.0.2.21"}},
+    {"name":"invalid-ssh-user", "program":"sshd", "message":"Invalid user synthetic-unknown from 192.0.2.22 port 50202", "expected":{"event_action":"authenticate", "outcome":"failure", "username":"synthetic-unknown", "source_ip":"192.0.2.22"}},
+    {"name":"sudo-command", "program":"sudo", "message":"synthetic-user : TTY=pts/0 ; PWD=/tmp ; USER=root ; COMMAND=/usr/bin/id", "expected":{"event_action":"privilege_escalation", "outcome":"success", "command_line":"/usr/bin/id"}},
+    {"name":"sudo-failure", "program":"sudo", "message":"pam_unix(sudo:auth): authentication failure; user=synthetic-user", "expected":{"event_action":"privilege_escalation", "outcome":"failure", "username":"synthetic-user"}},
+    {"name":"pam-failure", "program":"login", "message":"pam_unix(login:auth): authentication failure; user=synthetic-user", "expected":{"event_action":"authenticate", "outcome":"failure", "username":"synthetic-user"}},
+    {"name":"session-open", "program":"sshd", "message":"pam_unix(sshd:session): session opened for user synthetic-user by (uid=0)", "expected":{"event_action":"session_open", "outcome":"observed", "username":"synthetic-user"}},
+    {"name":"session-close", "program":"sshd", "message":"pam_unix(sshd:session): session closed for user synthetic-user", "expected":{"event_action":"session_close", "outcome":"observed", "username":"synthetic-user"}}
+  ],
+  "syslog": [
+    {"name":"rfc5424", "message":"<34>1 2026-10-22T08:00:00Z SYNTH-LINUX app 123 ID47 [example@32473 key=\"synthetic\"] test message", "expected":{"hostname":"SYNTH-LINUX", "process_name":"app", "process_id":"123", "message":"test message"}},
+    {"name":"rfc3164", "message":"<34>Oct 22 08:00:00 SYNTH-LINUX app[124]: synthetic yearless message", "expected":{"hostname":"SYNTH-LINUX", "process_name":"app", "process_id":"124", "message":"synthetic yearless message"}}
+  ]
+}

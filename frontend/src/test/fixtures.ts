@@ -1,4 +1,6 @@
 import { vi } from "vitest";
+import m34Contract from './m34-api-contract.json';
+import {parseSourceCoverage} from '../api/collection-contract';
 
 import type { AlertWorkflowDetail, NormalizedAlert } from "../types/alerts";
 import type { AnalystPrincipal, SessionResponse } from "../types/auth";
@@ -1180,6 +1182,17 @@ export const SAMPLE_AI_ANALYSIS: AIAnalysisRecord = {
 
 export function createMockApi(overrides: Partial<BackendApi> = {}): BackendApi {
     return {
+        getShadowCatalog: vi.fn().mockResolvedValue({version:"cdrc-v2",scope:"SOURCE_TEST_RESULTS",production_active:false,simulation_enabled:false,rules:[]}),
+        getDurableShadowStatus:vi.fn().mockResolvedValue({enabled:false,scope:'DISPOSABLE_DURABLE_SHADOW',production_active:false,schema_version:null,resource_state:null}),
+        reconcileShadowEvidence:vi.fn().mockRejectedValue(new Error('Disposable history not configured')),
+        createDurableShadowRun:vi.fn().mockRejectedValue(new Error('Disposable history not configured')),
+        getDurableShadowRun:vi.fn().mockRejectedValue(new Error('Disposable history not configured')),
+        resumeDurableShadowRun:vi.fn().mockRejectedValue(new Error('Disposable history not configured')),
+        listDurableShadowFindings:vi.fn().mockResolvedValue({items:[],next_cursor:null,scope:'DISPOSABLE_DURABLE_SHADOW',production_active:false}),
+        getDurableShadowFinding:vi.fn().mockRejectedValue(new Error('Finding unavailable')),
+        transitionDurableShadowFinding:vi.fn().mockRejectedValue(new Error('Finding unavailable')),
+        validateShadowRule: vi.fn().mockRejectedValue(new Error("Synthetic fixture has no configured rule")),
+        simulateShadowRule: vi.fn().mockRejectedValue(new Error("Disposable simulation gate closed")),
         health: vi
             .fn()
             .mockResolvedValue({
@@ -1260,6 +1273,64 @@ export function createMockApi(overrides: Partial<BackendApi> = {}): BackendApi {
                     sort: "newest",
                 },
             }),
+        searchCQQL: vi.fn().mockResolvedValue({
+            items: [SAMPLE_EVENT],
+            page: {
+                limit: 25,
+                next_cursor: null,
+                total: null,
+                count_mode: "UNKNOWN",
+                sort: "newest",
+            },
+            metadata: {
+                version: "cqql-v1",
+                execution_ms: 2.5,
+                query_status: "COMPLETE",
+                warnings: ["Exact result count is intentionally not computed for CQQL searches."],
+                truncated: false,
+                data_freshness: "2026-10-08T15:00:00Z",
+                clause_count: 1,
+                ast_depth: 1,
+                fts_used: false,
+                cost_class: "LOW",
+                plan_class: "INDEX_FRIENDLY",
+                planner_strategy: "DEFAULT",
+                diagnostic_reasons: ["INDEXED_EQUALITY"],
+            },
+        }),
+        getCQQLAnalytics: vi.fn().mockResolvedValue({
+            version: "cqql-v1",
+            query_status: "COMPLETE",
+            execution_ms: 3.1,
+            completeness: "EXACT_WITHIN_BOUNDED_RANGE",
+            sparse_time_series: true,
+            matching_events: 1,
+            groups: [
+                { field: "event.severity", buckets: [{ name: "8", count: 1 }], truncated: false },
+                { field: "source.ip", buckets: [{ name: "127.0.0.1", count: 1 }], truncated: false },
+                { field: "host.name", buckets: [{ name: "cyberqalqon-test-web", count: 1 }], truncated: false },
+                { field: "event.category", buckets: [{ name: "web", count: 1 }], truncated: false },
+                { field: "event.source_type", buckets: [{ name: "web", count: 1 }], truncated: false },
+            ],
+            time_series: [{ timestamp: "2026-10-08T15:00:00Z", count: 1 }],
+            clause_count: 1,
+            fts_used: false,
+        }),
+        downloadCQQL: vi.fn().mockResolvedValue({ blob: new Blob(["event_id\r\nEVT-1\r\n"], { type: "text/csv" }), filename: "cyberqalqon-cqql.csv" }),
+        getCQQLFields: vi.fn().mockResolvedValue({
+            version: "cqql-v1",
+            fields: [],
+            limits: {
+                maximum_query_length: 2000,
+                maximum_tokens: 256,
+                maximum_ast_depth: 8,
+                maximum_boolean_clauses: 32,
+                maximum_page_size: 100,
+                maximum_time_range_days: 31,
+                execution_deadline_ms: 1500,
+                maximum_concurrent_queries: 4,
+            },
+        }),
         getEvent: vi.fn().mockResolvedValue(SAMPLE_EVENT),
         getInvestigationWorkbench: vi.fn().mockResolvedValue(SAMPLE_WORKBENCH),
         listSavedEventSearches: vi.fn().mockResolvedValue([]),
@@ -1290,6 +1361,8 @@ export function createMockApi(overrides: Partial<BackendApi> = {}): BackendApi {
         getAgentHealth: vi.fn().mockResolvedValue(SAMPLE_AGENT_HEALTH),
         getWazuhIntegrationStatus: vi.fn().mockResolvedValue(WAZUH_INTEGRATION_STATUS),
         getOperationalOverview: vi.fn().mockResolvedValue(OPERATIONAL_OVERVIEW),
+        getSourceCoverage: vi.fn().mockResolvedValue(parseSourceCoverage(m34Contract.empty_source_coverage)),
+        previewSigma: vi.fn().mockRejectedValue(new Error('No Sigma response configured in this test')),
         listRules: vi.fn().mockResolvedValue(SAMPLE_RULES),
         listAdvancedDetectionRules: vi.fn().mockResolvedValue(SAMPLE_ADVANCED_RULES),
         getDetectionQuality: vi.fn().mockResolvedValue(SAMPLE_DETECTION_QUALITY),

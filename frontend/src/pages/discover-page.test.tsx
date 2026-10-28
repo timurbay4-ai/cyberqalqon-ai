@@ -1,10 +1,11 @@
 import { fireEvent, render, screen, waitFor, within } from "@testing-library/react";
-import { describe, expect, it, vi } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { SAMPLE_EVENT, createMockApi } from "../test/fixtures";
 import { DiscoverPage } from "./discover-page";
 import { DEFAULT_PREFERENCES } from "../types/preferences";
 
+afterEach(() => window.history.replaceState({}, "", "/?view=discover"));
 
 describe("DiscoverPage", () => {
   it("searches server-side, expands redacted JSON, and exposes relationships", async () => {
@@ -72,6 +73,82 @@ describe("DiscoverPage", () => {
     await waitFor(() => expect(api.saveEventSearch).toHaveBeenCalledWith({
       name: "Failed web",
       query: expect.objectContaining({ eventCategory: "web", outcome: "failure", relativeMinutes: 1440 }),
+    }));
+  });
+
+  it("runs bounded CQQL without persisting the expression in the URL", async () => {
+    window.history.replaceState({}, "", "/?view=discover");
+    const api = createMockApi();
+    render(<DiscoverPage api={api} onOpenAlert={() => undefined} onOpenIncident={() => undefined} />);
+    await screen.findByText(SAMPLE_EVENT.message);
+    fireEvent.change(screen.getByLabelText("CQQL query"), {
+      target: { value: 'source.ip = "127.0.0.1" AND event.severity >= 8' },
+    });
+    fireEvent.click(screen.getByRole("button", { name: "Search events" }));
+
+    await waitFor(() => expect(api.searchCQQL).toHaveBeenLastCalledWith(
+      expect.objectContaining({
+        query: 'source.ip = "127.0.0.1" AND event.severity >= 8',
+        sort: "newest",
+        limit: 25,
+        start_time: expect.any(String),
+        end_time: expect.any(String),
+      }),
+      expect.any(AbortSignal),
+    ));
+    expect(screen.getByText("Exact total: unknown")).toBeInTheDocument();
+    expect(screen.getByText(/Data freshness:/)).toBeInTheDocument();
+    expect(await screen.findByText("Search distribution")).toBeInTheDocument();
+    expect(screen.getByText(/Exact within the selected bounded range/)).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "Events over time" })).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "Severity" })).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "Source IP" })).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "Host" })).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "Category" })).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "Source type" })).toBeInTheDocument();
+    expect(api.getCQQLAnalytics).toHaveBeenCalledTimes(2);
+    fireEvent.click(screen.getByRole("button", { name: "Export CSV" }));
+    await waitFor(() => expect(api.downloadCQQL).toHaveBeenCalledWith(expect.objectContaining({
+      query: 'source.ip = "127.0.0.1" AND event.severity >= 8', limit: 1000,
+    })));
+    expect(window.location.search).not.toContain("source.ip");
+    expect(window.location.search).not.toContain("127.0.0.1");
+    expect(
+      (window.history.state as { cyberqalqonDiscover?: { cqql?: string } })
+        .cyberqalqonDiscover?.cqql,
+    ).toBe("");
+  });
+
+  it("shows a bounded CQQL analytics failure without hiding search results", async () => {
+    const api = createMockApi({
+      getCQQLAnalytics: vi.fn().mockRejectedValue(new Error("CQQL query exceeded its execution deadline")),
+    });
+    render(<DiscoverPage api={api} onOpenAlert={() => undefined} onOpenIncident={() => undefined} />);
+    await screen.findByText(SAMPLE_EVENT.message);
+    fireEvent.change(screen.getByLabelText("CQQL query"), {
+      target: { value: 'event.code = "4625"' },
+    });
+    fireEvent.click(screen.getByRole("button", { name: "Search events" }));
+
+    expect(await screen.findByText("CQQL analytics unavailable")).toBeInTheDocument();
+    expect(screen.getByText("CQQL query exceeded its execution deadline")).toBeInTheDocument();
+    expect(screen.getByText(SAMPLE_EVENT.message)).toBeInTheDocument();
+  });
+
+  it("stores validated CQQL with an analyst-owned saved search", async () => {
+    const api = createMockApi();
+    render(<DiscoverPage api={api} onOpenAlert={() => undefined} onOpenIncident={() => undefined} />);
+    await screen.findByText(SAMPLE_EVENT.message);
+    fireEvent.change(screen.getByLabelText("CQQL query"), {
+      target: { value: 'event.code = "4625"' },
+    });
+    fireEvent.change(screen.getByLabelText("Save current filters as"), {
+      target: { value: "Failed logons CQQL" },
+    });
+    fireEvent.click(screen.getByRole("button", { name: "Save" }));
+    await waitFor(() => expect(api.saveEventSearch).toHaveBeenCalledWith({
+      name: "Failed logons CQQL",
+      query: expect.objectContaining({ cqql: 'event.code = "4625"', relativeMinutes: 1440 }),
     }));
   });
 

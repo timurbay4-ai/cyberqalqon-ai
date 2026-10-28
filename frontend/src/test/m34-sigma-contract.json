@@ -1,0 +1,660 @@
+{
+  "sigma_source": "title: SYNTHETIC repeated DNS question on one sensor\nid: 00000000-0000-4000-8000-000000003401\nname: synthetic_dns\ndate: 2026-10-27\nstatus: test\nlogsource:\n  product: zeek\n  service: dns\ndetection:\n  selection:\n    query: synthetic.example.test\n  condition: selection\nfalsepositives:\n  - Routine DNS retries and application polling are common.\nlevel: low\n---\ntitle: SYNTHETIC repeated DNS review candidate\nid: 00000000-0000-4000-8000-000000003402\ndate: 2026-10-27\ncorrelation:\n  type: event_count\n  rules: [synthetic_dns]\n  group-by: [Computer, SourceIp]\n  timespan: 5m\n  condition:\n    gte: 3\nlevel: low\nfalsepositives:\n  - This is a pattern review candidate, not evidence of malicious DNS.\n",
+  "sigma_preview": {
+    "contract": "cq-sigma-preview-v1",
+    "profile": "CQ_ENDPOINT_SHADOW_V1",
+    "status": "CONVERTED_SHADOW_ONLY",
+    "production_active": false,
+    "rules": [
+      {
+        "definition": {
+          "contract": "cdrc-v3",
+          "correlation_mode": "ORDERED",
+          "predicate_semantics": "SIGMA_2VL",
+          "external_rule_ids": [
+            "00000000-0000-4000-8000-000000003402",
+            "00000000-0000-4000-8000-000000003401"
+          ],
+          "external_metadata_json": "{\"date\":\"2026-10-27\",\"external_rules\":[{\"date\":\"2026-10-27\",\"falsepositives\":[\"This is a pattern review candidate, not evidence of malicious DNS.\"],\"id\":\"00000000-0000-4000-8000-000000003402\",\"level\":\"low\",\"title\":\"SYNTHETIC repeated DNS review candidate\"},{\"date\":\"2026-10-27\",\"falsepositives\":[\"Routine DNS retries and application polling are common.\"],\"id\":\"00000000-0000-4000-8000-000000003401\",\"level\":\"low\",\"logsource\":{\"product\":\"zeek\",\"service\":\"dns\"},\"name\":\"synthetic_dns\",\"status\":\"test\",\"title\":\"SYNTHETIC repeated DNS question on one sensor\"}],\"falsepositives\":[\"This is a pattern review candidate, not evidence of malicious DNS.\"],\"id\":\"00000000-0000-4000-8000-000000003402\",\"level\":\"low\",\"profile\":\"CQ_ENDPOINT_SHADOW_V1\",\"sigma_source_sha256\":\"ea819e94d061ec73bec8e2901525c781679e2b1ce033c30bf1c4915e3bd95e35\",\"title\":\"SYNTHETIC repeated DNS review candidate\"}",
+          "rule_id": "SHADOW-SIGMA-00000000000040008000000000003402",
+          "title": "SYNTHETIC repeated DNS review candidate",
+          "description": "Imported Sigma endpoint shadow profile.",
+          "author": "CyberQalqon Sigma adapter",
+          "status": "SHADOW_ONLY",
+          "severity": 4,
+          "confidence": 40,
+          "minimum_confidence": 0,
+          "source_families": [
+            "ZEEK"
+          ],
+          "required_fields": [
+            "host.name",
+            "source.ip"
+          ],
+          "steps": [
+            {
+              "query": "(event.channel = \"dns\") AND (((dns.question.name = \"synthetic.example.test\")))",
+              "threshold": 3,
+              "process_basename_equals": null,
+              "parent_basename_equals": null
+            }
+          ],
+          "group_by": [
+            "host.name",
+            "source.ip"
+          ],
+          "window_seconds": 300,
+          "allowed_lateness": 0,
+          "suppression_policy": "EVIDENCE_IDENTITY_ONLY",
+          "account_identity_policy": "SID_WHEN_PRESENT_NO_DOWNGRADE",
+          "source_duplicate_policy": "SOURCE_RECORD_WHEN_AVAILABLE_ELSE_DELIVERY",
+          "mitre_ids": [],
+          "tags": [],
+          "references": [],
+          "created_at": "2026-10-27T00:00:00Z",
+          "updated_at": "2026-10-27T00:00:00Z"
+        },
+        "rule_version": "f58deca5298ce5b2a84a5ab1ee0c95a039fd431ee4eefb529319d9824f0a94ae",
+        "external_id": "00000000-0000-4000-8000-000000003402"
+      }
+    ],
+    "source_sha256": "ea819e94d061ec73bec8e2901525c781679e2b1ce033c30bf1c4915e3bd95e35",
+    "warnings": [
+      "ENDPOINT_NAMESPACE_ONLY_NO_CROSS_COLLECTOR_CORRELATION",
+      "SOURCE_AND_WINDOW_COMPLETENESS_UNPROVEN",
+      "PREVIEW_DOES_NOT_PERSIST_OR_ACTIVATE_RULES"
+    ]
+  },
+  "network_evaluation": {
+    "run_id": "RUN-190d86080e8a446485bb92c17c11fd30",
+    "status": "COMPLETED",
+    "attempts": 1,
+    "error_code": null,
+    "checkpoint": "SEALED",
+    "snapshot_sha256": "a0c290c87926161f5a3762c1a7221d1a02ae268fe3ee8dba76961b8af8fc46e3",
+    "result": {
+      "finding_ids": [
+        "DSF-c4e930dc1c42718efe942fdcb4500eb2a6e701e98c9ecf2579355e26c58761df"
+      ],
+      "diagnostics": {
+        "CANDIDATE_ROWS": 19,
+        "NO_MATCH": 3,
+        "ON_TIME": 3,
+        "UNSUPPORTED_SOURCE": 13
+      },
+      "coverage": "PARTIAL",
+      "identity_rejected": 0,
+      "candidate_count": 1,
+      "historical_continuity": "UNPROVEN",
+      "window_completeness": "UNPROVEN",
+      "evaluation_version": "m31-shadow-v1",
+      "graph_edges": [
+        {
+          "source": "DSF-c4e930dc1c42718efe942fdcb4500eb2a6e701e98c9ecf2579355e26c58761df",
+          "target": "EVT-3A3FEB417A6C313F3336A39C",
+          "relationship": "FINDING_SUPPORTED_BY_EVENT",
+          "causal_claim": false
+        },
+        {
+          "source": "DSF-c4e930dc1c42718efe942fdcb4500eb2a6e701e98c9ecf2579355e26c58761df",
+          "target": "EVT-19A422ECBDF4D70F5AE25D50",
+          "relationship": "FINDING_SUPPORTED_BY_EVENT",
+          "causal_claim": false
+        },
+        {
+          "source": "EVT-3A3FEB417A6C313F3336A39C",
+          "target": "EVT-19A422ECBDF4D70F5AE25D50",
+          "relationship": "OBSERVED_BEFORE",
+          "causal_claim": false
+        },
+        {
+          "source": "DSF-c4e930dc1c42718efe942fdcb4500eb2a6e701e98c9ecf2579355e26c58761df",
+          "target": "EVT-06BE87BFE63104A96E7A0D16",
+          "relationship": "FINDING_SUPPORTED_BY_EVENT",
+          "causal_claim": false
+        },
+        {
+          "source": "EVT-19A422ECBDF4D70F5AE25D50",
+          "target": "EVT-06BE87BFE63104A96E7A0D16",
+          "relationship": "OBSERVED_BEFORE",
+          "causal_claim": false
+        }
+      ]
+    },
+    "recovery_state": "NOT_REQUIRED",
+    "production_active": false,
+    "scope": "DISPOSABLE_DURABLE_SHADOW",
+    "historical_continuity": "UNPROVEN"
+  },
+  "finding_detail": {
+    "finding_id": "DSF-c4e930dc1c42718efe942fdcb4500eb2a6e701e98c9ecf2579355e26c58761df",
+    "matching_id": "SF-077ad7df388b5dd387553366f304d132ce18ca9bf639e85b56aa1f6bd0ee89d9",
+    "rule_version": "f58deca5298ce5b2a84a5ab1ee0c95a039fd431ee4eefb529319d9824f0a94ae",
+    "policy_sha": "b2ae98dca860525f1e4d08bbf2006038070b9a969c290e6a3ec69af4907ea88f",
+    "current_revision": 1,
+    "state": "SHADOW_CANDIDATE",
+    "created_at": "2026-10-27T11:24:44.330564Z",
+    "last_observed_at": "2026-10-27T11:24:44.330564Z",
+    "revision": 1,
+    "matching_evidence": {
+      "finding_id": "SF-077ad7df388b5dd387553366f304d132ce18ca9bf639e85b56aa1f6bd0ee89d9",
+      "rule_id": "SHADOW-SIGMA-00000000000040008000000000003402",
+      "rule_version": "f58deca5298ce5b2a84a5ab1ee0c95a039fd431ee4eefb529319d9824f0a94ae",
+      "evidence_manifest_sha256": "8148bcf0c99ce6f0f7771acfff7830c6e011e098b2d254983134f443420451ee",
+      "rule_snapshot": {
+        "contract": "cdrc-v3",
+        "correlation_mode": "ORDERED",
+        "predicate_semantics": "SIGMA_2VL",
+        "external_rule_ids": [
+          "00000000-0000-4000-8000-000000003402",
+          "00000000-0000-4000-8000-000000003401"
+        ],
+        "external_metadata_json": "{\"date\":\"2026-10-27\",\"external_rules\":[{\"date\":\"2026-10-27\",\"falsepositives\":[\"This is a pattern review candidate, not evidence of malicious DNS.\"],\"id\":\"00000000-0000-4000-8000-000000003402\",\"level\":\"low\",\"title\":\"SYNTHETIC repeated DNS review candidate\"},{\"date\":\"2026-10-27\",\"falsepositives\":[\"Routine DNS retries and application polling are common.\"],\"id\":\"00000000-0000-4000-8000-000000003401\",\"level\":\"low\",\"logsource\":{\"product\":\"zeek\",\"service\":\"dns\"},\"name\":\"synthetic_dns\",\"status\":\"test\",\"title\":\"SYNTHETIC repeated DNS question on one sensor\"}],\"falsepositives\":[\"This is a pattern review candidate, not evidence of malicious DNS.\"],\"id\":\"00000000-0000-4000-8000-000000003402\",\"level\":\"low\",\"profile\":\"CQ_ENDPOINT_SHADOW_V1\",\"sigma_source_sha256\":\"ea819e94d061ec73bec8e2901525c781679e2b1ce033c30bf1c4915e3bd95e35\",\"title\":\"SYNTHETIC repeated DNS review candidate\"}",
+        "rule_id": "SHADOW-SIGMA-00000000000040008000000000003402",
+        "title": "SYNTHETIC repeated DNS review candidate",
+        "description": "Imported Sigma endpoint shadow profile.",
+        "author": "CyberQalqon Sigma adapter",
+        "status": "SHADOW_ONLY",
+        "severity": 4,
+        "confidence": 40,
+        "minimum_confidence": 0,
+        "source_families": [
+          "ZEEK"
+        ],
+        "required_fields": [
+          "host.name",
+          "source.ip"
+        ],
+        "steps": [
+          {
+            "query": "(event.channel = \"dns\") AND (((dns.question.name = \"synthetic.example.test\")))",
+            "threshold": 3,
+            "process_basename_equals": null,
+            "parent_basename_equals": null
+          }
+        ],
+        "group_by": [
+          "host.name",
+          "source.ip"
+        ],
+        "window_seconds": 300,
+        "allowed_lateness": 0,
+        "suppression_policy": "EVIDENCE_IDENTITY_ONLY",
+        "account_identity_policy": "SID_WHEN_PRESENT_NO_DOWNGRADE",
+        "source_duplicate_policy": "SOURCE_RECORD_WHEN_AVAILABLE_ELSE_DELIVERY",
+        "mitre_ids": [],
+        "tags": [],
+        "references": [],
+        "created_at": "2026-10-27T00:00:00Z",
+        "updated_at": "2026-10-27T00:00:00Z"
+      },
+      "evaluation_version": "m34-shadow-v1",
+      "status": "SHADOW_ONLY",
+      "severity": 4,
+      "confidence": 40,
+      "identity_confidence": "CLAIMED_ENDPOINT_SCOPED",
+      "window_start": "2026-10-27T11:19:39Z",
+      "window_end": "2026-10-27T11:19:42Z",
+      "completeness": "UNPROVEN",
+      "group": {
+        "account_identity_basis": "SCOPED_NAME_ONLY_OR_NOT_USED",
+        "host.name": "SYNTHETIC-M34-SENSOR",
+        "source.ip": "192.0.2.34"
+      },
+      "explanation": "Observed ordered rule predicates in one claimed endpoint scope. Potential suspicious activity; requires analyst validation.",
+      "uncertainty": [
+        "Endpoint/account ownership is not independently verified.",
+        "No global source watermark; window/historical continuity UNPROVEN.",
+        "Benign retries or approved administration may explain this activity.",
+        "Evidence is not pinned; recheck availability on drill-down."
+      ],
+      "evidence": [
+        {
+          "event_id": "EVT-3A3FEB417A6C313F3336A39C",
+          "event_time": "2026-10-27T11:19:39Z",
+          "ingestion_time": "2026-10-27T11:24:40.805455Z",
+          "source_family": "ZEEK",
+          "host": "SYNTHETIC-M34-SENSOR",
+          "user": null,
+          "user_sid": null,
+          "process": null,
+          "event_code": null,
+          "process_guid": null,
+          "stored_envelope_sha256": "f1cefcc6d331b52b6dc0bdba06d1ead0cd48c8573b67adb7cb42336afadd30f3",
+          "source_identity_sha256": "14d4d0383474373948ba9c958d4735d58d34897dc4050e51c4af630fa7c274c9",
+          "source_record_key_sha256": null,
+          "provenance": "PARTIAL"
+        },
+        {
+          "event_id": "EVT-19A422ECBDF4D70F5AE25D50",
+          "event_time": "2026-10-27T11:19:41Z",
+          "ingestion_time": "2026-10-27T11:24:43.997446Z",
+          "source_family": "ZEEK",
+          "host": "SYNTHETIC-M34-SENSOR",
+          "user": null,
+          "user_sid": null,
+          "process": null,
+          "event_code": null,
+          "process_guid": null,
+          "stored_envelope_sha256": "c5a366465dd2e8b57ca413bc0e6a4c0cf287c1d98e4b8c74062b7dbde798c529",
+          "source_identity_sha256": "14d4d0383474373948ba9c958d4735d58d34897dc4050e51c4af630fa7c274c9",
+          "source_record_key_sha256": null,
+          "provenance": "PARTIAL"
+        },
+        {
+          "event_id": "EVT-06BE87BFE63104A96E7A0D16",
+          "event_time": "2026-10-27T11:19:42Z",
+          "ingestion_time": "2026-10-27T11:24:44.070911Z",
+          "source_family": "ZEEK",
+          "host": "SYNTHETIC-M34-SENSOR",
+          "user": null,
+          "user_sid": null,
+          "process": null,
+          "event_code": null,
+          "process_guid": null,
+          "stored_envelope_sha256": "14b5bd14841f3860c719c2166cf6514acf2f50d0286a14a750483515df0a98c6",
+          "source_identity_sha256": "14d4d0383474373948ba9c958d4735d58d34897dc4050e51c4af630fa7c274c9",
+          "source_record_key_sha256": null,
+          "provenance": "PARTIAL"
+        }
+      ],
+      "mitre": []
+    },
+    "identity": {
+      "version": "m31-identity-v1",
+      "policy": {
+        "version": "identity-policy-v1",
+        "minimum": "PARTIAL"
+      },
+      "satisfied": true,
+      "entities": [
+        {
+          "kind": "HOST",
+          "status": "PARTIAL",
+          "entity_id": "ENTITY-133dfdeb2446f482cc6a0be7e2294b86f515f420d05c7b2a782ed42d6fa6fd54",
+          "scope_sha256": "102a37cbace869ed3237589da5db6f9a5140282de3302c7fc503d697fb4cdef0",
+          "reason": "CLAIMED_SOURCE_SCOPE_ONLY",
+          "evidence_ids": [
+            "EVT-3A3FEB417A6C313F3336A39C",
+            "EVT-19A422ECBDF4D70F5AE25D50",
+            "EVT-06BE87BFE63104A96E7A0D16"
+          ],
+          "authority_sha256": null
+        },
+        {
+          "kind": "ACCOUNT",
+          "status": "UNVERIFIED",
+          "entity_id": null,
+          "scope_sha256": "102a37cbace869ed3237589da5db6f9a5140282de3302c7fc503d697fb4cdef0",
+          "reason": "MISSING_IDENTITY",
+          "evidence_ids": [
+            "EVT-3A3FEB417A6C313F3336A39C",
+            "EVT-19A422ECBDF4D70F5AE25D50",
+            "EVT-06BE87BFE63104A96E7A0D16"
+          ],
+          "authority_sha256": null
+        },
+        {
+          "kind": "PROCESS",
+          "status": "UNVERIFIED",
+          "entity_id": null,
+          "scope_sha256": "102a37cbace869ed3237589da5db6f9a5140282de3302c7fc503d697fb4cdef0",
+          "reason": "MISSING_IDENTITY",
+          "evidence_ids": [
+            "EVT-3A3FEB417A6C313F3336A39C",
+            "EVT-19A422ECBDF4D70F5AE25D50",
+            "EVT-06BE87BFE63104A96E7A0D16"
+          ],
+          "authority_sha256": null
+        },
+        {
+          "kind": "NETWORK_ENDPOINT",
+          "status": "UNVERIFIED",
+          "entity_id": null,
+          "scope_sha256": "102a37cbace869ed3237589da5db6f9a5140282de3302c7fc503d697fb4cdef0",
+          "reason": "MISSING_IDENTITY",
+          "evidence_ids": [
+            "EVT-3A3FEB417A6C313F3336A39C",
+            "EVT-19A422ECBDF4D70F5AE25D50",
+            "EVT-06BE87BFE63104A96E7A0D16"
+          ],
+          "authority_sha256": null
+        },
+        {
+          "kind": "SESSION",
+          "status": "UNVERIFIED",
+          "entity_id": null,
+          "scope_sha256": "102a37cbace869ed3237589da5db6f9a5140282de3302c7fc503d697fb4cdef0",
+          "reason": "MISSING_IDENTITY",
+          "evidence_ids": [
+            "EVT-3A3FEB417A6C313F3336A39C",
+            "EVT-19A422ECBDF4D70F5AE25D50",
+            "EVT-06BE87BFE63104A96E7A0D16"
+          ],
+          "authority_sha256": null
+        },
+        {
+          "kind": "AGENT",
+          "status": "PARTIAL",
+          "entity_id": "ENTITY-e01b1fa0076a8726b3f136598fff69dad71a7e80dc09a584442d4caf4b1b7409",
+          "scope_sha256": "102a37cbace869ed3237589da5db6f9a5140282de3302c7fc503d697fb4cdef0",
+          "reason": "CLAIMED_SOURCE_SCOPE_ONLY",
+          "evidence_ids": [
+            "EVT-3A3FEB417A6C313F3336A39C",
+            "EVT-19A422ECBDF4D70F5AE25D50",
+            "EVT-06BE87BFE63104A96E7A0D16"
+          ],
+          "authority_sha256": null
+        },
+        {
+          "kind": "COLLECTOR",
+          "status": "PARTIAL",
+          "entity_id": "ENTITY-05f4da6b54918bac8e16b62cda5a4880bb40e13eba758461b11c60406cf3ea3d",
+          "scope_sha256": "102a37cbace869ed3237589da5db6f9a5140282de3302c7fc503d697fb4cdef0",
+          "reason": "CLAIMED_SOURCE_SCOPE_ONLY",
+          "evidence_ids": [
+            "EVT-3A3FEB417A6C313F3336A39C",
+            "EVT-19A422ECBDF4D70F5AE25D50",
+            "EVT-06BE87BFE63104A96E7A0D16"
+          ],
+          "authority_sha256": null
+        }
+      ],
+      "required_kinds": [
+        "HOST"
+      ],
+      "historical_continuity": "UNPROVEN",
+      "causal_claim": false
+    },
+    "authority_documents": [],
+    "first_observed_at": "2026-10-27T11:24:44.330564Z",
+    "evidence_references": [
+      {
+        "event_id": "EVT-06BE87BFE63104A96E7A0D16",
+        "envelope_sha": "14b5bd14841f3860c719c2166cf6514acf2f50d0286a14a750483515df0a98c6",
+        "row_sha": "ead253645e174ac19fa2db7e97ebbdd78a7fa659d1fe5fe9143a9624b72b2b21"
+      },
+      {
+        "event_id": "EVT-19A422ECBDF4D70F5AE25D50",
+        "envelope_sha": "c5a366465dd2e8b57ca413bc0e6a4c0cf287c1d98e4b8c74062b7dbde798c529",
+        "row_sha": "408b5dd2b00b9a30b0085557ee419457019981399d34fa80b18eb2c11b6dcaf1"
+      },
+      {
+        "event_id": "EVT-3A3FEB417A6C313F3336A39C",
+        "envelope_sha": "f1cefcc6d331b52b6dc0bdba06d1ead0cd48c8573b67adb7cb42336afadd30f3",
+        "row_sha": "df6ccb16b50689a4a335dbb15234c3bb35f2cbe311fa01f5fb14faabf858b97a"
+      }
+    ],
+    "history": [
+      {
+        "sequence": 3,
+        "finding_id": "DSF-c4e930dc1c42718efe942fdcb4500eb2a6e701e98c9ecf2579355e26c58761df",
+        "revision": 1,
+        "previous_state": null,
+        "target_state": "SHADOW_CANDIDATE",
+        "reason": "INITIAL_MATCH",
+        "actor": "SYNTHETIC M34 operator (synthetic-m34-admin)",
+        "occurred_at": "2026-10-27T11:24:44.330564Z",
+        "superseded_by": null
+      }
+    ],
+    "history_truncated": false,
+    "historical_continuity": "UNPROVEN",
+    "production_active": false,
+    "scope": "DISPOSABLE_DURABLE_SHADOW",
+    "evidence_retention": "REFERENCES_NOT_AUTOMATIC_PINS",
+    "current_evidence_availability": {
+      "EVT-06BE87BFE63104A96E7A0D16": "AVAILABLE",
+      "EVT-19A422ECBDF4D70F5AE25D50": "AVAILABLE",
+      "EVT-3A3FEB417A6C313F3336A39C": "AVAILABLE"
+    },
+    "identity_context": "AT_ORIGINAL_EVALUATION_NOT_CURRENT_SOURCE_ATTESTATION"
+  },
+  "source_coverage": {
+    "contract": "cq-source-coverage-v1",
+    "observed_at": "2026-10-27T11:24:45.805228+00:00",
+    "scope": "SYNTHETIC_TEST",
+    "coverage": "RETAINED_SAMPLE",
+    "sample_limit": 1000,
+    "sample_count": 19,
+    "truncated": false,
+    "historical_continuity": "UNPROVEN",
+    "production_active": false,
+    "registered_sources": [
+      {
+        "source_id": "synthetic-zeek",
+        "source_type": "ZEEK_JSON",
+        "host": "SYNTHETIC-M34-SENSOR",
+        "collector_id": "synthetic-collector",
+        "source_generation": "synthetic-generation-1",
+        "configuration_authority": "EXPLICIT_DISPOSABLE_CONSTRUCTOR",
+        "configured": true,
+        "connected": "UNKNOWN",
+        "delivery_state": "OBSERVED_COMMIT",
+        "last_committed_delivery_at": "2026-10-27T11:24:44.167383+00:00",
+        "last_acknowledged_delivery": null,
+        "sample_event_count": 6,
+        "last_event_time": "2026-10-27T11:19:42+00:00",
+        "last_ingestion_time": "2026-10-27T11:24:44.070911+00:00",
+        "queue_backlog": null,
+        "retry_count": null,
+        "dead_letter_count": null,
+        "process_counters": {
+          "inserted": 6,
+          "duplicate": 4
+        },
+        "counter_scope": "SINCE_APPLICATION_START",
+        "family": "ZEEK"
+      },
+      {
+        "source_id": "synthetic-suricata",
+        "source_type": "SURICATA_EVE",
+        "host": "SYNTHETIC-M34-SENSOR",
+        "collector_id": "synthetic-collector",
+        "source_generation": "synthetic-generation-1",
+        "configuration_authority": "EXPLICIT_DISPOSABLE_CONSTRUCTOR",
+        "configured": true,
+        "connected": "UNKNOWN",
+        "delivery_state": "OBSERVED_COMMIT",
+        "last_committed_delivery_at": "2026-10-27T11:24:42.231169+00:00",
+        "last_acknowledged_delivery": null,
+        "sample_event_count": 5,
+        "last_event_time": "2026-10-27T11:19:39+00:00",
+        "last_ingestion_time": "2026-10-27T11:24:42.085780+00:00",
+        "queue_backlog": null,
+        "retry_count": null,
+        "dead_letter_count": null,
+        "process_counters": {
+          "inserted": 5,
+          "duplicate": 5
+        },
+        "counter_scope": "SINCE_APPLICATION_START",
+        "family": "SURICATA"
+      }
+    ],
+    "families": [
+      {
+        "family": "WINDOWS_EVENTCHANNEL",
+        "parser_available": true,
+        "observed": true,
+        "sample_event_count": 4,
+        "sample_normalized_count": 4,
+        "last_event_time": "2026-10-27T11:20:09+00:00",
+        "last_ingestion_time": "2026-10-27T11:24:42.530706+00:00",
+        "latest_event_id": "EVT-2564681AEFEE6BABBDEBAD68",
+        "freshness": "OBSERVED",
+        "search_fields_available": true,
+        "detection_eligible": "UNKNOWN",
+        "connected": "UNKNOWN",
+        "queue_backlog": null
+      },
+      {
+        "family": "SYSMON",
+        "parser_available": true,
+        "observed": false,
+        "sample_event_count": 0,
+        "sample_normalized_count": 0,
+        "last_event_time": null,
+        "last_ingestion_time": null,
+        "latest_event_id": null,
+        "freshness": "UNKNOWN",
+        "search_fields_available": true,
+        "detection_eligible": "UNKNOWN",
+        "connected": "UNKNOWN",
+        "queue_backlog": null
+      },
+      {
+        "family": "LINUX_AUTH",
+        "parser_available": true,
+        "observed": true,
+        "sample_event_count": 4,
+        "sample_normalized_count": 4,
+        "last_event_time": "2026-10-27T11:20:09+00:00",
+        "last_ingestion_time": "2026-10-27T11:24:42.911404+00:00",
+        "latest_event_id": "EVT-78E20BF676BA726A1DAB65E3",
+        "freshness": "OBSERVED",
+        "search_fields_available": true,
+        "detection_eligible": "UNKNOWN",
+        "connected": "UNKNOWN",
+        "queue_backlog": null
+      },
+      {
+        "family": "SYSLOG",
+        "parser_available": true,
+        "observed": false,
+        "sample_event_count": 0,
+        "sample_normalized_count": 0,
+        "last_event_time": null,
+        "last_ingestion_time": null,
+        "latest_event_id": null,
+        "freshness": "UNKNOWN",
+        "search_fields_available": true,
+        "detection_eligible": "UNKNOWN",
+        "connected": "UNKNOWN",
+        "queue_backlog": null
+      },
+      {
+        "family": "JOURNALD",
+        "parser_available": true,
+        "observed": false,
+        "sample_event_count": 0,
+        "sample_normalized_count": 0,
+        "last_event_time": null,
+        "last_ingestion_time": null,
+        "latest_event_id": null,
+        "freshness": "UNKNOWN",
+        "search_fields_available": true,
+        "detection_eligible": "UNKNOWN",
+        "connected": "UNKNOWN",
+        "queue_backlog": null
+      },
+      {
+        "family": "WAZUH_GENERIC",
+        "parser_available": true,
+        "observed": false,
+        "sample_event_count": 0,
+        "sample_normalized_count": 0,
+        "last_event_time": null,
+        "last_ingestion_time": null,
+        "latest_event_id": null,
+        "freshness": "UNKNOWN",
+        "search_fields_available": true,
+        "detection_eligible": "UNKNOWN",
+        "connected": "UNKNOWN",
+        "queue_backlog": null
+      },
+      {
+        "family": "ZEEK",
+        "parser_available": true,
+        "observed": true,
+        "sample_event_count": 6,
+        "sample_normalized_count": 6,
+        "last_event_time": "2026-10-27T11:19:42+00:00",
+        "last_ingestion_time": "2026-10-27T11:24:44.070911+00:00",
+        "latest_event_id": "EVT-06BE87BFE63104A96E7A0D16",
+        "freshness": "OBSERVED",
+        "search_fields_available": true,
+        "detection_eligible": "UNKNOWN",
+        "connected": "UNKNOWN",
+        "queue_backlog": null
+      },
+      {
+        "family": "SURICATA",
+        "parser_available": true,
+        "observed": true,
+        "sample_event_count": 5,
+        "sample_normalized_count": 5,
+        "last_event_time": "2026-10-27T11:19:39+00:00",
+        "last_ingestion_time": "2026-10-27T11:24:42.085780+00:00",
+        "latest_event_id": "EVT-DA808AE4AEA0F6189660DB5E",
+        "freshness": "OBSERVED",
+        "search_fields_available": true,
+        "detection_eligible": "UNKNOWN",
+        "connected": "UNKNOWN",
+        "queue_backlog": null
+      }
+    ],
+    "detection_workers": [
+      {
+        "contract": "cq-continuous-shadow-v1",
+        "namespace": "cq-m34-continuous-shadow-v1",
+        "state": "OWNED",
+        "reason": null,
+        "rule_id": "SHADOW-WINDOWS-AUTH",
+        "rule_version": "0265a87342b65eadc0dce1575a5ca9ae4aa83b10e2ef7b2b44db846af483e5df",
+        "ticks_committed": 1,
+        "last_end": "2026-10-27T11:20:19+00:00",
+        "pending_evaluation": false,
+        "last_run_id": "RUN-330400f475f0443d8977edf116a05930",
+        "last_finding_ids": [
+          "DSF-fe5ebb92a1c158c1d1ceaf38887b8f25343a378ff2088e0c07e2d3f91314a040"
+        ],
+        "observed_records": 17,
+        "late_observed": 0,
+        "late_outside_overlap": 0,
+        "gap_status": "UNPROVEN",
+        "historical_continuity": "UNPROVEN",
+        "production_active": false,
+        "scope": "DISPOSABLE_SHADOW_ONLY",
+        "source_checkpoint_reused": false,
+        "cross_database_atomicity": false,
+        "queue_capacity": 1,
+        "queue_depth": 0,
+        "late_counter_scope": "ALL_RETAINED_SOURCE_OBSERVATIONS",
+        "source_event_capacity": 1000,
+        "tick_capacity": 2048
+      },
+      {
+        "contract": "cq-continuous-shadow-v1",
+        "namespace": "cq-m34-continuous-shadow-v1",
+        "state": "OWNED",
+        "reason": null,
+        "rule_id": "SHADOW-SSH-AUTH",
+        "rule_version": "3761f4e3d050cb1a6415761b464476f23e9d0cb598db954c2a6a3c7f6b4303c6",
+        "ticks_committed": 1,
+        "last_end": "2026-10-27T11:20:19+00:00",
+        "pending_evaluation": false,
+        "last_run_id": "RUN-7adca827a21749b4adff432d9726a508",
+        "last_finding_ids": [
+          "DSF-e32ce36bca5f872ea1c9ad0364a0b6ee10c4053cd1ff27918d4a060fbb966898"
+        ],
+        "observed_records": 17,
+        "late_observed": 0,
+        "late_outside_overlap": 0,
+        "gap_status": "UNPROVEN",
+        "historical_continuity": "UNPROVEN",
+        "production_active": false,
+        "scope": "DISPOSABLE_SHADOW_ONLY",
+        "source_checkpoint_reused": false,
+        "cross_database_atomicity": false,
+        "queue_capacity": 1,
+        "queue_depth": 0,
+        "late_counter_scope": "ALL_RETAINED_SOURCE_OBSERVATIONS",
+        "source_event_capacity": 1000,
+        "tick_capacity": 2048
+      }
+    ],
+    "continuous_worker_state": "OBSERVED_ISOLATED_WORKERS"
+  },
+  "scope": "SYNTHETIC_TEST"
+}

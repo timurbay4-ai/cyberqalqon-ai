@@ -1,4 +1,4 @@
 -r requirements.txt
 
 jsonschema[format-nongpl]==4.26.0
-pytest==8.4.2
+pytest==9.1.1

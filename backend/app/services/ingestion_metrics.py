@@ -50,6 +50,32 @@ class IngestionMetrics:
         self._sqlite_busy_errors = 0
         self._last_failure_stage: str | None = None
         self._last_failure_timing: dict[str, float | int | bool] | None = None
+        self._normalization_counts = {key: 0 for key in (
+            "received", "recognized", "normalized", "partial", "unsupported", "rejected",
+            "malformed", "invalid_timestamp", "invalid_identity", "oversized",
+            "WINDOWS_EVENTCHANNEL", "SYSMON", "LINUX_AUTH", "SYSLOG", "JOURNALD", "WAZUH_GENERIC",
+        )}
+
+    def record_normalization(self, outcome: str, family: str | None = None) -> None:
+        """Fixed-cardinality counters; these do not mean durable delivery."""
+
+        with self._lock:
+            if outcome == "RECEIVED":
+                self._normalization_counts["received"] += 1
+            elif outcome in {"NORMALIZED", "PARTIAL", "UNSUPPORTED_SOURCE"}:
+                key = {"NORMALIZED": "normalized", "PARTIAL": "partial", "UNSUPPORTED_SOURCE": "unsupported"}[outcome]
+                self._normalization_counts[key] += 1
+                self._normalization_counts["recognized"] += int(family != "WAZUH_GENERIC")
+                if family in self._normalization_counts:
+                    self._normalization_counts[family] += 1
+            else:
+                self._normalization_counts["rejected"] += 1
+                key = {
+                    "INVALID_TIMESTAMP": "invalid_timestamp",
+                    "INVALID_SOURCE_IDENTITY": "invalid_identity",
+                    "OVERSIZED": "oversized",
+                }.get(outcome, "malformed")
+                self._normalization_counts[key] += 1
 
     def record_success(
         self,
@@ -194,4 +220,5 @@ class IngestionMetrics:
                 "last_error": self._last_error,
                 "historical_unique_insertions": None,
                 "historical_duplicate_acknowledgements": None,
+                "normalization_counts": dict(self._normalization_counts),
             }

@@ -8,6 +8,8 @@ from typing import Any, Literal
 from pydantic import ConfigDict, Field, IPvAnyAddress, field_validator, model_validator
 
 from app.schemas.alerts import MitreContext, StrictModel
+from app.schemas.cuse import CUSEMetadata
+from app.services.cqql import CQQLQueryError, compile_cqql
 
 
 EventSourceType = Literal[
@@ -68,6 +70,7 @@ class SecurityEventSummary(StrictModel):
 
 
 class SecurityEventDetail(SecurityEventSummary):
+    cuse: CUSEMetadata | None = None
     structured_payload: dict[str, Any] = Field(default_factory=dict)
     raw_payload: dict[str, Any] = Field(default_factory=dict)
     related_incident_ids: list[str] = Field(default_factory=list)
@@ -297,7 +300,19 @@ class SavedEventSearchQuery(StrictModel):
     severity_max: int | None = Field(default=None, ge=0, le=16)
     source_type: EventSourceType | None = None
     search: str | None = Field(default=None, min_length=1, max_length=200)
+    cqql: str | None = Field(default=None, min_length=1, max_length=2_000)
     sort: EventSort = "newest"
+
+    @field_validator("cqql")
+    @classmethod
+    def valid_cqql(cls, value: str | None) -> str | None:
+        if value is None:
+            return None
+        try:
+            compile_cqql(value)
+        except CQQLQueryError as exc:
+            raise ValueError(f"{exc.message} at position {exc.position}") from exc
+        return value
 
     @model_validator(mode="after")
     def validate_range(self) -> "SavedEventSearchQuery":
@@ -319,6 +334,16 @@ class SavedEventSearchQuery(StrictModel):
             and self.severity_min > self.severity_max
         ):
             raise ValueError("severity_min must not exceed severity_max")
+        if self.cqql is not None:
+            structured_fields = (
+                self.source_ip, self.destination_ip, self.hostname, self.username,
+                self.operating_system, self.event_provider, self.event_channel,
+                self.process_name, self.event_id, self.rule_id, self.event_category,
+                self.event_action, self.outcome, self.severity_min, self.severity_max,
+                self.source_type, self.search,
+            )
+            if any(value is not None for value in structured_fields):
+                raise ValueError("cqql cannot be combined with structured saved-search filters")
         return self
 
 

@@ -1,0 +1,36 @@
+title: SYNTHETIC Windows failure
+id: 00000000-0000-4000-8000-000000003411
+name: synthetic_windows_failure
+date: 2026-10-27
+logsource:
+  product: windows
+  service: security
+detection:
+  selection:
+    EventID: 4625
+  condition: selection
+---
+title: SYNTHETIC Windows success
+id: 00000000-0000-4000-8000-000000003412
+name: synthetic_windows_success
+date: 2026-10-27
+logsource:
+  product: windows
+  service: security
+detection:
+  selection:
+    EventID: 4624
+  condition: selection
+---
+title: SYNTHETIC host failure then success review
+id: 00000000-0000-4000-8000-000000003413
+date: 2026-10-27
+correlation:
+  type: temporal_ordered
+  rules: [synthetic_windows_failure, synthetic_windows_success]
+  group-by: [Computer]
+  timespan: 5m
+level: medium
+falsepositives:
+  - Host scope does not establish that the same user failed and succeeded.
+  - Approved logon retries are common; use the native account-scoped catalog for account correlation.

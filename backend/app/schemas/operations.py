@@ -196,6 +196,7 @@ class ForwardIngestionSummary(StrictModel):
 
 
 class IngestionPerformanceSummary(StrictModel):
+    normalization_counts: dict[str, int] = Field(default_factory=dict, max_length=16)
     measurement_scope: Literal["POST_PROCESS_START_ONLY"]
     started_at: datetime
     captured_at: datetime

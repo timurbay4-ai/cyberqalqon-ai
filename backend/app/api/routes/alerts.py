@@ -90,7 +90,7 @@ async def _read_json_object(request: Request, maximum: int) -> dict[str, Any]:
 
     try:
         payload = json.loads(b"".join(chunks))
-    except (json.JSONDecodeError, UnicodeDecodeError) as exc:
+    except (ValueError, UnicodeDecodeError, RecursionError) as exc:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail=_error("invalid_json", "Request body must contain valid UTF-8 JSON"),
@@ -108,22 +108,24 @@ def require_ingest_key(
     x_api_key: Annotated[str | None, Header()] = None,
 ) -> None:
     auth_started = time.monotonic()
+    from app.services.request_tracing import span
     try:
-        expected_key = request.app.state.settings.wazuh_ingest_api_key
-        if expected_key is None:
-            raise HTTPException(
-                status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
-                detail=_error(
-                    "ingestion_not_configured",
-                    "Wazuh ingestion is disabled until WAZUH_INGEST_API_KEY is configured",
-                ),
-            )
-        if x_api_key is None or not hmac.compare_digest(x_api_key, expected_key):
-            raise HTTPException(
-                status_code=status.HTTP_401_UNAUTHORIZED,
-                detail=_error("invalid_api_key", "A valid X-API-Key header is required"),
-                headers={"WWW-Authenticate": "ApiKey"},
-            )
+        with span("INGEST_AUTH"):
+            expected_key = request.app.state.settings.wazuh_ingest_api_key
+            if expected_key is None:
+                raise HTTPException(
+                    status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+                    detail=_error(
+                        "ingestion_not_configured",
+                        "Wazuh ingestion is disabled until WAZUH_INGEST_API_KEY is configured",
+                    ),
+                )
+            if x_api_key is None or not hmac.compare_digest(x_api_key, expected_key):
+                raise HTTPException(
+                    status_code=status.HTTP_401_UNAUTHORIZED,
+                    detail=_error("invalid_api_key", "A valid X-API-Key header is required"),
+                    headers={"WWW-Authenticate": "ApiKey"},
+                )
     finally:
         request.state.ingest_auth_ms = round(
             (time.monotonic() - auth_started) * 1000, 3

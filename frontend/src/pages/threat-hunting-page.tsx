@@ -324,6 +324,23 @@ export function ThreatHuntingPage({
                             }
                         />
                     </label>
+                    <label className="field field--grow">
+                        <span>CQQL refinement</span>
+                        <textarea
+                            aria-label="CQQL refinement"
+                            value={draft.cqql ?? ""}
+                            rows={3}
+                            maxLength={2000}
+                            onChange={(event) =>
+                                setDraft({
+                                    ...draft,
+                                    cqql: event.target.value || undefined,
+                                })
+                            }
+                            placeholder={'event.code = "4625" AND event.severity >= 5'}
+                        />
+                        <small>Combined with the bounded hunt filters. Matches remain analyst hypotheses, not detections.</small>
+                    </label>
                     <div className="filter-actions">
                         <button
                             className="button button--primary"

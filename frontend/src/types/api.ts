@@ -20,6 +20,12 @@ import type {
     SessionResponse,
 } from "./auth";
 import type {
+    CQQLFieldCatalog,
+    CQQLAnalyticsRequest,
+    CQQLAnalyticsResponse,
+    CQQLExportRequest,
+    CQQLSearchRequest,
+    CQQLSearchResponse,
     EventQuery,
     SavedEventSearch,
     SavedEventSearchCreate,
@@ -163,7 +169,26 @@ export interface HealthResponse {
     service: string;
 }
 
+import type {ShadowCatalog,ShadowRule,ShadowValidation,ShadowSimulationRequest,ShadowSimulationResult} from "./shadow-detection";
+import type {DurableStatus,DurableRequest,DurableRun,FindingPage,FindingDetail,FindingTransition} from './shadow-history';
+import type {ReconciliationPage} from './evidence-consistency';
+
+import type {SourceCoverageReport} from './collection';
+
 export interface BackendApi {
+    previewSigma(source:string,signal?:AbortSignal):Promise<import('../api/sigma-contract').SigmaPreview>;
+    getSourceCoverage(signal?: AbortSignal): Promise<SourceCoverageReport>;
+    getShadowCatalog(signal?:AbortSignal):Promise<ShadowCatalog>;
+    validateShadowRule(rule:ShadowRule,signal?:AbortSignal):Promise<ShadowValidation>;
+    simulateShadowRule(payload:ShadowSimulationRequest,signal?:AbortSignal):Promise<ShadowSimulationResult>;
+    getDurableShadowStatus(signal?:AbortSignal):Promise<DurableStatus>;
+    reconcileShadowEvidence(cursor?:string|null,signal?:AbortSignal):Promise<ReconciliationPage>;
+    createDurableShadowRun(payload:DurableRequest,signal?:AbortSignal):Promise<DurableRun>;
+    getDurableShadowRun(id:string,signal?:AbortSignal):Promise<DurableRun>;
+    resumeDurableShadowRun(id:string,signal?:AbortSignal):Promise<DurableRun>;
+    listDurableShadowFindings(cursor?:string|null,signal?:AbortSignal):Promise<FindingPage>;
+    getDurableShadowFinding(id:string,revision?:number,signal?:AbortSignal):Promise<FindingDetail>;
+    transitionDurableShadowFinding(id:string,change:FindingTransition,signal?:AbortSignal):Promise<FindingDetail>;
     health(signal?: AbortSignal): Promise<HealthResponse>;
     getSession(signal?: AbortSignal): Promise<SessionResponse>;
     login(
@@ -224,6 +249,19 @@ export interface BackendApi {
         query?: EventQuery,
         signal?: AbortSignal,
     ): Promise<SecurityEventListResponse>;
+    searchCQQL(
+        query: CQQLSearchRequest,
+        signal?: AbortSignal,
+    ): Promise<CQQLSearchResponse>;
+    getCQQLAnalytics(
+        query: CQQLAnalyticsRequest,
+        signal?: AbortSignal,
+    ): Promise<CQQLAnalyticsResponse>;
+    downloadCQQL(
+        query: CQQLExportRequest,
+        signal?: AbortSignal,
+    ): Promise<{ blob: Blob; filename: string }>;
+    getCQQLFields(signal?: AbortSignal): Promise<CQQLFieldCatalog>;
     getEvent(
         eventId: string,
         signal?: AbortSignal,

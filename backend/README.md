@@ -2,6 +2,11 @@
 
 **Stack:** Python 3.11 · FastAPI · Pydantic · SQLite
 
+Current source candidate: M36 validation (local-only historical reference: `../docs/release/M36_VALIDATION.md`).
+Clean dependency installation, the Windows/Python 3.11 constraints, Go integration
+prerequisite and independent release gates are documented in
+M36 reconstruction (local-only historical reference: `../docs/release/M36_BUILD_REPRODUCIBILITY.md`).
+
 ## Implemented capabilities
 
 - `GET /health`
@@ -21,8 +26,11 @@
 - Secure local Ollama analyst with bounded server-selected context, strict output validation,
   provenance/history, concurrency control, and stale detection
 
-Automatic incident correlation remains intentionally out of scope. The AI path is advisory only and
-cannot mutate incidents or execute tools. See [`../docs/AI_ANALYST.md`](../docs/AI_ANALYST.md).
+The source includes deterministic incident correlation and bounded CUSE/CQQL,
+FTS5, registered synthetic network collection and durable shadow finding history.
+Advanced shadow matches do not authorize production enforcement or automatic
+incident creation. The AI path remains advisory only and cannot mutate incidents
+or execute tools. See [`../docs/AI_ANALYST.md`](../docs/AI_ANALYST.md).
 
 ## Run locally
 
